@@ -1,0 +1,738 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>LingapLink - Patient Profile</title>
+    
+    <!-- Stylesheets -->
+    <link rel="stylesheet" href="../src/styles/patientPortal.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    
+    <!-- Debug Panel (remove in production) -->
+    <div id="debugPanel" style="position: fixed; top: 10px; left: 10px; background: #000; color: #fff; padding: 10px; border-radius: 5px; font-family: monospace; font-size: 12px; z-index: 10000; max-width: 300px; max-height: 200px; overflow-y: auto; display: none;">
+      <div style="font-weight: bold; margin-bottom: 5px;">Debug Information</div>
+      <div id="debugContent">Loading...</div>
+      <button onclick="document.getElementById('debugPanel').style.display='none'" style="background: #fff; color: #000; border: none; padding: 2px 5px; margin-top: 5px; cursor: pointer;">Close</button>
+    </div>
+    
+    <!-- Debug Toggle Button -->
+    <button onclick="document.getElementById('debugPanel').style.display='block'" style="position: fixed; bottom: 10px; left: 10px; background: #007bff; color: white; border: none; padding: 10px; border-radius: 5px; cursor: pointer; z-index: 9999;">Show Debug</button>
+    
+    <!-- Loading Overlay -->
+    <div id="loadingOverlay" style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(255, 255, 255, 0.9); display: none; justify-content: center; align-items: center; z-index: 9999; backdrop-filter: blur(5px);">
+      <div style="text-align: center;">
+        <div style="width: 50px; height: 50px; border: 4px solid #f3f3f3; border-top: 4px solid #4A90E2; border-radius: 50%; animation: spin 1s linear infinite; margin: 0 auto 20px;"></div>
+        <p id="loadingMessage" style="color: #2C3E50; font-weight: 500;">Loading...</p>
+      </div>
+    </div>
+    
+    <style>
+      @keyframes spin {
+        0% { transform: rotate(0deg); }
+        100% { transform: rotate(360deg); }
+      }
+    </style>
+  </head>
+  <body>
+    <!-- FLAWLESS Accessibility Enhancement -->
+    <div id="live-region" aria-live="polite" aria-atomic="true" style="position: absolute; left: -10000px; width: 1px; height: 1px; overflow: hidden;"></div>
+    
+    <div class="dashboard-layout">
+      <!-- Sidebar -->
+      <aside class="sidebar">
+        <div class="sidebar-header">
+          <div class="logo">
+            <i class="fas fa-heart-pulse"></i>
+            <span>LingapLink</span>
+          </div>
+        </div>
+        
+        <nav class="sidebar-nav">
+          <ul class="nav-items">
+            <li class="nav-item active">
+              <a href="#" class="nav-link">
+                <i class="fas fa-th-large"></i>
+                <span>Dashboard</span>
+              </a>
+            </li>
+            <li class="nav-item">
+              <a href="#" class="nav-link">
+                <i class="fas fa-calendar-alt"></i>
+                <span>Calendar</span>
+              </a>
+            </li>
+            <li class="nav-item">
+              <a href="#" class="nav-link">
+                <i class="fas fa-user"></i>
+                <span>Profile</span>
+              </a>
+            </li>
+            <li class="nav-item">
+              <a href="#" class="nav-link">
+                <i class="fas fa-question-circle"></i>
+                <span>Help</span>
+              </a>
+            </li>
+          </ul>
+        </nav>
+        
+        <div class="sidebar-footer">
+          <button class="logout-btn" id="logoutBtn">
+            <i class="fas fa-sign-out-alt"></i>
+            <span>Logout</span>
+          </button>
+        </div>
+      </aside>
+
+      <!-- Main Content -->
+      <main class="main-content">
+        <!-- Top Bar -->
+        <div class="top-bar">
+          <div class="greeting">
+            <h1>Hi, <span id="patientName">Maria Asuncion Cruz</span></h1>
+            <h2 id="pageTitle">Dashboard</h2>
+          </div>
+          
+          <div class="user-info">
+            <select class="language-selector">
+              <option>EN</option>
+              <option>FIL</option>
+            </select>
+            <div class="notifications">
+              <i class="fas fa-bell"></i>
+              <span class="notification-badge">3</span>
+            </div>
+            <div class="user-avatar">
+              <span>MA</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Main Content Container -->
+        <div class="main-container">
+          <!-- Dashboard Content -->
+          <div class="content-section active" id="dashboard-content">
+            <!-- Quick Stats -->
+            <div class="stats-grid">
+              <div class="stat-card">
+                <div class="stat-icon">
+                  <i class="fas fa-calendar-check"></i>
+                </div>
+                <div class="stat-info">
+                  <h3>5</h3>
+                  <p>Upcoming Appointments</p>
+                </div>
+              </div>
+              
+              <div class="stat-card">
+                <div class="stat-icon">
+                  <i class="fas fa-file-medical"></i>
+                </div>
+                <div class="stat-info">
+                  <h3>12</h3>
+                  <p>Medical Records</p>
+                </div>
+              </div>
+              
+              <div class="stat-card">
+                <div class="stat-icon">
+                  <i class="fas fa-pills"></i>
+                </div>
+                <div class="stat-info">
+                  <h3>3</h3>
+                  <p>Active Medications</p>
+                </div>
+              </div>
+              
+              <div class="stat-card">
+                <div class="stat-icon">
+                  <i class="fas fa-heartbeat"></i>
+                </div>
+                <div class="stat-info">
+                  <h3>Good</h3>
+                  <p>Health Status</p>
+                </div>
+              </div>
+            </div>
+
+            <!-- Quick Actions -->
+            <div class="quick-actions">
+              <h3>Quick Actions</h3>
+              <div class="action-buttons">
+                <button class="action-btn">
+                  <i class="fas fa-plus"></i>
+                  <span>Book Appointment</span>
+                </button>
+                <button class="action-btn">
+                  <i class="fas fa-video"></i>
+                  <span>Video Consultation</span>
+                </button>
+                <button class="action-btn">
+                  <i class="fas fa-prescription-bottle"></i>
+                  <span>Refill Prescription</span>
+                </button>
+                <button class="action-btn">
+                  <i class="fas fa-download"></i>
+                  <span>Download Records</span>
+                </button>
+              </div>
+            </div>
+
+            <!-- Recent Activities -->
+            <div class="dashboard-section">
+              <h3>Recent Activities</h3>
+              <div class="activity-list">
+                <div class="activity-item">
+                  <div class="activity-icon">
+                    <i class="fas fa-calendar-plus"></i>
+                  </div>
+                  <div class="activity-content">
+                    <h4>Appointment Scheduled</h4>
+                    <p>Cardiology consultation with Dr. Sarah Johnson</p>
+                    <span class="activity-time">2 hours ago</span>
+                  </div>
+                </div>
+                
+                <div class="activity-item">
+                  <div class="activity-icon">
+                    <i class="fas fa-file-upload"></i>
+                  </div>
+                  <div class="activity-content">
+                    <h4>Lab Results Uploaded</h4>
+                    <p>Blood work results from March 15, 2024</p>
+                    <span class="activity-time">1 day ago</span>
+                  </div>
+                </div>
+                
+                <div class="activity-item">
+                  <div class="activity-icon">
+                    <i class="fas fa-prescription"></i>
+                  </div>
+                  <div class="activity-content">
+                    <h4>Prescription Updated</h4>
+                    <p>Medication dosage adjusted by Dr. Michael Chen</p>
+                    <span class="activity-time">3 days ago</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Upcoming Appointments -->
+            <div class="dashboard-section">
+              <h3>Upcoming Appointments</h3>
+              <div class="appointments-list">
+                <div class="appointment-card">
+                  <div class="appointment-date">
+                    <span class="date">22</span>
+                    <span class="month">Mar</span>
+                  </div>
+                  <div class="appointment-info">
+                    <h4>Dr. Sarah Johnson</h4>
+                    <p>Cardiology Consultation</p>
+                    <span class="appointment-time">10:30 AM</span>
+                  </div>
+                  <div class="appointment-actions">
+                    <button class="btn-outline">Reschedule</button>
+                    <button class="btn-primary">Join Call</button>
+                  </div>
+                </div>
+                
+                <div class="appointment-card">
+                  <div class="appointment-date">
+                    <span class="date">25</span>
+                    <span class="month">Mar</span>
+                  </div>
+                  <div class="appointment-info">
+                    <h4>Dr. Lisa Wong</h4>
+                    <p>Speech Therapy Session</p>
+                    <span class="appointment-time">2:00 PM</span>
+                  </div>
+                  <div class="appointment-actions">
+                    <button class="btn-outline">Reschedule</button>
+                    <button class="btn-primary">Join Call</button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Calendar Content -->
+          <div class="content-section" id="calendar-content">
+            <div class="calendar-header">
+              <div class="calendar-navigation">
+                <button class="nav-btn" id="prevMonth">
+                  <i class="fas fa-chevron-left"></i>
+                </button>
+                <h3 id="currentMonth">March 2024</h3>
+                <button class="nav-btn" id="nextMonth">
+                  <i class="fas fa-chevron-right"></i>
+                </button>
+              </div>
+              <div class="calendar-actions">
+                <button class="btn-primary" id="bookAppointmentBtn">
+                  <i class="fas fa-plus"></i>
+                  Book Appointment
+                </button>
+              </div>
+            </div>
+
+            <div class="calendar-grid">
+              <div class="calendar-weekdays">
+                <div class="weekday">Sun</div>
+                <div class="weekday">Mon</div>
+                <div class="weekday">Tue</div>
+                <div class="weekday">Wed</div>
+                <div class="weekday">Thu</div>
+                <div class="weekday">Fri</div>
+                <div class="weekday">Sat</div>
+              </div>
+              
+              <div class="calendar-days" id="calendarDays">
+                <!-- Calendar days will be generated by JavaScript -->
+              </div>
+            </div>
+
+            <div class="upcoming-appointments">
+              <h3>Upcoming Appointments</h3>
+              <div class="appointment-list">
+                <div class="appointment-item">
+                  <div class="appointment-time">
+                    <span class="time">10:30 AM</span>
+                    <span class="date">Mar 22, 2024</span>
+                  </div>
+                  <div class="appointment-details">
+                    <h4>Dr. Sarah Johnson</h4>
+                    <p>Cardiology Consultation</p>
+                    <span class="location">Virtual Consultation</span>
+                  </div>
+                  <div class="appointment-actions">
+                    <button class="btn-sm btn-outline">Reschedule</button>
+                    <button class="btn-sm btn-primary">Join</button>
+                  </div>
+                </div>
+                
+                <div class="appointment-item">
+                  <div class="appointment-time">
+                    <span class="time">2:00 PM</span>
+                    <span class="date">Mar 25, 2024</span>
+                  </div>
+                  <div class="appointment-details">
+                    <h4>Dr. Lisa Wong</h4>
+                    <p>Speech Therapy Session</p>
+                    <span class="location">In-Person Visit</span>
+                  </div>
+                  <div class="appointment-actions">
+                    <button class="btn-sm btn-outline">Reschedule</button>
+                    <button class="btn-sm btn-primary">Directions</button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Profile Content -->
+          <div class="content-section" id="profile-content">
+            <!-- Profile Tabs -->
+            <div class="profile-tabs">
+              <div class="tab-nav">
+                <button class="tab-button active" data-tab="general">General</button>
+                <button class="tab-button" data-tab="consultation-history">Consultation History</button>
+                <button class="tab-button" data-tab="patient-documents">Patient Documents</button>
+              </div>
+            </div>
+
+            <!-- General Tab Content -->
+            <div class="tab-content active" id="general-tab">
+              <!-- Profile Header -->
+              <div class="profile-header">
+                <div class="profile-info">
+                  <div class="profile-avatar">
+                    <div class="profile-avatar-placeholder" id="profileImage">
+                      <span>MA</span>
+                    </div>
+                  </div>
+                  <div class="profile-details">
+                    <h3 class="profile-name">Maria Asuncion Cruz <span class="gender-tag">(Female)</span></h3>
+                    <p class="profile-role">Patient</p>
+                    <p class="profile-location">Leeds, United Kingdom</p>
+                  </div>
+                </div>
+                <button class="edit-btn" id="editProfileBtn">
+                  <i class="fas fa-edit"></i>
+                  Edit
+                </button>
+              </div>
+
+              <!-- Personal Information -->
+              <div class="info-section">
+                <div class="section-header">
+                  <h3>Personal Information</h3>
+                  <button class="edit-btn small" id="editPersonalBtn">
+                    <i class="fas fa-edit"></i>
+                    Edit
+                  </button>
+                </div>
+                
+                <div class="info-grid">
+                  <div class="info-item">
+                    <label>Name</label>
+                    <span id="fullName">Ani Cavalcanti</span>
+                  </div>
+                  <div class="info-item">
+                    <label>Date Of Birth</label>
+                    <span id="dateOfBirth">07/01/1997</span>
+                  </div>
+                  <div class="info-item">
+                    <label>Age</label>
+                    <span id="age">26</span>
+                  </div>
+                  <div class="info-item">
+                    <label>Phone Number</label>
+                    <span id="phoneNumber">+ 1 345 346 347</span>
+                  </div>
+                  <div class="info-item">
+                    <label>Email Address</label>
+                    <span id="emailAddress">martha.johnson@gmail.com</span>
+                  </div>
+                  <div class="info-item">
+                    <label>Bio</label>
+                    <span id="bio">Cardiac Doctor</span>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Pre-existing Diseases -->
+              <div class="info-section">
+                <div class="section-header">
+                  <h3>Pre-existing Diseases</h3>
+                </div>
+                
+                <div class="diseases-section">
+                  <div class="disease-category">
+                    <h4>Speech</h4>
+                    <div class="disease-tags" id="speechDiseases">
+                      <span class="disease-tag">Dysarthria <i class="fas fa-times"></i></span>
+                      <span class="disease-tag">Apraxia <i class="fas fa-times"></i></span>
+                    </div>
+                  </div>
+                  
+                  <div class="disease-category">
+                    <h4>Physical</h4>
+                    <div class="disease-tags" id="physicalDiseases">
+                      <span class="disease-tag">Arthritis <i class="fas fa-times"></i></span>
+                    </div>
+                  </div>
+                  
+                  <button class="add-disease-btn" id="addDiseaseBtn">
+                    <i class="fas fa-plus"></i>
+                    Add Condition
+                  </button>
+                </div>
+              </div>
+
+              <!-- General Settings -->
+              <div class="info-section">
+                <div class="section-header">
+                  <h3>General</h3>
+                </div>
+                
+                <div class="settings-section">
+                  <div class="setting-item">
+                    <div class="setting-info">
+                      <label>Change Password</label>
+                    </div>
+                    <button class="btn-outline">Change</button>
+                  </div>
+                  
+                  <div class="setting-item">
+                    <div class="setting-info">
+                      <label>Notifications</label>
+                    </div>
+                    <div class="toggle-switch">
+                      <label class="switch">
+                        <input type="checkbox" id="notificationsToggle" checked>
+                        <span class="slider"></span>
+                      </label>
+                      <span class="toggle-label">Enable Notifications</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Consultation History Tab Content -->
+            <div class="tab-content" id="consultation-history-tab">
+              <div class="consultation-history">
+                <h3>Consultation History</h3>
+                <div class="consultation-list">
+                  <div class="consultation-item">
+                    <div class="consultation-date">
+                      <span class="date">March 15, 2024</span>
+                      <span class="time">10:30 AM</span>
+                    </div>
+                    <div class="consultation-details">
+                      <h4>Dr. Sarah Johnson</h4>
+                      <p>Cardiology Consultation</p>
+                      <span class="status completed">Completed</span>
+                    </div>
+                    <div class="consultation-actions">
+                      <button class="btn-outline">View Report</button>
+                      <button class="btn-primary">Book Follow-up</button>
+                    </div>
+                  </div>
+                  
+                  <div class="consultation-item">
+                    <div class="consultation-date">
+                      <span class="date">March 8, 2024</span>
+                      <span class="time">2:00 PM</span>
+                    </div>
+                    <div class="consultation-details">
+                      <h4>Dr. Lisa Wong</h4>
+                      <p>Speech Therapy Session</p>
+                      <span class="status completed">Completed</span>
+                    </div>
+                    <div class="consultation-actions">
+                      <button class="btn-outline">View Report</button>
+                      <button class="btn-primary">Book Follow-up</button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Patient Documents Tab Content -->
+            <div class="tab-content" id="patient-documents-tab">
+              <div class="patient-documents">
+                <div class="section-header">
+                  <h3>Patient Documents</h3>
+                  <button class="btn-primary">
+                    <i class="fas fa-upload"></i>
+                    Upload Document
+                  </button>
+                </div>
+                
+                <div class="documents-grid">
+                  <div class="document-item">
+                    <div class="document-icon">
+                      <i class="fas fa-file-pdf"></i>
+                    </div>
+                    <div class="document-details">
+                      <h4>Lab Results - March 2024</h4>
+                      <p>Blood work and analysis</p>
+                      <span class="document-date">March 15, 2024</span>
+                    </div>
+                    <div class="document-actions">
+                      <button class="btn-outline">
+                        <i class="fas fa-download"></i>
+                        Download
+                      </button>
+                      <button class="btn-outline">
+                        <i class="fas fa-eye"></i>
+                        View
+                      </button>
+                    </div>
+                  </div>
+                  
+                  <div class="document-item">
+                    <div class="document-icon">
+                      <i class="fas fa-file-medical"></i>
+                    </div>
+                    <div class="document-details">
+                      <h4>Prescription - March 2024</h4>
+                      <p>Medication prescription</p>
+                      <span class="document-date">March 10, 2024</span>
+                    </div>
+                    <div class="document-actions">
+                      <button class="btn-outline">
+                        <i class="fas fa-download"></i>
+                        Download
+                      </button>
+                      <button class="btn-outline">
+                        <i class="fas fa-eye"></i>
+                        View
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Help Content -->
+          <div class="content-section" id="help-content">
+            <div class="help-search">
+              <div class="search-box">
+                <i class="fas fa-search"></i>
+                <input type="text" placeholder="Search for help articles, FAQs, or topics..." id="helpSearch">
+              </div>
+            </div>
+
+            <div class="help-categories">
+              <h3>How can we help you?</h3>
+              <div class="category-grid">
+                <div class="help-category">
+                  <div class="category-icon">
+                    <i class="fas fa-calendar-alt"></i>
+                  </div>
+                  <h4>Appointments</h4>
+                  <p>Book, reschedule, or cancel appointments</p>
+                </div>
+                
+                <div class="help-category">
+                  <div class="category-icon">
+                    <i class="fas fa-file-medical"></i>
+                  </div>
+                  <h4>Medical Records</h4>
+                  <p>Access and manage your medical documents</p>
+                </div>
+                
+                <div class="help-category">
+                  <div class="category-icon">
+                    <i class="fas fa-video"></i>
+                  </div>
+                  <h4>Virtual Consultations</h4>
+                  <p>Join video calls and online consultations</p>
+                </div>
+                
+                <div class="help-category">
+                  <div class="category-icon">
+                    <i class="fas fa-user-cog"></i>
+                  </div>
+                  <h4>Profile Settings</h4>
+                  <p>Update your personal information and preferences</p>
+                </div>
+                
+                <div class="help-category">
+                  <div class="category-icon">
+                    <i class="fas fa-pills"></i>
+                  </div>
+                  <h4>Medications</h4>
+                  <p>Track prescriptions and refill requests</p>
+                </div>
+                
+                <div class="help-category">
+                  <div class="category-icon">
+                    <i class="fas fa-phone"></i>
+                  </div>
+                  <h4>Contact Support</h4>
+                  <p>Get help from our support team</p>
+                </div>
+              </div>
+            </div>
+
+            <div class="faq-section">
+              <h3>Frequently Asked Questions</h3>
+              <div class="faq-list">
+                <div class="faq-item">
+                  <button class="faq-question">
+                    <span>How do I book an appointment?</span>
+                    <i class="fas fa-chevron-down"></i>
+                  </button>
+                  <div class="faq-answer">
+                    <p>You can book an appointment by going to the Calendar section and clicking "Book Appointment". Choose your preferred doctor, date, and time, then submit your request.</p>
+                  </div>
+                </div>
+                
+                <div class="faq-item">
+                  <button class="faq-question">
+                    <span>How do I join a virtual consultation?</span>
+                    <i class="fas fa-chevron-down"></i>
+                  </button>
+                  <div class="faq-answer">
+                    <p>When it's time for your virtual consultation, go to your Dashboard and click the "Join Call" button next to your appointment.</p>
+                  </div>
+                </div>
+                
+                <div class="faq-item">
+                  <button class="faq-question">
+                    <span>Can I reschedule or cancel my appointment?</span>
+                    <i class="fas fa-chevron-down"></i>
+                  </button>
+                  <div class="faq-answer">
+                    <p>Yes, you can reschedule or cancel appointments up to 24 hours before the scheduled time. Go to your appointments and click the "Reschedule" button.</p>
+                  </div>
+                </div>
+                
+                <div class="faq-item">
+                  <button class="faq-question">
+                    <span>How do I update my profile information?</span>
+                    <i class="fas fa-chevron-down"></i>
+                  </button>
+                  <div class="faq-answer">
+                    <p>Go to the Profile section and click the "Edit" button next to your personal information. Make your changes and click "Save Changes".</p>
+                  </div>
+                </div>
+                
+                <div class="faq-item">
+                  <button class="faq-question">
+                    <span>Where can I view my medical records?</span>
+                    <i class="fas fa-chevron-down"></i>
+                  </button>
+                  <div class="faq-answer">
+                    <p>Your medical records are available in the Profile section under the "Patient Documents" tab. You can view, download, and upload documents there.</p>
+                  </div>
+                </div>
+                
+                <div class="faq-item">
+                  <button class="faq-question">
+                    <span>How do I contact support?</span>
+                    <i class="fas fa-chevron-down"></i>
+                  </button>
+                  <div class="faq-answer">
+                    <p>You can contact our support team at support@lingaplink.com or call us at (555) 123-4567. We're available Monday through Friday, 8 AM to 6 PM.</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </main>
+    </div>
+
+    <!-- Edit Profile Modal -->
+    <div class="modal" id="editProfileModal">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h3>Edit Profile Information</h3>
+          <button class="close-btn" id="closeModal">
+            <i class="fas fa-times"></i>
+          </button>
+        </div>
+        <div class="modal-body">
+          <form id="profileForm">
+            <div class="form-group">
+              <label for="editFullName">Full Name</label>
+              <input type="text" id="editFullName" value="Ani Cavalcanti">
+            </div>
+            <div class="form-group">
+              <label for="editDateOfBirth">Date of Birth</label>
+              <input type="date" id="editDateOfBirth" value="1997-01-07">
+            </div>
+            <div class="form-group">
+              <label for="editPhoneNumber">Phone Number</label>
+              <input type="tel" id="editPhoneNumber" value="+1 345 346 347">
+            </div>
+            <div class="form-group">
+              <label for="editEmailAddress">Email Address</label>
+              <input type="email" id="editEmailAddress" value="martha.johnson@gmail.com">
+            </div>
+            <div class="form-group">
+              <label for="editBio">Bio</label>
+              <textarea id="editBio" rows="3">Cardiac Doctor</textarea>
+            </div>
+          </form>
+        </div>
+        <div class="modal-footer">
+          <button class="btn-secondary" id="cancelEdit">Cancel</button>
+          <button class="btn-primary" id="saveProfile">Save Changes</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- JavaScript Modules -->
+    <script type="module" src="../src/utils/auth-guard.js"></script>
+<script type="module" src="../src/pages/patientPortal.js"></script>
+  </body>
+</html> 

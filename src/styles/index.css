@@ -1,0 +1,301 @@
+/* public/pages/css/index.css */
+
+:root {
+  --primary-color: #0066cc; /* Professional blue */
+  --secondary-color: #6c757d; /* Medium gray */
+  --background-color: #f8f9fa; /* Light gray background */
+  --text-color: #212529; /* Dark text */
+  --text-muted: #6c757d; /* Muted text */
+  --card-bg-color: #fff; /* White cards */
+  --success-color: #28a745; /* Green */
+  --warning-color: #ffc107; /* Yellow */
+  --danger-color: #dc3545; /* Red */
+  --border-color: #dee2e6; /* Light border */
+  --font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  --header-height: 70px;
+  --border-radius: 8px;
+  --box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  --box-shadow-hover: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+/* Base styles */
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  font-family: var(--font-family);
+  background: var(--background-color);
+  color: var(--text-color);
+  line-height: 1.6;
+  min-height: 100vh;
+  margin: 0;
+  padding-top: var(--header-height);
+}
+
+/* Container */
+.container {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 0 20px;
+}
+
+/* Main content */
+.main {
+  padding: 40px 0;
+}
+
+/* Hero Section */
+.hero {
+  background: var(--card-bg-color);
+  border-radius: var(--border-radius);
+  box-shadow: var(--box-shadow);
+  margin-bottom: 40px;
+  overflow: hidden;
+}
+
+.hero__container {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 40px;
+  padding: 60px 40px;
+  align-items: center;
+}
+
+.hero__data {
+  text-align: center;
+}
+
+.hero__title {
+  font-size: 2.5rem;
+  font-weight: 600;
+  color: var(--text-color);
+  margin-bottom: 16px;
+  line-height: 1.2;
+}
+
+.highlight {
+  color: var(--primary-color);
+  font-weight: 700;
+}
+
+.hero__subtitle {
+  font-size: 1.125rem;
+  color: var(--text-muted);
+  margin-bottom: 40px;
+  max-width: 600px;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+/* Mock Stats */
+.mock-stats {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 30px;
+  margin-bottom: 40px;
+  padding: 30px 0;
+  border-top: 1px solid var(--border-color);
+  border-bottom: 1px solid var(--border-color);
+}
+
+.stat-item {
+  text-align: center;
+}
+
+.stat-item h3 {
+  font-size: 2rem;
+  font-weight: 700;
+  color: var(--primary-color);
+  margin-bottom: 8px;
+}
+
+.stat-item p {
+  font-size: 0.875rem;
+  color: var(--text-muted);
+  font-weight: 500;
+  margin: 0;
+}
+
+/* Role Buttons */
+.role-buttons {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  max-width: 400px;
+  margin: 0 auto;
+}
+
+/* Button Styles */
+.button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px 32px;
+  border-radius: var(--border-radius);
+  font-weight: 500;
+  font-size: 1rem;
+  text-decoration: none;
+  border: none;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  min-height: 56px;
+}
+
+.button--primary {
+  background-color: var(--primary-color);
+  color: white;
+}
+
+.button--primary:hover {
+  background-color: #0056b3;
+  transform: translateY(-2px);
+  box-shadow: var(--box-shadow-hover);
+}
+
+.button--secondary {
+  background-color: transparent;
+  color: var(--primary-color);
+  border: 2px solid var(--primary-color);
+}
+
+.button--secondary:hover {
+  background-color: var(--primary-color);
+  color: white;
+  transform: translateY(-2px);
+  box-shadow: var(--box-shadow-hover);
+}
+
+/* Hero Image */
+.hero__image {
+  display: none; /* Hide for now, can be implemented later */
+}
+
+/* Hidden sections */
+.features,
+.about,
+.contact,
+.footer {
+  display: none;
+}
+
+/* Responsive Design */
+@media (min-width: 768px) {
+  .hero__container {
+    grid-template-columns: 1fr 1fr;
+    text-align: left;
+  }
+  
+  .hero__data {
+    text-align: left;
+  }
+  
+  .hero__subtitle {
+    margin-left: 0;
+    margin-right: 0;
+  }
+  
+  .role-buttons {
+    margin: 0;
+  }
+  
+  .mock-stats {
+    grid-template-columns: repeat(3, 1fr);
+  }
+  
+  .hero__image {
+    display: block;
+    background: linear-gradient(135deg, var(--primary-color), var(--success-color));
+    border-radius: var(--border-radius);
+    height: 300px;
+    position: relative;
+  }
+  
+  .hero__image::after {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 100px;
+    height: 100px;
+    background: rgba(255, 255, 255, 0.2);
+    border-radius: 50%;
+  }
+}
+
+@media (min-width: 1024px) {
+  .hero__container {
+    padding: 80px 60px;
+  }
+  
+  .hero__title {
+    font-size: 3rem;
+  }
+  
+  .hero__subtitle {
+    font-size: 1.25rem;
+  }
+  
+  .role-buttons {
+    flex-direction: row;
+    gap: 20px;
+  }
+}
+
+@media (max-width: 768px) {
+  body {
+    padding-top: 60px;
+  }
+  
+  .hero__container {
+    padding: 40px 20px;
+  }
+  
+  .hero__title {
+    font-size: 2rem;
+  }
+  
+  .hero__subtitle {
+    font-size: 1rem;
+  }
+  
+  .mock-stats {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 20px;
+  }
+  
+  .stat-item h3 {
+    font-size: 1.5rem;
+  }
+  
+  .button {
+    padding: 14px 24px;
+    font-size: 0.875rem;
+  }
+}
+
+@media (max-width: 480px) {
+  .container {
+    padding: 0 15px;
+  }
+  
+  .hero__container {
+    padding: 30px 15px;
+  }
+  
+  .hero__title {
+    font-size: 1.75rem;
+  }
+  
+  .mock-stats {
+    grid-template-columns: 1fr;
+  }
+}
+

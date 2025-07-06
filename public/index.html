@@ -1,0 +1,111 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="/vite.svg" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="description" content="LingapLink: Connecting Care, Bridging Gaps. Isang AI-powered platform para sa healthcare coordination sa Pilipinas." />
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <title>LingapLink - Kinabukasan ng Kalusugan</title>
+    <!-- CSS files -->
+    <link rel="stylesheet" href="../src/styles/shared-header.css">
+<link rel="stylesheet" href="../src/styles/index.css">
+  </head>
+  <body>
+    <!-- Unified Header -->
+    <header class="unified-header">
+      <div class="header-container">
+        <a href="index.html" class="header-logo">
+          <span class="logo-text">LingapLink</span>
+          <span class="logo-tagline">PH</span>
+        </a>
+        
+        <nav class="header-nav">
+          <ul class="nav-links">
+            <li><a href="index.html" class="nav-link active">Home</a></li>
+            <li><a href="#features" class="nav-link">Features</a></li>
+            <li><a href="#about" class="nav-link">About</a></li>
+            <li><a href="#contact" class="nav-link">Contact</a></li>
+          </ul>
+        </nav>
+        
+        <div class="header-actions">
+          <a href="patientSign-up.html" class="header-btn btn-secondary">Patient Portal</a>
+          <a href="patientSign-up.html" class="header-btn btn-primary">Get Started</a>
+        </div>
+        
+        <!-- Mobile Menu Toggle -->
+        <button class="mobile-menu-toggle">
+          <span class="hamburger-line"></span>
+          <span class="hamburger-line"></span>
+          <span class="hamburger-line"></span>
+        </button>
+      </div>
+      
+      <!-- Mobile Navigation -->
+      <nav class="mobile-nav">
+        <ul class="mobile-nav-links">
+          <li><a href="index.html" class="nav-link active">Home</a></li>
+          <li><a href="#features" class="nav-link">Features</a></li>
+          <li><a href="#about" class="nav-link">About</a></li>
+          <li><a href="#contact" class="nav-link">Contact</a></li>
+        </ul>
+        <div class="mobile-actions">
+          <a href="patientSign-up.html" class="header-btn btn-secondary">Patient Portal</a>
+          <a href="patientSign-up.html" class="header-btn btn-primary">Get Started</a>
+          <a href="ai-assistant.html" class="header-btn btn-secondary">AI Assistant</a>
+          <a href="analytics.html" class="header-btn btn-success">Analytics</a>
+        </div>
+      </nav>
+    </header>
+
+    <main class="main">
+      <div class="container">
+        <section class="hero">
+          <div class="hero__container">
+            <div class="hero__data">
+              <h1 class="hero__title">Kasama mo sa <span class="highlight">Makabagong Kalusugan</span></h1>
+              <p class="hero__subtitle">Nagbibigay-lakas sa mga Ospital, Klinika, at Pasyente sa pamamagitan ng makabagong digital na solusyon para sa lahat ng Pilipino.</p>
+              
+              <div class="mock-stats">
+                <div class="stat-item">
+                  <h3>150+</h3>
+                  <p>Mga Ospital na Kasosyo</p>
+                </div>
+                <div class="stat-item">
+                  <h3>75K+</h3>
+                  <p>Mga Pasyenteng Natutugunan</p>
+                </div>
+                <div class="stat-item">
+                  <h3>99.8%</h3>
+                  <p>Mataas na Reliability</p>
+                </div>
+              </div>
+              
+              <div class="role-buttons">
+                <button class="button button--primary" id="hospitalClinicBtn">Para sa mga Ospital/Klinika</button>
+                <button class="button button--secondary" id="patientBtn">Para sa mga Pasyente</button>
+              </div>
+            </div>
+            <div class="hero__image">
+              <div class="hero__image-bg"></div>
+            </div>
+          </div>
+        </section>
+      </div>
+    </main>
+
+    <!-- Hidden sections for future development -->
+    <section class="features" id="features"></section>
+    <section class="about" id="about"></section>
+    <section class="contact" id="contact"></section>
+    <footer class="footer"></footer>
+    
+    <!-- JavaScript files -->
+    <script src="../src/utils/shared-header.js"></script>
+<script src="../src/pages/index.js"></script>
+  </body>
+</html>
+

@@ -1,0 +1,486 @@
+// Comprehensive Input Validation and Sanitization Utility
+// Protects against XSS, injection attacks, and ensures data integrity
+
+/**
+ * HTML Entity Encoding to prevent XSS attacks
+ */
+function escapeHtml(text) {
+    if (typeof text !== 'string') return text;
+    
+    const map = {
+        '&': '&amp;',
+        '<': '&lt;',
+        '>': '&gt;',
+        '"': '&quot;',
+        "'": '&#x27;',
+        '/': '&#x2F;',
+        '`': '&#x60;',
+        '=': '&#x3D;'
+    };
+    
+    return text.replace(/[&<>"'`=\/]/g, (s) => map[s]);
+}
+
+/**
+ * Remove potentially dangerous characters
+ */
+function sanitizeInput(input) {
+    if (typeof input !== 'string') return input;
+    
+    // Remove null bytes, control characters, and common injection patterns
+    return input
+        .replace(/[\x00-\x1F\x7F]/g, '') // Remove control characters
+        .replace(/[<>]/g, '') // Remove angle brackets
+        .replace(/javascript:/gi, '') // Remove javascript: protocol
+        .replace(/on\w+\s*=/gi, '') // Remove event handlers
+        .replace(/data:/gi, '') // Remove data: protocol
+        .trim();
+}
+
+/**
+ * Validate email format
+ */
+function validateEmail(email) {
+    if (!email || typeof email !== 'string') {
+        return { valid: false, error: 'Email is required' };
+    }
+    
+    const sanitized = sanitizeInput(email.toLowerCase());
+    
+    // RFC 5322 compliant email regex (simplified but secure)
+    const emailRegex = /^[a-zA-Z0-9.!#$%&'*+/=?^_`{|}~-]+@[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\.[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)*$/;
+    
+    if (!emailRegex.test(sanitized)) {
+        return { valid: false, error: 'Please enter a valid email address' };
+    }
+    
+    if (sanitized.length > 254) {
+        return { valid: false, error: 'Email address is too long' };
+    }
+    
+    return { valid: true, value: sanitized };
+}
+
+/**
+ * Validate password strength
+ */
+function validatePassword(password) {
+    if (!password || typeof password !== 'string') {
+        return { valid: false, error: 'Password is required' };
+    }
+    
+    const errors = [];
+    
+    if (password.length < 8) {
+        errors.push('Password must be at least 8 characters long');
+    }
+    
+    if (password.length > 128) {
+        errors.push('Password must be less than 128 characters');
+    }
+    
+    if (!/[a-z]/.test(password)) {
+        errors.push('Password must contain at least one lowercase letter');
+    }
+    
+    if (!/[A-Z]/.test(password)) {
+        errors.push('Password must contain at least one uppercase letter');
+    }
+    
+    if (!/\d/.test(password)) {
+        errors.push('Password must contain at least one number');
+    }
+    
+    if (!/[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/.test(password)) {
+        errors.push('Password must contain at least one special character');
+    }
+    
+    // Check for common weak patterns
+    const weakPatterns = [
+        /^(.)\1+$/, // All same character
+        /^(012|123|234|345|456|567|678|789|890|abc|bcd|cde|def|efg|fgh|ghi|hij|ijk|jkl|klm|lmn|mno|nop|opq|pqr|qrs|rst|stu|tuv|uvw|vwx|wxy|xyz)/i,
+        /^(password|admin|user|login|guest|test|demo|root|toor)/i
+    ];
+    
+    if (weakPatterns.some(pattern => pattern.test(password))) {
+        errors.push('Password contains common weak patterns');
+    }
+    
+    if (errors.length > 0) {
+        return { valid: false, error: errors[0] };
+    }
+    
+    return { valid: true, value: password };
+}
+
+/**
+ * Validate name (first name, last name)
+ */
+function validateName(name, fieldName = 'Name') {
+    if (!name || typeof name !== 'string') {
+        return { valid: false, error: `${fieldName} is required` };
+    }
+    
+    const sanitized = sanitizeInput(name.trim());
+    
+    if (sanitized.length === 0) {
+        return { valid: false, error: `${fieldName} cannot be empty` };
+    }
+    
+    if (sanitized.length > 50) {
+        return { valid: false, error: `${fieldName} must be less than 50 characters` };
+    }
+    
+    // Allow letters, spaces, hyphens, apostrophes (international names)
+    const nameRegex = /^[a-zA-ZÀ-ÿ\u0100-\u017F\u0180-\u024F\u1E00-\u1EFF\s'-]+$/;
+    
+    if (!nameRegex.test(sanitized)) {
+        return { valid: false, error: `${fieldName} contains invalid characters` };
+    }
+    
+    // Prevent excessive repeated characters
+    if (/(.)\1{4,}/.test(sanitized)) {
+        return { valid: false, error: `${fieldName} contains too many repeated characters` };
+    }
+    
+    return { valid: true, value: sanitized };
+}
+
+/**
+ * Validate phone number
+ */
+function validatePhone(phone) {
+    if (!phone || typeof phone !== 'string') {
+        return { valid: false, error: 'Phone number is required' };
+    }
+    
+    const sanitized = sanitizeInput(phone.trim());
+    
+    // Remove all non-digit characters for validation
+    const digitsOnly = sanitized.replace(/\D/g, '');
+    
+    if (digitsOnly.length < 10 || digitsOnly.length > 15) {
+        return { valid: false, error: 'Phone number must be between 10 and 15 digits' };
+    }
+    
+    // Basic international phone format validation
+    const phoneRegex = /^[\+]?[1-9][\d\s\-\(\)\.]{8,}$/;
+    
+    if (!phoneRegex.test(sanitized)) {
+        return { valid: false, error: 'Please enter a valid phone number' };
+    }
+    
+    return { valid: true, value: sanitized };
+}
+
+/**
+ * Validate date of birth
+ */
+function validateDateOfBirth(dateOfBirth) {
+    if (!dateOfBirth) {
+        return { valid: false, error: 'Date of birth is required' };
+    }
+    
+    const date = new Date(dateOfBirth);
+    
+    if (isNaN(date.getTime())) {
+        return { valid: false, error: 'Please enter a valid date' };
+    }
+    
+    const today = new Date();
+    const minDate = new Date(today.getFullYear() - 120, today.getMonth(), today.getDate());
+    const maxDate = new Date(today.getFullYear() - 13, today.getMonth(), today.getDate());
+    
+    if (date < minDate) {
+        return { valid: false, error: 'Please enter a valid date of birth' };
+    }
+    
+    if (date > maxDate) {
+        return { valid: false, error: 'You must be at least 13 years old' };
+    }
+    
+    return { valid: true, value: date.toISOString().split('T')[0] };
+}
+
+/**
+ * Validate address
+ */
+function validateAddress(address) {
+    if (!address || typeof address !== 'string') {
+        return { valid: false, error: 'Address is required' };
+    }
+    
+    const sanitized = sanitizeInput(address.trim());
+    
+    if (sanitized.length === 0) {
+        return { valid: false, error: 'Address cannot be empty' };
+    }
+    
+    if (sanitized.length > 200) {
+        return { valid: false, error: 'Address must be less than 200 characters' };
+    }
+    
+    // Allow letters, numbers, spaces, and common address characters
+    const addressRegex = /^[a-zA-Z0-9\s\-\.,#\/]+$/;
+    
+    if (!addressRegex.test(sanitized)) {
+        return { valid: false, error: 'Address contains invalid characters' };
+    }
+    
+    return { valid: true, value: sanitized };
+}
+
+/**
+ * Validate bio/description text
+ */
+function validateBio(bio) {
+    if (!bio || typeof bio !== 'string') {
+        return { valid: true, value: '' }; // Bio is optional
+    }
+    
+    const sanitized = sanitizeInput(bio.trim());
+    
+    if (sanitized.length > 500) {
+        return { valid: false, error: 'Bio must be less than 500 characters' };
+    }
+    
+    // Allow most characters but prevent script injection
+    const bioRegex = /^[a-zA-Z0-9\s\-\.,!?'"()&@#$%\n\r]+$/;
+    
+    if (!bioRegex.test(sanitized)) {
+        return { valid: false, error: 'Bio contains invalid characters' };
+    }
+    
+    return { valid: true, value: sanitized };
+}
+
+/**
+ * Validate medical condition
+ */
+function validateMedicalCondition(condition) {
+    if (!condition || typeof condition !== 'string') {
+        return { valid: false, error: 'Medical condition is required' };
+    }
+    
+    const sanitized = sanitizeInput(condition.trim());
+    
+    if (sanitized.length === 0) {
+        return { valid: false, error: 'Medical condition cannot be empty' };
+    }
+    
+    if (sanitized.length > 100) {
+        return { valid: false, error: 'Medical condition must be less than 100 characters' };
+    }
+    
+    // Allow letters, numbers, spaces, hyphens, parentheses
+    const conditionRegex = /^[a-zA-Z0-9\s\-\(\)\.]+$/;
+    
+    if (!conditionRegex.test(sanitized)) {
+        return { valid: false, error: 'Medical condition contains invalid characters' };
+    }
+    
+    return { valid: true, value: sanitized };
+}
+
+/**
+ * Validate category for medical conditions
+ */
+function validateCategory(category) {
+    const validCategories = ['speech', 'physical', 'mental', 'other'];
+    
+    if (!category || typeof category !== 'string') {
+        return { valid: false, error: 'Category is required' };
+    }
+    
+    const sanitized = sanitizeInput(category.toLowerCase().trim());
+    
+    if (!validCategories.includes(sanitized)) {
+        return { valid: false, error: 'Invalid category. Must be: speech, physical, mental, or other' };
+    }
+    
+    return { valid: true, value: sanitized };
+}
+
+/**
+ * Validate document name
+ */
+function validateDocumentName(name) {
+    if (!name || typeof name !== 'string') {
+        return { valid: false, error: 'Document name is required' };
+    }
+    
+    const sanitized = sanitizeInput(name.trim());
+    
+    if (sanitized.length === 0) {
+        return { valid: false, error: 'Document name cannot be empty' };
+    }
+    
+    if (sanitized.length > 100) {
+        return { valid: false, error: 'Document name must be less than 100 characters' };
+    }
+    
+    // Allow letters, numbers, spaces, hyphens, dots, underscores
+    const nameRegex = /^[a-zA-Z0-9\s\-\._]+$/;
+    
+    if (!nameRegex.test(sanitized)) {
+        return { valid: false, error: 'Document name contains invalid characters' };
+    }
+    
+    return { valid: true, value: sanitized };
+}
+
+/**
+ * Comprehensive form validation
+ */
+function validatePatientRegistrationForm(formData) {
+    const errors = [];
+    const sanitizedData = {};
+    
+    // Validate each field
+    const validations = [
+        { field: 'firstName', validator: (val) => validateName(val, 'First name') },
+        { field: 'lastName', validator: (val) => validateName(val, 'Last name') },
+        { field: 'email', validator: validateEmail },
+        { field: 'password', validator: validatePassword },
+        { field: 'phone', validator: validatePhone },
+        { field: 'address', validator: validateAddress },
+        { field: 'dateOfBirth', validator: validateDateOfBirth },
+        { field: 'bio', validator: validateBio }
+    ];
+    
+    validations.forEach(({ field, validator }) => {
+        const value = formData[field];
+        const result = validator(value);
+        
+        if (!result.valid) {
+            errors.push(result.error);
+        } else {
+            sanitizedData[field] = result.value;
+        }
+    });
+    
+    // Validate password confirmation
+    if (formData.password && formData.confirmPassword) {
+        if (formData.password !== formData.confirmPassword) {
+            errors.push('Passwords do not match');
+        }
+    }
+    
+    // Validate terms agreement
+    if (!formData.terms) {
+        errors.push('You must agree to the Terms of Service and Privacy Policy');
+    }
+    
+    return {
+        valid: errors.length === 0,
+        errors,
+        sanitizedData
+    };
+}
+
+/**
+ * Validate profile update data
+ */
+function validateProfileUpdateData(data) {
+    const errors = [];
+    const sanitizedData = {};
+    
+    if (data.fullName) {
+        const nameResult = validateName(data.fullName, 'Full name');
+        if (!nameResult.valid) {
+            errors.push(nameResult.error);
+        } else {
+            sanitizedData.fullName = nameResult.value;
+        }
+    }
+    
+    if (data.phone) {
+        const phoneResult = validatePhone(data.phone);
+        if (!phoneResult.valid) {
+            errors.push(phoneResult.error);
+        } else {
+            sanitizedData.phone = phoneResult.value;
+        }
+    }
+    
+    if (data.dateOfBirth) {
+        const dobResult = validateDateOfBirth(data.dateOfBirth);
+        if (!dobResult.valid) {
+            errors.push(dobResult.error);
+        } else {
+            sanitizedData.dateOfBirth = dobResult.value;
+        }
+    }
+    
+    if (data.bio) {
+        const bioResult = validateBio(data.bio);
+        if (!bioResult.valid) {
+            errors.push(bioResult.error);
+        } else {
+            sanitizedData.bio = bioResult.value;
+        }
+    }
+    
+    return {
+        valid: errors.length === 0,
+        errors,
+        sanitizedData
+    };
+}
+
+/**
+ * Rate limiting helper
+ */
+class RateLimiter {
+    constructor() {
+        this.attempts = new Map();
+    }
+    
+    isAllowed(key, maxAttempts = 5, windowMs = 60000) {
+        const now = Date.now();
+        const userAttempts = this.attempts.get(key) || [];
+        
+        // Remove expired attempts
+        const validAttempts = userAttempts.filter(time => now - time < windowMs);
+        
+        if (validAttempts.length >= maxAttempts) {
+            return false;
+        }
+        
+        validAttempts.push(now);
+        this.attempts.set(key, validAttempts);
+        
+        return true;
+    }
+    
+    reset(key) {
+        this.attempts.delete(key);
+    }
+}
+
+// Create global rate limiter instance
+const rateLimiter = new RateLimiter();
+
+/**
+ * Export all validation functions
+ */
+export {
+    escapeHtml,
+    sanitizeInput,
+    validateEmail,
+    validatePassword,
+    validateName,
+    validatePhone,
+    validateDateOfBirth,
+    validateAddress,
+    validateBio,
+    validateMedicalCondition,
+    validateCategory,
+    validateDocumentName,
+    validatePatientRegistrationForm,
+    validateProfileUpdateData,
+    RateLimiter,
+    rateLimiter
+};
+
+console.log('Validation utility loaded successfully'); 

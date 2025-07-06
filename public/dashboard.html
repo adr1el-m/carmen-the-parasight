@@ -1,0 +1,639 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>LingapLink - Healthcare Dashboard</title>
+    <!-- CSS files -->
+    <link rel="stylesheet" href="../src/styles/shared-header.css">
+<link rel="stylesheet" href="../src/styles/dashboard.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+  </head>
+  <body>
+    <!-- Main Header -->
+    <header class="main-header">
+      <div class="header-container">
+        <div class="header-left">
+          <div class="logo">
+            <i class="fas fa-heartbeat logo-icon"></i>
+            <span class="logo-text">LingapLink</span>
+          </div>
+        </div>
+        
+        <div class="header-right">
+          <div class="language-selector">
+            <select id="language-select">
+              <option value="en">EN</option>
+              <option value="tl">TL</option>
+            </select>
+          </div>
+          
+          <div class="notification-bell">
+            <i class="fas fa-bell"></i>
+            <span class="notification-badge">3</span>
+          </div>
+          
+          <div class="user-profile">
+            <div class="user-avatar">
+              <i class="fas fa-user-circle"></i>
+            </div>
+            <span class="user-name">Manila Medical Center</span>
+            <i class="fas fa-chevron-down"></i>
+          </div>
+        </div>
+      </div>
+    </header>
+
+    <!-- Dashboard Layout -->
+    <div class="dashboard-layout">
+      <!-- Sidebar -->
+      <aside class="sidebar">
+        <nav class="sidebar-nav">
+          <ul class="nav-menu">
+            <li class="nav-item active">
+              <a href="#dashboard" class="nav-link" data-section="dashboard">
+                <i class="fas fa-chart-line"></i>
+                <span>Dashboard</span>
+              </a>
+            </li>
+            <li class="nav-item">
+              <a href="#patient-records" class="nav-link" data-section="patient-records">
+                <i class="fas fa-folder-open"></i>
+                <span>Patient Records</span>
+              </a>
+            </li>
+            <li class="nav-item">
+              <a href="#availability" class="nav-link" data-section="availability">
+                <i class="fas fa-calendar-alt"></i>
+                <span>My Availability</span>
+              </a>
+            </li>
+            <li class="nav-item">
+              <a href="#consults" class="nav-link" data-section="consults">
+                <i class="fas fa-stethoscope"></i>
+                <span>My Consults</span>
+              </a>
+            </li>
+            <li class="nav-item">
+              <a href="#online-consult" class="nav-link" data-section="online-consult">
+                <i class="fas fa-video"></i>
+                <span>Online Consult</span>
+              </a>
+            </li>
+            <li class="nav-item">
+              <a href="#help" class="nav-link" data-section="help">
+                <i class="fas fa-question-circle"></i>
+                <span>Help</span>
+              </a>
+            </li>
+            <li class="nav-item">
+              <a href="#logout" class="nav-link logout-btn">
+                <i class="fas fa-sign-out-alt"></i>
+                <span>Logout</span>
+              </a>
+            </li>
+          </ul>
+        </nav>
+      </aside>
+
+      <!-- Main Content -->
+      <main class="main-content">
+        <!-- Dashboard Section -->
+        <section id="dashboard-section" class="content-section active">
+          <div class="section-header">
+            <h1>Hi, Manila Medical Center!</h1>
+            <p>Welcome to your healthcare management dashboard</p>
+          </div>
+          
+          <div class="stats-grid">
+            <div class="stat-card">
+              <div class="stat-icon">
+                <i class="fas fa-users"></i>
+              </div>
+              <div class="stat-info">
+                <h3>2,547</h3>
+                <p>Total Patients</p>
+              </div>
+            </div>
+            
+            <div class="stat-card">
+              <div class="stat-icon">
+                <i class="fas fa-user-md"></i>
+              </div>
+              <div class="stat-info">
+                <h3>45</h3>
+                <p>Active Doctors</p>
+              </div>
+            </div>
+            
+            <div class="stat-card">
+              <div class="stat-icon">
+                <i class="fas fa-calendar-check"></i>
+              </div>
+              <div class="stat-info">
+                <h3>128</h3>
+                <p>Today's Appointments</p>
+              </div>
+            </div>
+            
+            <div class="stat-card">
+              <div class="stat-icon">
+                <i class="fas fa-video"></i>
+              </div>
+              <div class="stat-info">
+                <h3>34</h3>
+                <p>Online Consults</p>
+              </div>
+            </div>
+          </div>
+          
+          <div class="dashboard-grid">
+            <div class="dashboard-card">
+              <h3>Recent Appointments</h3>
+              <div class="appointment-list">
+                <div class="appointment-item">
+                  <div class="appointment-date">
+                    <span class="day">15</span>
+                    <span class="month">May</span>
+                  </div>
+                  <div class="appointment-details">
+                    <h4>Dr. Maria Santos</h4>
+                    <p>Cardiology - Room 301</p>
+                    <span class="time">9:30 AM - 10:00 AM</span>
+                  </div>
+                </div>
+                
+                <div class="appointment-item">
+                  <div class="appointment-date">
+                    <span class="day">15</span>
+                    <span class="month">May</span>
+                  </div>
+                  <div class="appointment-details">
+                    <h4>Dr. Juan Dela Cruz</h4>
+                    <p>Pediatrics - Room 205</p>
+                    <span class="time">11:00 AM - 11:30 AM</span>
+                  </div>
+                </div>
+                
+                <div class="appointment-item">
+                  <div class="appointment-date">
+                    <span class="day">16</span>
+                    <span class="month">May</span>
+                  </div>
+                  <div class="appointment-details">
+                    <h4>Dr. Ana Gonzales</h4>
+                    <p>Dermatology - Room 102</p>
+                    <span class="time">2:30 PM - 3:00 PM</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+            
+            <div class="dashboard-card">
+              <h3>Quick Actions</h3>
+              <div class="quick-actions">
+                <button class="action-btn">
+                  <i class="fas fa-plus"></i>
+                  <span>Add New Patient</span>
+                </button>
+                <button class="action-btn">
+                  <i class="fas fa-calendar-plus"></i>
+                  <span>Schedule Appointment</span>
+                </button>
+                <button class="action-btn">
+                  <i class="fas fa-user-plus"></i>
+                  <span>Add Doctor</span>
+                </button>
+                <button class="action-btn">
+                  <i class="fas fa-chart-bar"></i>
+                  <span>View Reports</span>
+                </button>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- Patient Records Section -->
+        <section id="patient-records-section" class="content-section">
+          <div class="section-header">
+            <h1>Patient Records</h1>
+            <div class="header-actions">
+              <select class="filter-select">
+                <option value="today">Today</option>
+                <option value="yesterday">Yesterday</option>
+                <option value="past">Past</option>
+              </select>
+              <button class="btn btn-primary">
+                <i class="fas fa-plus"></i>
+                New Patient
+              </button>
+            </div>
+          </div>
+          
+          <div class="filter-tabs">
+            <button class="tab-btn active" data-tab="today">Today</button>
+            <button class="tab-btn" data-tab="yesterday">Yesterday</button>
+            <button class="tab-btn" data-tab="past">Past</button>
+          </div>
+          
+          <div class="records-list">
+            <div class="record-item">
+              <div class="record-date">
+                <span class="day">Thu</span>
+                <span class="date">15</span>
+              </div>
+              <div class="record-details">
+                <div class="record-time">
+                  <i class="fas fa-clock"></i>
+                  <span>09:00am - 09:30am</span>
+                </div>
+                <div class="record-info">
+                  <h4>Patient: Maria Cruz</h4>
+                  <p>Issue: Fever</p>
+                  <a href="#" class="view-docs">View Documents</a>
+                </div>
+              </div>
+              <div class="record-actions">
+                <button class="action-btn">
+                  <i class="fas fa-edit"></i>
+                  Edit
+                </button>
+              </div>
+            </div>
+            
+            <div class="record-item">
+              <div class="record-date">
+                <span class="day">Fri</span>
+                <span class="date">16</span>
+              </div>
+              <div class="record-details">
+                <div class="record-time">
+                  <i class="fas fa-clock"></i>
+                  <span>09:00am - 09:30am</span>
+                </div>
+                <div class="record-info">
+                  <h4>Patient: Juan Santos</h4>
+                  <p>Issue: Checkup</p>
+                  <a href="#" class="view-docs">View Documents</a>
+                </div>
+              </div>
+              <div class="record-actions">
+                <button class="action-btn">
+                  <i class="fas fa-edit"></i>
+                  Edit
+                </button>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- Availability Section -->
+        <section id="availability-section" class="content-section">
+          <div class="section-header">
+            <h1>My Availability</h1>
+            <div class="calendar-navigation">
+              <button class="nav-btn prev-btn">
+                <i class="fas fa-chevron-left"></i>
+              </button>
+              <h2 class="current-month">November 2024</h2>
+              <button class="nav-btn next-btn">
+                <i class="fas fa-chevron-right"></i>
+              </button>
+            </div>
+          </div>
+          
+          <div class="availability-layout">
+            <div class="calendar-container">
+              <div class="calendar-header">
+                <div class="day-header">Mon</div>
+                <div class="day-header">Tue</div>
+                <div class="day-header">Wed</div>
+                <div class="day-header">Thu</div>
+                <div class="day-header">Fri</div>
+                <div class="day-header">Sat</div>
+                <div class="day-header">Sun</div>
+              </div>
+              
+              <div class="calendar-grid">
+                <!-- Previous month days -->
+                <div class="calendar-day prev-month">31</div>
+                
+                <!-- Current month days -->
+                <div class="calendar-day">
+                  <span class="day-number">01</span>
+                  <div class="time-slots">
+                    <span class="time-slot">01</span>
+                    <span class="time-slot">02</span>
+                    <span class="time-slot">03</span>
+                  </div>
+                </div>
+                
+                <div class="calendar-day">
+                  <span class="day-number">02</span>
+                  <div class="time-slots">
+                    <span class="time-slot">02</span>
+                    <span class="time-slot">03</span>
+                  </div>
+                </div>
+                
+                <div class="calendar-day">
+                  <span class="day-number">03</span>
+                  <div class="time-slots">
+                    <span class="time-slot">03</span>
+                  </div>
+                </div>
+                
+                <div class="calendar-day">
+                  <span class="day-number">04</span>
+                  <div class="time-slots">
+                    <span class="time-slot">02</span>
+                    <span class="time-slot">03</span>
+                  </div>
+                </div>
+                
+                <div class="calendar-day">
+                  <span class="day-number">05</span>
+                  <div class="time-slots">
+                    <span class="time-slot">01</span>
+                    <span class="time-slot">02</span>
+                    <span class="time-slot">03</span>
+                  </div>
+                </div>
+                
+                <div class="calendar-day">
+                  <span class="day-number">06</span>
+                  <div class="time-slots">
+                    <span class="time-slot">03</span>
+                  </div>
+                </div>
+                
+                <!-- Add more days as needed -->
+              </div>
+            </div>
+            
+            <div class="upcoming-sidebar">
+              <h3>Upcoming</h3>
+              <div class="upcoming-section">
+                <h4>Today</h4>
+                <div class="upcoming-item">
+                  <h5>Cardiology Clinic</h5>
+                  <p>10:00am - 11:00am</p>
+                  <span class="date">Nov 01, 2024</span>
+                </div>
+                
+                <div class="upcoming-item">
+                  <h5>Pediatrics Ward</h5>
+                  <p>10:00am - 11:00am</p>
+                  <span class="date">Nov 01, 2024</span>
+                </div>
+                
+                <div class="upcoming-item">
+                  <h5>General Medicine</h5>
+                  <p>10:00am - 11:00am</p>
+                  <span class="date">Nov 01, 2024</span>
+                </div>
+              </div>
+              
+              <div class="upcoming-section">
+                <h4>Tomorrow</h4>
+                <div class="upcoming-item">
+                  <h5>Surgery Department</h5>
+                  <p>10:00am - 11:00am</p>
+                  <span class="date">Nov 02, 2024</span>
+                </div>
+                
+                <div class="upcoming-item">
+                  <h5>Emergency Room</h5>
+                  <p>10:00am - 11:00am</p>
+                  <span class="date">Nov 02, 2024</span>
+                </div>
+                
+                <div class="upcoming-item">
+                  <h5>Outpatient Clinic</h5>
+                  <p>10:00am - 11:00am</p>
+                  <span class="date">Nov 02, 2024</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- Consults Section -->
+        <section id="consults-section" class="content-section">
+          <div class="section-header">
+            <h1>Appointments</h1>
+            <div class="header-actions">
+              <select class="filter-select">
+                <option value="may23">May 23</option>
+                <option value="may24">May 24</option>
+                <option value="may25">May 25</option>
+              </select>
+              <button class="btn btn-primary">
+                <i class="fas fa-plus"></i>
+                New Appointment
+              </button>
+            </div>
+          </div>
+          
+          <div class="filter-tabs">
+            <button class="tab-btn active" data-tab="upcoming">Upcoming</button>
+            <button class="tab-btn" data-tab="past">Past</button>
+            <button class="tab-btn" data-tab="cancelled">Cancelled</button>
+          </div>
+          
+          <div class="appointments-list">
+            <div class="appointment-item">
+              <div class="appointment-date">
+                <span class="day">Thu</span>
+                <span class="date">15</span>
+              </div>
+              <div class="appointment-details">
+                <div class="appointment-time">
+                  <i class="fas fa-clock"></i>
+                  <span>09:00am - 09:30am</span>
+                </div>
+                <div class="appointment-info">
+                  <h4>Dr. Maria Santos</h4>
+                  <p>Issue: Fever</p>
+                  <a href="#" class="view-docs">View Documents</a>
+                </div>
+              </div>
+              <div class="appointment-actions">
+                <button class="action-btn">
+                  <i class="fas fa-edit"></i>
+                  Edit
+                </button>
+              </div>
+            </div>
+            
+            <div class="appointment-item">
+              <div class="appointment-date">
+                <span class="day">Fri</span>
+                <span class="date">16</span>
+              </div>
+              <div class="appointment-details">
+                <div class="appointment-time">
+                  <i class="fas fa-clock"></i>
+                  <span>09:00am - 09:30am</span>
+                </div>
+                <div class="appointment-info">
+                  <h4>Dr. Juan Dela Cruz</h4>
+                  <p>Issue: Checkup</p>
+                  <a href="#" class="view-docs">View Documents</a>
+                </div>
+              </div>
+              <div class="appointment-actions">
+                <button class="action-btn">
+                  <i class="fas fa-edit"></i>
+                  Edit
+                </button>
+              </div>
+            </div>
+            
+            <div class="appointment-item">
+              <div class="appointment-date">
+                <span class="day">Mon</span>
+                <span class="date">19</span>
+              </div>
+              <div class="appointment-details">
+                <div class="appointment-time">
+                  <i class="fas fa-clock"></i>
+                  <span>09:00am - 09:30am</span>
+                </div>
+                <div class="appointment-info">
+                  <h4>Dr. Ana Gonzales</h4>
+                  <p>Issue: Dermatology</p>
+                  <span class="no-docs">-</span>
+                </div>
+              </div>
+              <div class="appointment-actions">
+                <button class="action-btn">
+                  <i class="fas fa-edit"></i>
+                  Edit
+                </button>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- Online Consult Section -->
+        <section id="online-consult-section" class="content-section">
+          <div class="section-header">
+            <h1>Online Consult</h1>
+          </div>
+          
+          <div class="consult-info">
+            <h2>Consultation Info</h2>
+            <p>Configure your online consultation settings and availability for remote patient care.</p>
+          </div>
+          
+          <div class="consult-form">
+            <div class="form-group">
+              <label>Availability</label>
+              <div class="radio-group">
+                <input type="radio" id="disable" name="availability" value="disable">
+                <label for="disable">Disable</label>
+                <input type="radio" id="enable" name="availability" value="enable" checked>
+                <label for="enable">Enable</label>
+              </div>
+            </div>
+            
+            <div class="form-group">
+              <label>Type Of Availability</label>
+              <div class="checkbox-group">
+                <div class="checkbox-item">
+                  <input type="checkbox" id="whatsapp" name="consult-type" value="whatsapp">
+                  <label for="whatsapp">WhatsApp chat</label>
+                </div>
+                <div class="checkbox-item">
+                  <input type="checkbox" id="video" name="consult-type" value="video">
+                  <label for="video">Video call</label>
+                </div>
+                <div class="checkbox-item">
+                  <input type="checkbox" id="phone" name="consult-type" value="phone">
+                  <label for="phone">Phone Call</label>
+                </div>
+              </div>
+            </div>
+            
+            <div class="form-row">
+              <div class="form-group">
+                <label for="duration">Duration</label>
+                <select id="duration" name="duration">
+                  <option value="30">30 mins</option>
+                  <option value="45">45 mins</option>
+                  <option value="60">60 mins</option>
+                </select>
+              </div>
+              
+              <div class="form-group">
+                <label for="fees">Fees</label>
+                <input type="text" id="fees" name="fees" value="₱500" placeholder="Enter consultation fee">
+              </div>
+            </div>
+            
+            <div class="form-actions">
+              <button class="btn btn-secondary">Reset</button>
+              <button class="btn btn-primary">Save</button>
+            </div>
+          </div>
+        </section>
+
+        <!-- Help Section -->
+        <section id="help-section" class="content-section">
+          <div class="section-header">
+            <h1>Help & Support</h1>
+          </div>
+          
+          <div class="help-categories">
+            <div class="help-category">
+              <i class="fas fa-question-circle"></i>
+              <h3>Getting Started</h3>
+              <p>Learn the basics of using LingapLink</p>
+            </div>
+            
+            <div class="help-category">
+              <i class="fas fa-calendar-alt"></i>
+              <h3>Managing Appointments</h3>
+              <p>Schedule and manage patient appointments</p>
+            </div>
+            
+            <div class="help-category">
+              <i class="fas fa-users"></i>
+              <h3>Patient Management</h3>
+              <p>Handle patient records and information</p>
+            </div>
+            
+            <div class="help-category">
+              <i class="fas fa-video"></i>
+              <h3>Online Consultations</h3>
+              <p>Set up and conduct virtual consultations</p>
+            </div>
+          </div>
+          
+          <div class="faq-section">
+            <h2>Frequently Asked Questions</h2>
+            <div class="faq-item">
+              <h3>How do I add a new patient?</h3>
+              <p>Click on the "New Patient" button in the Patient Records section and fill in the required information.</p>
+            </div>
+            
+            <div class="faq-item">
+              <h3>Can I schedule recurring appointments?</h3>
+              <p>Yes, you can set up recurring appointments when creating a new appointment by selecting the repeat option.</p>
+            </div>
+            
+            <div class="faq-item">
+              <h3>How do I enable online consultations?</h3>
+              <p>Go to the Online Consult section and enable the availability option, then configure your preferred consultation methods.</p>
+            </div>
+          </div>
+        </section>
+      </main>
+    </div>
+    
+    <!-- JavaScript files -->
+    <script src="../src/utils/shared-header.js"></script>
+<script src="../src/pages/dashboard.js"></script>
+  </body>
+</html>

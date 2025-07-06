@@ -1,0 +1,353 @@
+/* Patient Sign In CSS */
+
+:root {
+    --primary-color: #0066cc; /* Professional blue */
+    --secondary-color: #6c757d; /* Medium gray */
+    --background-color: #f8f9fa; /* Light gray background */
+    --text-color: #212529; /* Dark text */
+    --text-muted: #6c757d; /* Muted text */
+    --card-bg-color: #fff; /* White cards */
+    --success-color: #28a745; /* Green */
+    --warning-color: #ffc107; /* Yellow */
+    --danger-color: #dc3545; /* Red */
+    --border-color: #dee2e6; /* Light border */
+    --font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    --header-height: 70px;
+    --border-radius: 8px;
+    --box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    --box-shadow-hover: 0 4px 12px rgba(0, 0, 0, 0.15);
+    --input-focus-color: rgba(0, 102, 204, 0.1);
+}
+
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    font-family: var(--font-family);
+    background: var(--background-color);
+    color: var(--text-color);
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    margin: 0;
+    padding-top: var(--header-height);
+    line-height: 1.6;
+}
+
+/* Dashboard container to match other pages */
+.dashboard-container {
+    background: var(--card-bg-color);
+    border-radius: var(--border-radius);
+    box-shadow: var(--box-shadow);
+    padding: 40px;
+    margin: 40px auto;
+    max-width: 500px;
+    width: calc(100% - 40px);
+    position: relative;
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.signin-card {
+    width: 100%;
+    max-width: 400px;
+    background: transparent;
+    padding: 0;
+    border-radius: 0;
+    box-shadow: none;
+    border: none;
+    position: static;
+    overflow: visible;
+}
+
+.signin-header {
+    text-align: center;
+    margin-bottom: 32px;
+}
+
+.signin-header h1 {
+    color: var(--text-color);
+    font-size: 2.5rem;
+    font-weight: 600;
+    margin-bottom: 8px;
+    line-height: 1.2;
+}
+
+.signin-header p {
+    color: var(--text-muted);
+    font-size: 1.125rem;
+    font-weight: 400;
+}
+
+.signin-form {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+}
+
+.form-group {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.form-group.forgot-password {
+    margin-top: -12px;
+    align-items: flex-end;
+}
+
+.form-group label {
+    color: var(--text-color);
+    font-weight: 500;
+    font-size: 0.875rem;
+}
+
+.form-group input {
+    padding: 12px 16px;
+    border: 1px solid var(--border-color);
+    border-radius: var(--border-radius);
+    background: var(--card-bg-color);
+    font-size: 1rem;
+    font-family: var(--font-family);
+    transition: all 0.2s ease;
+    color: var(--text-color);
+}
+
+.form-group input:focus {
+    outline: none;
+    border-color: var(--primary-color);
+    box-shadow: 0 0 0 3px var(--input-focus-color);
+}
+
+.form-group input:hover {
+    border-color: var(--primary-color);
+}
+
+.forgot-link {
+    color: var(--primary-color);
+    text-decoration: none;
+    font-size: 0.875rem;
+    font-weight: 500;
+    transition: color 0.2s ease;
+}
+
+.forgot-link:hover {
+    text-decoration: underline;
+    color: #0056b3;
+}
+
+.signin-btn {
+    background: var(--primary-color);
+    color: white;
+    border: none;
+    padding: 16px 24px;
+    border-radius: var(--border-radius);
+    font-size: 1rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    position: relative;
+    overflow: hidden;
+    margin-top: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    min-height: 56px;
+}
+
+.signin-btn:hover {
+    background: #0056b3;
+    transform: translateY(-2px);
+    box-shadow: var(--box-shadow-hover);
+}
+
+.signin-btn:disabled {
+    background: var(--secondary-color);
+    cursor: not-allowed;
+    transform: none;
+    box-shadow: none;
+}
+
+.loading-spinner {
+    width: 20px;
+    height: 20px;
+    border: 2px solid rgba(255, 255, 255, 0.3);
+    border-top: 2px solid white;
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+    to { transform: rotate(360deg); }
+}
+
+.divider {
+    position: relative;
+    text-align: center;
+    margin: 24px 0;
+}
+
+.divider::before,
+.divider::after {
+    content: '';
+    position: absolute;
+    top: 50%;
+    width: 45%;
+    height: 1px;
+    background: var(--border-color);
+}
+
+.divider::before {
+    left: 0;
+}
+
+.divider::after {
+    right: 0;
+}
+
+.divider span {
+    background: var(--card-bg-color);
+    padding: 0 16px;
+    color: var(--text-muted);
+    font-size: 0.875rem;
+    font-weight: 500;
+}
+
+.google-btn {
+    background: var(--card-bg-color);
+    color: var(--text-color);
+    border: 1px solid var(--border-color);
+    padding: 12px 20px;
+    border-radius: var(--border-radius);
+    font-size: 1rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+    min-height: 48px;
+}
+
+.google-btn:hover {
+    background: var(--background-color);
+    border-color: var(--primary-color);
+    transform: translateY(-1px);
+    box-shadow: var(--box-shadow);
+}
+
+.google-btn:disabled {
+    background: var(--secondary-color);
+    cursor: not-allowed;
+    transform: none;
+    box-shadow: none;
+    opacity: 0.6;
+}
+
+.google-icon {
+    width: 20px;
+    height: 20px;
+}
+
+.signup-link {
+    text-align: center;
+    margin-top: 24px;
+}
+
+.signup-link p {
+    color: var(--text-muted);
+    font-size: 0.875rem;
+}
+
+.signup-link a {
+    color: var(--primary-color);
+    text-decoration: none;
+    font-weight: 500;
+    margin-left: 4px;
+}
+
+.signup-link a:hover {
+    text-decoration: underline;
+}
+
+.error-message {
+    background: rgba(220, 53, 69, 0.1);
+    color: var(--danger-color);
+    padding: 12px 16px;
+    border-radius: var(--border-radius);
+    border: 1px solid rgba(220, 53, 69, 0.2);
+    font-size: 0.875rem;
+    margin-top: 16px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.success-message {
+    background: rgba(40, 167, 69, 0.1);
+    color: var(--success-color);
+    padding: 12px 16px;
+    border-radius: var(--border-radius);
+    border: 1px solid rgba(40, 167, 69, 0.2);
+    font-size: 0.875rem;
+    margin-top: 16px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+/* Mobile Responsive */
+@media (max-width: 768px) {
+    body {
+        padding-top: 60px;
+    }
+    
+    .dashboard-container {
+        margin: 20px auto;
+        padding: 24px;
+        width: calc(100% - 24px);
+    }
+    
+    .signin-header h1 {
+        font-size: 2rem;
+    }
+    
+    .form-group input {
+        font-size: 16px; /* Prevent zoom on iOS */
+    }
+    
+    .signin-btn,
+    .google-btn {
+        font-size: 0.875rem;
+    }
+}
+
+@media (max-width: 480px) {
+    .dashboard-container {
+        margin: 16px auto;
+        padding: 20px;
+        width: calc(100% - 16px);
+    }
+    
+    .signin-header h1 {
+        font-size: 1.75rem;
+    }
+    
+    .signin-header p {
+        font-size: 1rem;
+    }
+}
+
+/* Ensure content doesn't overlap with header */
+@media (min-width: 769px) {
+    .dashboard-container {
+        margin: 60px auto;
+    }
+}

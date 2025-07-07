@@ -78,13 +78,20 @@ if (missingFields.length > 0) {
     throw new Error(`🚨 Firebase configuration incomplete. Missing: ${missingFields.join(', ')}`);
 }
 
-// Log configuration source for debugging (without exposing sensitive data)
-console.log('✅ Firebase Config loaded:', {
-    projectId: firebaseConfig.projectId ? '***configured***' : 'MISSING',
-    authDomain: firebaseConfig.authDomain ? '***configured***' : 'MISSING',
-    usingEnvVars: Boolean(getEnvVar('VITE_FIREBASE_API_KEY', null)),
-    environment: typeof import.meta !== 'undefined' ? 'vite' : 'browser',
-    securityStatus: '🔒 SECURE - No hardcoded credentials'
+// Production-safe configuration logging
+import('../utils/logger.js').then(({ default: logger }) => {
+    logger.info('Firebase Config loaded:', {
+        projectId: firebaseConfig.projectId ? '***configured***' : 'MISSING',
+        authDomain: firebaseConfig.authDomain ? '***configured***' : 'MISSING',
+        usingEnvVars: Boolean(getEnvVar('VITE_FIREBASE_API_KEY', null)),
+        environment: typeof import.meta !== 'undefined' ? 'vite' : 'browser',
+        securityStatus: 'SECURE - No hardcoded credentials'
+    });
+}).catch(() => {
+    // Fallback for when logger is not available (e.g., in Node.js environment)
+    if (typeof window === 'undefined') {
+        console.log('Firebase Config loaded (server environment)');
+    }
 });
 
 // Export the configuration for use in other modules

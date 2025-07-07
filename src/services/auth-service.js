@@ -36,6 +36,7 @@ import {
 
 // Import Firebase configuration
 import { firebaseConfig } from './config.js';
+import logger from '../utils/logger.js';
 
 // Initialize Firebase (avoid duplicate initialization)
 let app;
@@ -46,17 +47,17 @@ try {
     // Check if Firebase is already initialized
     if (getApps().length === 0) {
         app = initializeApp(firebaseConfig);
-        console.log('Firebase initialized by Auth Service');
+        logger.info('Firebase initialized by Auth Service');
     } else {
         app = getApp();
-        console.log('Using existing Firebase instance');
+        logger.info('Using existing Firebase instance');
     }
     
     auth = getAuth(app);
     db = getFirestore(app);
     
 } catch (error) {
-    console.error('Firebase initialization error:', error);
+    logger.error('Firebase initialization error:', error);
     throw error;
 }
 
@@ -215,19 +216,19 @@ class AuthService {
         onAuthStateChanged(auth, async (user) => {
             // Prevent multiple simultaneous state changes
             if (processingStateChange) {
-                console.log('🔄 Auth state change already in progress, skipping');
+                logger.debug('Auth state change already in progress, skipping');
                 return;
             }
             
             // Don't interfere with Google sign-up flow
             if (window.isProcessingGoogleAuth) {
-                console.log('🔄 Google auth in progress, skipping auth state change');
+                logger.debug('Google auth in progress, skipping auth state change');
                 return;
             }
             
             // Prevent auth state listener from interfering during redirects
             if (window.isRedirecting) {
-                console.log('🔄 Auth state changed during redirect, skipping processing');
+                logger.debug('Auth state changed during redirect, skipping processing');
                 return;
             }
             
@@ -235,14 +236,14 @@ class AuthService {
             
             try {
                 if (user) {
-                    console.log('🔔 Auth state changed: user authenticated', user.email);
+                    logger.info('Auth state changed: user authenticated', user.email);
                     
                     // Check if user is a Google user (Google users are auto-verified)
                     const isGoogleUser = user.providerData.some(provider => provider.providerId === 'google.com');
                     
                     // Check email verification (skip for Google users)
                     if (!isGoogleUser && !user.emailVerified && this.requireEmailVerification()) {
-                        console.log('📧 Email not verified, requesting verification');
+                        logger.info(' Email not verified, requesting verification');
                         await this.handleUnverifiedEmail(user);
                         return;
                     }
@@ -251,7 +252,7 @@ class AuthService {
                     try {
                         await this.loadUserData(user);
                     } catch (error) {
-                        console.error('⚠️ Error loading user data, proceeding with default role:', error);
+                        logger.error('⚠️ Error loading user data, proceeding with default role:', error);
                         this.currentUser = user;
                         this.userRole = USER_ROLES.PATIENT;
                     }
@@ -264,7 +265,7 @@ class AuthService {
                         try {
                             await this.updatePatientLastLogin(user.uid);
                         } catch (error) {
-                            console.warn('⚠️ Could not update patient last login:', error);
+                            logger.warn(' Could not update patient last login:', error);
                         }
                     }
                     
@@ -273,7 +274,7 @@ class AuthService {
                         this.notifyAuthListeners(user, this.userRole);
                     }, 100);
                 } else {
-                    console.log('🔔 Auth state changed: user not authenticated');
+                    logger.info(' Auth state changed: user not authenticated');
                     this.currentUser = null;
                     this.userRole = null;
                     this.clearSession();
@@ -315,7 +316,7 @@ class AuthService {
             await signOut(auth);
             
         } catch (error) {
-            console.error('Error sending verification email:', error);
+            logger.error('Error sending verification email:', error);
             throw new Error('Failed to send verification email');
         }
     }
@@ -349,7 +350,7 @@ class AuthService {
             const isGoogleUser = user.providerData.some(provider => provider.providerId === 'google.com');
             
             if (isGoogleUser) {
-                console.log('✅ Google user detected, setting role as patient');
+                logger.info(' Google user detected, setting role as patient');
                 this.userRole = USER_ROLES.PATIENT;
                 this.currentUser = user;
                 
@@ -360,7 +361,7 @@ class AuthService {
                     if (userDoc.exists()) {
                         const userData = userDoc.data();
                         this.userRole = userData.role || USER_ROLES.PATIENT;
-                        console.log('📄 Found existing user document with role:', this.userRole);
+                        logger.info(' Found existing user document with role:', this.userRole);
                         
                         // Update last login if possible
                         try {
@@ -375,7 +376,7 @@ class AuthService {
                         // Try to create user document
                         try {
                             await this.createUserDocument(user);
-                            console.log('📄 Created new user document for Google user');
+                            logger.info(' Created new user document for Google user');
                         } catch (createError) {
                             console.warn('Could not create user document:', createError);
                         }
@@ -384,7 +385,7 @@ class AuthService {
                     console.warn('Firestore permission error, proceeding with default role:', firestoreError);
                 }
                 
-                console.log('✅ Google user authentication complete:', { 
+                logger.info(' Google user authentication complete:', { 
                     email: user.email, 
                     role: this.userRole, 
                     uid: user.uid 
@@ -412,7 +413,7 @@ class AuthService {
             this.currentUser = user;
             
         } catch (error) {
-            console.error('Error loading user data:', error);
+            logger.error('Error loading user data:', error);
             
             // If there are permission errors, still set the user as authenticated
             // This allows the app to continue working even if Firestore has permission issues
@@ -442,10 +443,10 @@ class AuthService {
             
             await setDoc(doc(db, 'users', user.uid), userData);
             this.userRole = USER_ROLES.PATIENT;
-            console.log('User document created successfully');
+            logger.debug('User document created successfully');
             
         } catch (error) {
-            console.error('Error creating user document:', error);
+            logger.error('Error creating user document:', error);
             console.warn('Proceeding without user document due to permission issues');
             // Don't throw an error - we'll proceed with default role
             this.userRole = USER_ROLES.PATIENT;
@@ -460,7 +461,7 @@ class AuthService {
             const { updateLastLogin } = await import('./firestoredb.js');
             await updateLastLogin(userId);
         } catch (error) {
-            console.error('Error updating patient last login:', error);
+            logger.error('Error updating patient last login:', error);
         }
     }
 
@@ -514,7 +515,7 @@ class AuthService {
      * Force clear all authentication state (for troubleshooting)
      */
     forceClearAuthState() {
-        console.log('🧹 Force clearing all authentication state');
+        logger.debug(' Force clearing all authentication state');
         
         // Clear internal state
         this.currentUser = null;
@@ -533,7 +534,7 @@ class AuthService {
         authKeys.forEach(key => {
             if (localStorage.getItem(key)) {
                 localStorage.removeItem(key);
-                console.log(`🧹 Cleared localStorage key: ${key}`);
+                logger.debug(`🧹 Cleared localStorage key: ${key}`);
             }
         });
         
@@ -544,7 +545,7 @@ class AuthService {
             window.lastRedirectTime = 0;
         }
         
-        console.log('✅ All authentication state cleared');
+        logger.info(' All authentication state cleared');
     }
 
     /**
@@ -617,7 +618,7 @@ class AuthService {
             return userCredential.user;
             
         } catch (error) {
-            console.error('Login error:', error);
+            logger.error('Login error:', error);
             
             // Track failed login attempt
             if (error.code === 'auth/invalid-credential' || 
@@ -659,7 +660,7 @@ class AuthService {
             return user;
             
         } catch (error) {
-            console.error('Registration error:', error);
+            logger.error('Registration error:', error);
             throw error;
         }
     }
@@ -669,7 +670,7 @@ class AuthService {
      */
     async loginWithGoogle() {
         try {
-            console.log('🚀 Starting Google authentication');
+            logger.info(' Starting Google authentication');
             
             // Set flag to prevent auth state listener interference
             window.isProcessingGoogleAuth = true;
@@ -680,18 +681,18 @@ class AuthService {
             try {
                 const redirectResult = await getRedirectResult(auth);
                 if (redirectResult) {
-                    console.log('✅ Google login via redirect successful');
+                    logger.info(' Google login via redirect successful');
                     return redirectResult.user;
                 }
             } catch (redirectError) {
-                console.log('No redirect result found');
+                logger.debug('No redirect result found');
             }
             
             // Try popup first
             try {
-                console.log('🔄 Attempting Google sign-in with popup');
+                logger.debug(' Attempting Google sign-in with popup');
                 result = await signInWithPopup(auth, googleProvider);
-                console.log('✅ Google popup login successful');
+                logger.info(' Google popup login successful');
                 
                 // Set user role immediately for Google users
                 this.currentUser = result.user;
@@ -700,11 +701,11 @@ class AuthService {
                 return result.user;
                 
             } catch (popupError) {
-                console.log('❌ Popup error occurred:', popupError);
+                logger.warn(' Popup error occurred:', popupError);
                 
                 // Handle specific popup errors
                 if (popupError.code === 'auth/popup-blocked') {
-                    console.log('🔄 Popup blocked, trying redirect');
+                    logger.debug(' Popup blocked, trying redirect');
                     await signInWithRedirect(auth, googleProvider);
                     return null; // Redirect will reload the page
                 } else if (popupError.code === 'auth/popup-closed-by-user') {
@@ -718,19 +719,19 @@ class AuthService {
                     return null;
                 } else {
                     // For other errors, try redirect as fallback
-                    console.log('🔄 Popup failed, trying redirect as fallback');
+                    logger.debug(' Popup failed, trying redirect as fallback');
                     try {
                         await signInWithRedirect(auth, googleProvider);
                         return null; // Redirect will reload the page
                     } catch (redirectError) {
-                        console.error('❌ Redirect also failed:', redirectError);
+                        logger.error('❌ Redirect also failed:', redirectError);
                         throw popupError; // Throw original popup error
                     }
                 }
             }
             
         } catch (error) {
-            console.error('❌ Google login error:', error);
+            logger.error('❌ Google login error:', error);
             
             // Provide user-friendly error messages
             if (error.message.includes('Domain')) {
@@ -764,7 +765,7 @@ class AuthService {
             // Logout successful
             
         } catch (error) {
-            console.error('Logout error:', error);
+            logger.error('Logout error:', error);
             throw error;
         }
     }
@@ -788,7 +789,7 @@ class AuthService {
             // Password updated successfully
             
         } catch (error) {
-            console.error('Password update error:', error);
+            logger.error('Password update error:', error);
             throw error;
         }
     }
@@ -823,7 +824,7 @@ class AuthService {
             // Account deleted successfully
             
         } catch (error) {
-            console.error('Account deletion error:', error);
+            logger.error('Account deletion error:', error);
             throw error;
         }
     }
@@ -853,7 +854,7 @@ class AuthService {
             // User role updated
             
         } catch (error) {
-            console.error('Role update error:', error);
+            logger.error('Role update error:', error);
             throw error;
         }
     }
@@ -895,20 +896,20 @@ class AuthService {
         const firebaseCurrentUser = auth.currentUser;
         
         if (!this.currentUser && firebaseCurrentUser) {
-            console.log('🔄 Firebase user found but not in auth service, syncing...');
+            logger.debug(' Firebase user found but not in auth service, syncing...');
             this.currentUser = firebaseCurrentUser;
             return firebaseCurrentUser;
         }
         
         if (this.currentUser && !firebaseCurrentUser) {
-            console.warn('⚠️ Auth service has user but Firebase doesn\'t, clearing...');
+            logger.warn(' Auth service has user but Firebase doesn\'t, clearing...');
             this.currentUser = null;
             this.userRole = null;
             return null;
         }
         
         if (this.currentUser && firebaseCurrentUser && this.currentUser.uid !== firebaseCurrentUser.uid) {
-            console.warn('⚠️ User UID mismatch, clearing auth state');
+            logger.warn(' User UID mismatch, clearing auth state');
             this.currentUser = null;
             this.userRole = null;
             return null;
@@ -936,7 +937,7 @@ class AuthService {
         // Check if the Firebase auth state is consistent
         const firebaseCurrentUser = auth.currentUser;
         if (!firebaseCurrentUser || firebaseCurrentUser.uid !== this.currentUser.uid) {
-            console.warn('⚠️ Auth state mismatch detected, clearing current user');
+            logger.warn(' Auth state mismatch detected, clearing current user');
             this.currentUser = null;
             this.userRole = null;
             return false;
@@ -968,7 +969,7 @@ class AuthService {
             try {
                 callback(user, role);
             } catch (error) {
-                console.error('Auth listener error:', error);
+                logger.error('Auth listener error:', error);
             }
         });
     }
@@ -997,11 +998,11 @@ class AuthService {
      * Redirect after login based on role
      */
     redirectAfterLogin() {
-        console.log('🔄 Redirecting after login with role:', this.userRole);
+        logger.debug(' Redirecting after login with role:', this.userRole);
         
         // Ensure we have a valid user and role
         if (!this.currentUser || !this.userRole) {
-            console.warn('⚠️ No user or role found, defaulting to patient portal');
+            logger.warn(' No user or role found, defaulting to patient portal');
             this.userRole = USER_ROLES.PATIENT;
         }
         
@@ -1038,7 +1039,7 @@ class AuthService {
                 redirectUrl = '/public/patientPortal.html';
         }
         
-        console.log('🎯 Redirecting to:', redirectUrl);
+        logger.debug(' Redirecting to:', redirectUrl);
         
         // Perform redirect with delay to ensure auth state is stable
         setTimeout(() => {

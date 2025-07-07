@@ -803,30 +803,43 @@ if (document.readyState === 'loading') {
 export default authGuard;
 export { AuthGuard, USER_ROLES };
 
-// Debug utility for monitoring auth state
-window.authDebug = {
-    getAuthState: () => {
-        return {
-            isAuthenticated: authService.isAuthenticated(),
-            currentUser: authService.getCurrentUser()?.email || null,
-            userRole: authService.getUserRole(),
-            isRedirecting: window.isRedirecting,
-            redirectCount: window.redirectCount,
-            lastRedirectTime: window.lastRedirectTime,
-            currentPath: window.location.pathname
-        };
-    },
-    
-    resetRedirects: () => {
-        globalRedirectManager.reset();
-        console.log('🔄 Redirects reset');
-    },
-    
-    forceAuth: () => {
-        authService.forceClearAuthState();
-        console.log('🧹 Auth state cleared');
-    }
-};
-
-console.log('Authentication Guard module loaded');
-console.log('💡 Debug utilities available: window.authDebug.getAuthState(), window.authDebug.resetRedirects(), window.authDebug.forceAuth()'); 
+// Production-safe debug utilities
+import('../utils/environment.js').then(({ default: environment }) => {
+    import('../utils/logger.js').then(({ default: logger }) => {
+        // Only create debug utilities in development
+        if (environment.isDevelopment()) {
+            window.authDebug = {
+                getAuthState: () => {
+                    return {
+                        isAuthenticated: authService.isAuthenticated(),
+                        currentUser: authService.getCurrentUser()?.email || null,
+                        userRole: authService.getUserRole(),
+                        isRedirecting: window.isRedirecting,
+                        redirectCount: window.redirectCount,
+                        lastRedirectTime: window.lastRedirectTime,
+                        currentPath: window.location.pathname
+                    };
+                },
+                
+                resetRedirects: () => {
+                    globalRedirectManager.reset();
+                    logger.debug('Redirects reset');
+                },
+                
+                forceAuth: () => {
+                    authService.forceClearAuthState();
+                    logger.debug('Auth state cleared');
+                }
+            };
+            
+            logger.info('Authentication Guard module loaded');
+            logger.dev('Debug utilities available: window.authDebug.getAuthState(), window.authDebug.resetRedirects(), window.authDebug.forceAuth()');
+        } else {
+            // In production, just log that auth guard is loaded
+            logger.info('Authentication Guard module loaded');
+        }
+    });
+}).catch(() => {
+    // Fallback if logger/environment modules are not available
+    console.log('Authentication Guard module loaded');
+}); 

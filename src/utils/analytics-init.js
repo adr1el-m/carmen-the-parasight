@@ -1,6 +1,8 @@
 // Basic analytics page functionality
+import logger from './logger.js';
+
 document.addEventListener('DOMContentLoaded', function() {
-    console.log('Analytics page loaded');
+    logger.info('Analytics page loaded');
     // Future: Add chart initialization and data loading
     
     // Initialize any analytics-specific functionality here

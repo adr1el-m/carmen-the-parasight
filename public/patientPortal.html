@@ -12,15 +12,15 @@
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     
-    <!-- Debug Panel (remove in production) -->
-    <div id="debugPanel" class="debug-panel hidden">
+    <!-- Debug Panel (automatically hidden in production) -->
+    <div id="debugPanel" class="debug-panel hidden" data-debug>
       <div class="debug-panel-header">Debug Information</div>
       <div id="debugContent">Loading...</div>
       <button onclick="document.getElementById('debugPanel').classList.add('hidden')" class="debug-close-btn">Close</button>
     </div>
     
-    <!-- Debug Toggle Button -->
-    <button onclick="document.getElementById('debugPanel').classList.remove('hidden')" class="debug-show-btn">Show Debug</button>
+    <!-- Debug Toggle Button (automatically hidden in production) -->
+    <button onclick="document.getElementById('debugPanel').classList.remove('hidden')" class="debug-show-btn" data-debug>Show Debug</button>
     
     <!-- Loading Overlay -->
     <div id="loadingOverlay" class="loading-overlay hidden">
@@ -711,6 +711,9 @@
     </div>
 
     <!-- JavaScript Modules -->
+    <script type="module" src="../src/utils/environment.js"></script>
+    <script type="module" src="../src/utils/logger.js"></script>
+    <script type="module" src="../src/utils/debug-manager.js"></script>
     <script type="module" src="../src/utils/auth-guard.js"></script>
     <script type="module" src="../src/pages/patientPortal.js"></script>
   </body>

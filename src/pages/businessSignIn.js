@@ -142,7 +142,9 @@ class BusinessSignIn {
             }, 1500);
 
         } catch (error) {
-            console.error('Sign in error:', error);
+            import('../utils/logger.js').then(({ default: logger }) => {
+            logger.error('Sign in error:', error);
+        }).catch(() => console.error('Sign in error:', error));
             this.handleSignInError(error);
         } finally {
             this.setLoadingState(false);
@@ -392,7 +394,9 @@ class BusinessSignIn {
                         }, 1500);
                     }
                 } catch (error) {
-                    console.log('Auth state check error:', error);
+                    import('../utils/logger.js').then(({ default: logger }) => {
+            logger.warn('Auth state check error:', error);
+        }).catch(() => console.log('Auth state check error:', error));
                     // Continue with normal sign in flow
                 }
             }

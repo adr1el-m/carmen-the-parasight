@@ -9,6 +9,7 @@
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <link rel="stylesheet" href="../src/styles/businessSignIn.css">
+    <link rel="stylesheet" href="../src/styles/csp-utilities.css">
 </head>
 <body>
     <div class="signin-container">
@@ -139,7 +140,7 @@
 
                         <button type="submit" id="signInBtn" class="signin-btn">
                             <span class="btn-text">Sign In to Dashboard</span>
-                            <span class="btn-loader" style="display: none;">
+                            <span class="btn-loader hidden">
                                 <i class="fas fa-spinner fa-spin"></i>
                             </span>
                         </button>
@@ -173,7 +174,7 @@
     </div>
 
     <!-- Message Display -->
-    <div id="messageContainer" class="message-container" style="display: none;">
+                        <div id="messageContainer" class="message-container hidden">
         <div class="message">
             <i class="message-icon"></i>
             <span class="message-text"></span>
@@ -182,7 +183,7 @@
     </div>
 
     <!-- Loading Overlay -->
-    <div id="loadingOverlay" class="loading-overlay" style="display: none;">
+                    <div id="loadingOverlay" class="loading-overlay hidden">
         <div class="loading-spinner">
             <i class="fas fa-spinner fa-spin"></i>
             <p>Signing you in...</p>

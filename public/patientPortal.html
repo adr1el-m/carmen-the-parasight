@@ -8,37 +8,31 @@
     <!-- CSS files -->
     <link rel="stylesheet" href="../src/styles/shared-header.css">
     <link rel="stylesheet" href="../src/styles/patientPortal.css">
+    <link rel="stylesheet" href="../src/styles/csp-utilities.css">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     
     <!-- Debug Panel (remove in production) -->
-    <div id="debugPanel" style="position: fixed; top: 10px; left: 10px; background: #000; color: #fff; padding: 10px; border-radius: 5px; font-family: monospace; font-size: 12px; z-index: 10000; max-width: 300px; max-height: 200px; overflow-y: auto; display: none;">
-      <div style="font-weight: bold; margin-bottom: 5px;">Debug Information</div>
+    <div id="debugPanel" class="debug-panel hidden">
+      <div class="debug-panel-header">Debug Information</div>
       <div id="debugContent">Loading...</div>
-      <button onclick="document.getElementById('debugPanel').style.display='none'" style="background: #fff; color: #000; border: none; padding: 2px 5px; margin-top: 5px; cursor: pointer;">Close</button>
+      <button onclick="document.getElementById('debugPanel').classList.add('hidden')" class="debug-close-btn">Close</button>
     </div>
     
     <!-- Debug Toggle Button -->
-    <button onclick="document.getElementById('debugPanel').style.display='block'" style="position: fixed; bottom: 10px; left: 10px; background: #007bff; color: white; border: none; padding: 10px; border-radius: 5px; cursor: pointer; z-index: 9999;">Show Debug</button>
+    <button onclick="document.getElementById('debugPanel').classList.remove('hidden')" class="debug-show-btn">Show Debug</button>
     
     <!-- Loading Overlay -->
-    <div id="loadingOverlay" style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(255, 255, 255, 0.9); display: none; justify-content: center; align-items: center; z-index: 9999; backdrop-filter: blur(5px);">
-      <div style="text-align: center;">
-        <div style="width: 50px; height: 50px; border: 4px solid #f3f3f3; border-top: 4px solid #4A90E2; border-radius: 50%; animation: spin 1s linear infinite; margin: 0 auto 20px;"></div>
-        <p id="loadingMessage" style="color: #2C3E50; font-weight: 500;">Loading...</p>
+    <div id="loadingOverlay" class="loading-overlay hidden">
+      <div class="loading-content">
+        <div class="loading-spinner"></div>
+        <p id="loadingMessage" class="loading-message">Loading...</p>
       </div>
     </div>
-    
-    <style>
-      @keyframes spin {
-        0% { transform: rotate(0deg); }
-        100% { transform: rotate(360deg); }
-      }
-    </style>
   </head>
   <body>
     <!-- FLAWLESS Accessibility Enhancement -->
-    <div id="live-region" aria-live="polite" aria-atomic="true" style="position: absolute; left: -10000px; width: 1px; height: 1px; overflow: hidden;"></div>
+    <div id="live-region" aria-live="polite" aria-atomic="true" class="sr-only"></div>
     
     <!-- Top Bar -->
     <div class="top-bar">

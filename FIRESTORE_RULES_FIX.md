@@ -54,6 +54,7 @@ match /users/{userId} {
     && (request.resource.data.authProvider == null || isValidAuthProvider(request.resource.data.authProvider))
     && (request.resource.data.isActive == null || request.resource.data.isActive is bool)
     && (request.resource.data.emailVerified == null || request.resource.data.emailVerified is bool);
+}
 ```
 
 ### Step 5: Update Patients Collection Rules

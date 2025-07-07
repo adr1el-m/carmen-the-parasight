@@ -18,6 +18,12 @@ class PatientPortal {
 
     async init() {
         try {
+            // Close any lingering authentication popups
+            this.closeAuthPopups();
+            
+            // Check for any pending errors from sign-in process
+            this.checkPendingErrors();
+            
             await this.loadUserData();
             this.setupEventListeners();
             this.setupCalendar();
@@ -27,6 +33,105 @@ class PatientPortal {
         } catch (error) {
             console.error('Initialization failed:', error);
             this.handleError(error);
+        }
+    }
+
+    closeAuthPopups() {
+        try {
+            console.log('🔧 Checking for open auth popups...');
+            
+            // Close any Firebase auth popups that might still be open
+            // This handles cases where the popup doesn't close automatically
+            if (window.opener) {
+                // If this window was opened as a popup, close it
+                console.log('Closing auth popup window (this window is a popup)');
+                window.close();
+                return;
+            }
+            
+            // Try to close any child popup windows
+            if (typeof window.authPopup !== 'undefined' && window.authPopup && !window.authPopup.closed) {
+                console.log('Closing lingering auth popup (window.authPopup)');
+                window.authPopup.close();
+                window.authPopup = null;
+            }
+            
+            // Close auth service popup if available
+            if (authService && typeof authService.closeAuthPopup === 'function') {
+                authService.closeAuthPopup();
+            }
+            
+            // Send message to close any auth popups (in case they're listening)
+            try {
+                if (window.postMessage) {
+                    window.postMessage({ type: 'CLOSE_AUTH_POPUP' }, window.location.origin);
+                }
+            } catch (e) {
+                // Ignore postMessage errors
+            }
+            
+            // Clear any auth-related flags
+            if (window.isProcessingGoogleAuth) {
+                window.isProcessingGoogleAuth = false;
+            }
+            
+            // More aggressive popup cleanup - check for any popups in a few seconds
+            setTimeout(() => {
+                this.aggressivePopupCleanup();
+            }, 2000);
+            
+            console.log('✅ Auth popup cleanup completed');
+        } catch (error) {
+            console.warn('⚠️ Error during auth popup cleanup:', error);
+        }
+    }
+
+    aggressivePopupCleanup() {
+        try {
+            // Check all open windows and close ones that look like auth popups
+            if (typeof window.authPopup !== 'undefined' && window.authPopup && !window.authPopup.closed) {
+                console.log('🚨 Aggressively closing auth popup');
+                window.authPopup.close();
+                window.authPopup = null;
+            }
+            
+            // Look for any global popup references
+            const popupVars = ['authPopup', 'googleAuthPopup', 'firebasePopup', '_popupWindow'];
+            popupVars.forEach(varName => {
+                if (window[varName] && typeof window[varName].close === 'function' && !window[varName].closed) {
+                    console.log(`🚨 Closing popup: ${varName}`);
+                    window[varName].close();
+                    window[varName] = null;
+                }
+            });
+            
+            console.log('✅ Aggressive popup cleanup completed');
+        } catch (error) {
+            console.warn('⚠️ Error during aggressive popup cleanup:', error);
+        }
+    }
+
+    checkPendingErrors() {
+        // Check for Firestore rules error
+        const firestoreError = sessionStorage.getItem('firestore_rules_error');
+        if (firestoreError) {
+            console.warn('⚠️ Firestore rules issue detected:', firestoreError);
+            sessionStorage.removeItem('firestore_rules_error');
+            
+            // Show user-friendly warning
+            this.showNotification(
+                'Your profile information may not be fully loaded due to configuration issues. Please contact support if you experience any problems.',
+                'warning'
+            );
+        }
+        
+        // Check for patient document creation error
+        const patientDocError = sessionStorage.getItem('pending_patient_doc_error');
+        if (patientDocError) {
+            console.warn('⚠️ Patient document creation issue:', patientDocError);
+            sessionStorage.removeItem('pending_patient_doc_error');
+            
+            // This is handled gracefully in loadUserData, so just log it
         }
     }
 

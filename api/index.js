@@ -7,12 +7,44 @@ const jwt = require('jsonwebtoken');
 const morgan = require('morgan');
 const { GoogleGenerativeAI } = require('@google/generative-ai');
 const { initializeApp } = require('firebase/app');
-const { getFirestore, doc, setDoc, getDoc, collection, getDocs, query, where, orderBy, addDoc, updateDoc } = require('firebase/firestore');
+const { getFirestore, doc, setDoc, getDoc, collection, getDocs, query: firestoreQuery, where, orderBy, addDoc, updateDoc } = require('firebase/firestore');
 const { getAuth } = require('firebase-admin/auth');
 const mongoSanitize = require('express-mongo-sanitize');
 const xss = require('xss');
 const validator = require('validator');
 require('dotenv').config();
+
+// Import error sanitizer for secure error handling
+let errorSanitizer;
+try {
+  errorSanitizer = require('../src/utils/error-sanitizer.js');
+} catch (err) {
+  // Fallback error handling if sanitizer not available
+  console.warn('Error sanitizer not available, using basic error handling');
+  errorSanitizer = {
+    sanitizeError: (error) => ({ error: 'An error occurred', timestamp: new Date().toISOString() }),
+    sanitizeValidationErrors: () => ({ error: 'Invalid input data', timestamp: new Date().toISOString() }),
+    secureErrorHandler: (err, req, res, next) => {
+      console.error('Error:', err);
+      res.status(500).json({ error: 'Internal server error', timestamp: new Date().toISOString() });
+    }
+  };
+}
+
+// Import CSRF protection for secure state-changing operations
+let csrfProtection;
+try {
+  csrfProtection = require('../src/utils/csrf-protection.js');
+} catch (err) {
+  // Fallback CSRF handling if protection not available
+  console.warn('CSRF protection not available, using basic fallback');
+  csrfProtection = {
+    csrfMiddleware: () => (req, res, next) => next(),
+    generateTokenResponse: () => ({ csrfToken: 'disabled', message: 'CSRF protection disabled' }),
+    cleanupSession: () => {},
+    getCSRFStats: () => ({ disabled: true })
+  };
+}
 
 const app = express();
 
@@ -197,7 +229,7 @@ app.use((req, res, next) => {
   next();
 });
 
-// Rate Limiting
+// Rate Limiting - Multiple tiers for different security levels
 const limiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
   max: process.env.NODE_ENV === 'production' ? 100 : 1000, // limit each IP to 100 requests per windowMs in production
@@ -207,8 +239,13 @@ const limiter = rateLimit({
   },
   standardHeaders: true,
   legacyHeaders: false,
+  // Skip rate limiting for CSRF token endpoint and health checks
+  skip: (req) => {
+    return req.path === '/api/auth/csrf-token' || req.path === '/api/health' || req.path === '/';
+  }
 });
 
+// Strict limiter for sensitive operations (AI, optimization, authentication)
 const strictLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
   max: 10, // limit each IP to 10 requests per windowMs for sensitive endpoints
@@ -220,6 +257,56 @@ const strictLimiter = rateLimit({
   legacyHeaders: false,
 });
 
+// Medium security limiter for dashboard and analytics
+const mediumLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 30, // limit each IP to 30 requests per windowMs
+  message: {
+    error: 'Rate limit exceeded for this endpoint. Please try again later.',
+    retryAfter: 15 * 60 * 1000
+  },
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
+// Light limiter for health checks and public endpoints
+const lightLimiter = rateLimit({
+  windowMs: 5 * 60 * 1000, // 5 minutes
+  max: 50, // limit each IP to 50 requests per 5 minutes
+  message: {
+    error: 'Too many health check requests, please try again later.',
+    retryAfter: 5 * 60 * 1000
+  },
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
+// Authentication limiter for login/register endpoints  
+const authLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 5, // Very strict for auth attempts
+  message: {
+    error: 'Too many authentication attempts. Please try again later.',
+    retryAfter: 15 * 60 * 1000
+  },
+  standardHeaders: true,
+  legacyHeaders: false,
+  skipSuccessfulRequests: true, // Don't count successful auth attempts
+});
+
+// Data modification limiter for POST/PUT/DELETE operations
+const modificationLimiter = rateLimit({
+  windowMs: 10 * 60 * 1000, // 10 minutes
+  max: 20, // limit data modifications
+  message: {
+    error: 'Too many data modification requests. Please try again later.',
+    retryAfter: 10 * 60 * 1000
+  },
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
+// Apply general rate limiting to all API routes as baseline
 app.use('/api/', limiter);
 
 // Enhanced CORS Configuration
@@ -258,6 +345,10 @@ app.use(cors({
 
 // Input Sanitization Middleware
 app.use(mongoSanitize());
+
+// Cookie parser for CSRF token handling
+const cookieParser = require('cookie-parser');
+app.use(cookieParser());
 
 // Body Parser with size limits
 app.use(express.json({ 
@@ -471,65 +562,68 @@ const requireRole = (roles) => {
   };
 };
 
-// Input validation middleware
+// Input validation middleware with secure error handling
 const validateInput = (req, res, next) => {
   const errors = validationResult(req);
   if (!errors.isEmpty()) {
-    return res.status(400).json({
-      error: 'Validation Error',
-      details: errors.array()
-    });
+    const sanitizedResponse = errorSanitizer.sanitizeValidationErrors(errors.array());
+    return res.status(400).json(sanitizedResponse);
   }
   next();
 };
 
-// Error handling middleware
-const errorHandler = (err, req, res, next) => {
-  console.error('Error:', err);
-  
-  // CORS error
-  if (err.message === 'Not allowed by CORS') {
-    return res.status(403).json({
-      error: 'CORS Error',
-      message: 'Origin not allowed'
+// CSRF Protection Configuration
+const csrfErrorHandler = (err, req, res, next) => {
+  if (err.code && err.code.startsWith('CSRF_')) {
+    const sanitized = errorSanitizer.sanitizeError(err, { 
+      context: 'csrf-protection' 
+    });
+    return res.status(err.status || 403).json({
+      error: 'CSRF protection error',
+      message: sanitized.error,
+      code: err.code,
+      timestamp: sanitized.timestamp
     });
   }
-  
-  // Rate limit error
-  if (err.status === 429) {
-    return res.status(429).json({
-      error: 'Rate Limit Exceeded',
-      message: 'Too many requests, please try again later'
-    });
-  }
-  
-  // Firebase errors
-  if (err.code && err.code.startsWith('auth/')) {
-    return res.status(401).json({
-      error: 'Authentication Error',
-      message: 'Invalid authentication credentials'
-    });
-  }
-  
-  // Validation errors
-  if (err.name === 'ValidationError') {
-    return res.status(400).json({
-      error: 'Validation Error',
-      message: err.message
-    });
-  }
-  
-  // Default error response
-  res.status(err.status || 500).json({
-    error: 'Internal Server Error',
-    message: process.env.NODE_ENV === 'production' 
-      ? 'Something went wrong' 
-      : err.message
-  });
+  next(err);
 };
 
-// Health check endpoint (no auth required)
-app.get('/api/health', (req, res) => {
+// Configure CSRF protection with custom settings
+if (csrfProtection.configureCSRFProtection) {
+  const csrfOptions = {
+    errorHandler: csrfErrorHandler,
+    skipRoutes: [
+      '/api/auth/csrf-token',
+      '/api/health',
+      '/api/dashboard/stats', // GET only
+      '/api/surgery/queue',    // GET only
+      '/api/or/status',        // GET only
+      '/api/rural/patients',   // GET only
+      '/api/analytics/wait-times', // GET only
+      '/api/patient/'          // GET requests only
+    ],
+    skipMethods: ['GET', 'HEAD', 'OPTIONS'],
+    sessionIdExtractor: (req) => {
+      // Extract session ID from authenticated user or generate from IP for anonymous users
+      return req.user?.uid || req.sessionID || `anonymous_${req.ip}`;
+    }
+  };
+  
+  // Apply CSRF middleware
+  app.use(csrfProtection.csrfMiddleware(csrfOptions));
+  console.log('✅ CSRF protection enabled for state-changing operations');
+} else {
+  console.warn('⚠️ CSRF protection not available');
+}
+
+// Secure error handling middleware
+const errorHandler = (err, req, res, next) => {
+  // Use the secure error handler from error-sanitizer
+  errorSanitizer.secureErrorHandler(err, req, res, next);
+};
+
+// Health check endpoint (no auth required) - Light rate limiting
+app.get('/api/health', lightLimiter, (req, res) => {
   res.json({ 
     status: 'OK', 
     message: 'LingapLink PH API is running',
@@ -538,8 +632,86 @@ app.get('/api/health', (req, res) => {
   });
 });
 
-// Get dashboard statistics (requires authentication)
+// CSRF token endpoint (requires authentication) - No rate limiting
+app.get('/api/auth/csrf-token', 
+  authenticateUser,
+  async (req, res) => {
+    try {
+      const sessionId = req.user?.uid || req.sessionID || `anonymous_${req.ip}`;
+      
+      if (!csrfProtection.generateTokenResponse) {
+        return res.json({
+          error: 'CSRF protection not available',
+          message: 'CSRF tokens are disabled in this configuration'
+        });
+      }
+      
+      const tokenResponse = csrfProtection.generateTokenResponse(req, res, sessionId);
+      
+      res.json({
+        success: true,
+        ...tokenResponse,
+        message: 'CSRF token generated successfully',
+        instructions: {
+          header: `Include token in '${tokenResponse.headerName}' header for all state-changing requests`,
+          cookie: `Token also set as '${tokenResponse.cookieName}' cookie for double-submit pattern`,
+          expiry: 'Token expires in 30 minutes and should be refreshed as needed'
+        }
+      });
+      
+    } catch (error) {
+      const sanitized = errorSanitizer.sanitizeError(error, { context: 'csrf-token-generation' });
+      res.status(500).json({
+        error: 'Failed to generate CSRF token',
+        ...sanitized
+      });
+    }
+  }
+);
+
+// CSRF token refresh endpoint (requires authentication) - Light rate limiting
+app.post('/api/auth/csrf-token/refresh',
+  lightLimiter,
+  authenticateUser,
+  async (req, res) => {
+    try {
+      const sessionId = req.user?.uid || req.sessionID || `anonymous_${req.ip}`;
+      
+      // Check if current token should be rotated
+      const currentToken = req.headers[csrfProtection.CSRF_CONFIG?.HEADER_NAME] || req.body?._csrf;
+      const shouldRotate = !currentToken || csrfProtection.shouldRotateToken?.(currentToken);
+      
+      if (!shouldRotate) {
+        return res.json({
+          success: true,
+          message: 'Current CSRF token is still valid',
+          shouldRefresh: false
+        });
+      }
+      
+      // Generate new token
+      const tokenResponse = csrfProtection.generateTokenResponse(req, res, sessionId);
+      
+      res.json({
+        success: true,
+        ...tokenResponse,
+        message: 'CSRF token refreshed successfully',
+        rotated: true
+      });
+      
+    } catch (error) {
+      const sanitized = errorSanitizer.sanitizeError(error, { context: 'csrf-token-refresh' });
+      res.status(500).json({
+        error: 'Failed to refresh CSRF token',
+        ...sanitized
+      });
+    }
+  }
+);
+
+// Get dashboard statistics (requires authentication) - Medium rate limiting
 app.get('/api/dashboard/stats', 
+  mediumLimiter,
   authenticateUser, 
   requireRole(['admin', 'doctor', 'nurse']),
   [
@@ -580,16 +752,17 @@ app.get('/api/dashboard/stats',
     
     res.json(stats);
   } catch (error) {
-    console.error('Error fetching dashboard stats:', error);
+    const sanitized = errorSanitizer.sanitizeError(error, { context: 'fetch-dashboard-stats' });
     res.status(500).json({ 
       error: 'Failed to fetch dashboard statistics',
-      message: process.env.NODE_ENV === 'development' ? error.message : 'Internal server error'
+      ...sanitized
     });
   }
 });
 
-// Surgery prioritization endpoints (requires authentication)
+// Surgery prioritization endpoints (requires authentication) - Medium rate limiting
 app.get('/api/surgery/queue', 
+  mediumLimiter,
   authenticateUser, 
   requireRole(['admin', 'doctor', 'surgeon']),
   [
@@ -678,17 +851,18 @@ app.get('/api/surgery/queue',
       totalCount: filteredQueue.length,
       lastUpdated: new Date().toISOString()
     });
-  } catch (error) {
-    console.error('Error fetching surgery queue:', error);
-    res.status(500).json({ 
-      error: 'Failed to fetch surgery queue',
-      message: process.env.NODE_ENV === 'development' ? error.message : 'Internal server error'
-    });
-  }
+      } catch (error) {
+      const sanitized = errorSanitizer.sanitizeError(error, { context: 'fetch-surgery-queue' });
+      res.status(500).json({ 
+        error: 'Failed to fetch surgery queue',
+        ...sanitized
+      });
+    }
 });
 
-// OR optimization endpoints (requires authentication)
+// OR optimization endpoints (requires authentication) - Medium rate limiting
 app.get('/api/or/status', 
+  mediumLimiter,
   authenticateUser, 
   requireRole(['admin', 'doctor', 'nurse', 'or_coordinator']),
   [
@@ -772,13 +946,13 @@ app.get('/api/or/status',
       averageUtilization: Math.round(orStatus.reduce((acc, or) => acc + or.utilization, 0) / orStatus.length),
       lastUpdated: new Date().toISOString()
     });
-  } catch (error) {
-    console.error('Error fetching OR status:', error);
-    res.status(500).json({ 
-      error: 'Failed to fetch OR status',
-      message: process.env.NODE_ENV === 'development' ? error.message : 'Internal server error'
-    });
-  }
+      } catch (error) {
+      const sanitized = errorSanitizer.sanitizeError(error, { context: 'fetch-or-status' });
+      res.status(500).json({ 
+        error: 'Failed to fetch OR status',
+        ...sanitized
+      });
+    }
 });
 
 // AI-powered optimization suggestions (requires authentication and strict rate limiting)
@@ -875,17 +1049,18 @@ app.post('/api/or/optimize',
         }
       });
     } catch (error) {
-      console.error('Error generating optimization suggestions:', error);
+      const sanitized = errorSanitizer.sanitizeError(error, { context: 'generate-optimization-suggestions' });
       res.status(500).json({ 
         error: 'Failed to generate optimization suggestions',
-        message: process.env.NODE_ENV === 'development' ? error.message : 'Internal server error'
+        ...sanitized
       });
     }
   }
 );
 
-// Telemedicine and rural patient endpoints (requires authentication and query validation)
+// Telemedicine and rural patient endpoints (requires authentication and query validation) - Medium rate limiting
 app.get('/api/telemedicine/patients', 
+  mediumLimiter,
   authenticateUser, 
   requireRole(['admin', 'doctor', 'nurse', 'chw']), 
   [
@@ -968,17 +1143,18 @@ app.get('/api/telemedicine/patients',
       offset: parseInt(offset),
       lastUpdated: new Date().toISOString()
     });
-  } catch (error) {
-    console.error('Error fetching rural patients:', error);
-    res.status(500).json({ 
-      error: 'Failed to fetch rural patients',
-      message: process.env.NODE_ENV === 'development' ? error.message : 'Internal server error'
-    });
-  }
+      } catch (error) {
+      const sanitized = errorSanitizer.sanitizeError(error, { context: 'fetch-rural-patients' });
+      res.status(500).json({ 
+        error: 'Failed to fetch rural patients',
+        ...sanitized
+      });
+    }
 });
 
-// Schedule offline consultation (NOW WITH PROPER VALIDATION)
+// Schedule offline consultation (NOW WITH PROPER VALIDATION) - Data modification rate limiting
 app.post('/api/telemedicine/schedule-offline', 
+  modificationLimiter,
   authenticateUser,
   requireRole(['admin', 'doctor', 'nurse', 'chw']),
   [
@@ -1042,10 +1218,10 @@ app.post('/api/telemedicine/schedule-offline',
         consultation 
       });
     } catch (error) {
-      console.error('Error scheduling offline consultation:', error);
+      const sanitized = errorSanitizer.sanitizeError(error, { context: 'schedule-offline-consultation' });
       res.status(500).json({ 
         error: 'Failed to schedule consultation',
-        message: process.env.NODE_ENV === 'development' ? error.message : 'Internal server error'
+        ...sanitized
       });
     }
   }
@@ -1126,17 +1302,18 @@ app.post('/api/ai/consultation',
         userId: userId
       });
     } catch (error) {
-      console.error('Error generating AI consultation:', error);
+      const sanitized = errorSanitizer.sanitizeError(error, { context: 'generate-ai-consultation' });
       res.status(500).json({ 
         error: 'Failed to generate consultation',
-        message: process.env.NODE_ENV === 'development' ? error.message : 'Internal server error'
+        ...sanitized
       });
     }
   }
 );
 
-// Patient portal endpoints (requires authentication and parameter validation)
+// Patient portal endpoints (requires authentication and parameter validation) - Medium rate limiting
 app.get('/api/patient/:id', 
+  mediumLimiter,
   authenticateUser,
   requireRole(['admin', 'doctor', 'nurse', 'patient']),
   [
@@ -1191,17 +1368,18 @@ app.get('/api/patient/:id',
       
       res.json(patient);
     } catch (error) {
-      console.error('Error fetching patient data:', error);
+      const sanitized = errorSanitizer.sanitizeError(error, { context: 'fetch-patient-data' });
       res.status(500).json({ 
         error: 'Failed to fetch patient data',
-        message: process.env.NODE_ENV === 'development' ? error.message : 'Internal server error'
+        ...sanitized
       });
     }
   }
 );
 
-// Analytics endpoints (requires authentication and query validation)
+// Analytics endpoints (requires authentication and query validation) - Medium rate limiting
 app.get('/api/analytics/wait-times', 
+  mediumLimiter,
   authenticateUser,
   requireRole(['admin', 'doctor', 'analyst']),
   [
@@ -1246,17 +1424,18 @@ app.get('/api/analytics/wait-times',
         lastUpdated: new Date().toISOString()
       });
     } catch (error) {
-      console.error('Error fetching wait time analytics:', error);
+      const sanitized = errorSanitizer.sanitizeError(error, { context: 'fetch-wait-time-analytics' });
       res.status(500).json({ 
         error: 'Failed to fetch wait time analytics',
-        message: process.env.NODE_ENV === 'development' ? error.message : 'Internal server error'
+        ...sanitized
       });
     }
   }
 );
 
-// Save patient data (requires authentication and validation)
+// Save patient data (requires authentication and validation) - Data modification rate limiting
 app.post('/api/patient', 
+  modificationLimiter,
   authenticateUser,
   requireRole(['admin', 'doctor', 'nurse']),
   [
@@ -1300,10 +1479,10 @@ app.post('/api/patient',
         timestamp: new Date().toISOString()
       });
     } catch (error) {
-      console.error('Error saving patient data:', error);
+      const sanitized = errorSanitizer.sanitizeError(error, { context: 'save-patient-data' });
       res.status(500).json({ 
         error: 'Failed to save patient data',
-        message: process.env.NODE_ENV === 'development' ? error.message : 'Internal server error'
+        ...sanitized
       });
     }
   }

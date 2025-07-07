@@ -1,3 +1,25 @@
+/**
+ * Firestore Database Service - Secure Patient Data Management
+ * Provides secure and validated patient data operations with Firestore
+ */
+
+// Import logger for production-safe logging
+import('../utils/logger.js').then(({ default: logger }) => {
+    window.firestoreLogger = logger;
+}).catch(() => {
+    // Fallback if logger not available
+    window.firestoreLogger = {
+        info: (...args) => console.log(...args),
+        error: (...args) => console.error(...args),
+        warn: (...args) => console.warn(...args),
+        debug: (...args) => console.log(...args)
+    };
+});
+
+// Import Firebase modules
+let db = null;
+let auth = null;
+
 // Firestore Database Service
 import { initializeApp, getApps, getApp } from 'https://www.gstatic.com/firebasejs/11.9.1/firebase-app.js';
 import { 
@@ -40,8 +62,6 @@ import {
 
 // Initialize Firebase (avoid duplicate initialization)
 let app;
-let auth;
-let db;
 
 try {
     // Check if Firebase is already initialized
@@ -57,7 +77,8 @@ try {
     db = getFirestore(app);
     
 } catch (error) {
-    console.error('Firebase initialization error:', error);
+    const logger = window.firestoreLogger || console;
+    logger.error('Firebase initialization error:', error);
     throw error;
 }
 
@@ -107,7 +128,8 @@ export async function getPatientData(userId) {
             return null;
         }
     } catch (error) {
-        console.error('Error fetching patient data:', error);
+        const logger = window.firestoreLogger || console;
+        logger.error('Error fetching patient data:', error);
         throw error;
     }
 }
@@ -221,8 +243,27 @@ export async function createPatientDocument(user, additionalData = {}) {
         // Patient document created successfully
         return patientData;
     } catch (error) {
-        console.error('Error creating patient document:', error);
-        throw error;
+        let errorMessage = 'Failed to create patient document';
+        
+        // Handle specific Firestore errors
+        if (error.code === 'permission-denied') {
+            errorMessage = 'Permission denied. This is likely due to Firestore rules. Please check FIRESTORE_RULES_FIX.md for instructions.';
+            // Log helpful information for debugging
+            console.error('🔒 Firestore Permission Denied Error:');
+            console.error('- Check if user is authenticated:', user ? '✅ Yes' : '❌ No');
+            console.error('- User UID:', user?.uid);
+            console.error('- User email verified:', user?.emailVerified ? '✅ Yes' : '❌ No');
+            console.error('- User providers:', user?.providerData?.map(p => p.providerId));
+            console.error('- Check Firestore rules for Google sign-in compatibility');
+            console.error('- See FIRESTORE_RULES_FIX.md for detailed instructions');
+        } else if (error.code === 'unauthenticated') {
+            errorMessage = 'Authentication required to create patient document.';
+        } else if (error.message) {
+            errorMessage = `Error creating patient document: ${error.message}`;
+        }
+        
+        console.error('Error creating patient document:', errorMessage);
+        throw new Error(errorMessage);
     }
 }
 
@@ -250,10 +291,21 @@ export async function updatePatientPersonalInfo(userId, personalInfo) {
         await updateDoc(doc(db, 'patients', userId), updates);
         // Patient personal info updated successfully
         return true;
-    } catch (error) {
-        console.error('Error updating patient personal info:', error);
-        throw error;
-    }
+            } catch (error) {
+            let errorMessage = 'Failed to update patient personal info';
+            
+            // Handle specific Firestore errors
+            if (error.code === 'permission-denied') {
+                errorMessage = 'Permission denied. Please check your authentication and Firestore rules.';
+            } else if (error.code === 'unauthenticated') {
+                errorMessage = 'Authentication required to update patient info.';
+            } else if (error.message) {
+                errorMessage = `Error updating patient info: ${error.message}`;
+            }
+            
+            console.error('Error updating patient personal info:', errorMessage);
+            throw new Error(errorMessage);
+        }
 }
 
 /**
@@ -269,10 +321,21 @@ export async function updatePatientMedicalInfo(userId, medicalInfo) {
         await updateDoc(doc(db, 'patients', userId), updates);
         // Patient medical info updated successfully
         return true;
-    } catch (error) {
-        console.error('Error updating patient medical info:', error);
-        throw error;
-    }
+            } catch (error) {
+            let errorMessage = 'Failed to update patient medical info';
+            
+            // Handle specific Firestore errors
+            if (error.code === 'permission-denied') {
+                errorMessage = 'Permission denied. Please check your authentication and Firestore rules.';
+            } else if (error.code === 'unauthenticated') {
+                errorMessage = 'Authentication required to update medical info.';
+            } else if (error.message) {
+                errorMessage = `Error updating medical info: ${error.message}`;
+            }
+            
+            console.error('Error updating patient medical info:', errorMessage);
+            throw new Error(errorMessage);
+        }
 }
 
 /**
@@ -323,7 +386,8 @@ export async function addMedicalCondition(userId, category, condition) {
         };
         
         await updateDoc(doc(db, 'patients', userId), updates);
-        console.log('Medical condition added successfully');
+        const logger = window.firestoreLogger || console;
+        logger.info('Medical condition added successfully');
         return true;
     } catch (error) {
         console.error('Error adding medical condition:', error);

@@ -490,11 +490,11 @@ class AuthGuard {
         this.recordRedirect();
         
         if (message) {
-            localStorage.setItem('auth_redirect_message', message);
+            sessionStorage.setItem('auth_redirect_message', message);
         }
         
         // Store return URL
-        localStorage.setItem('auth_return_url', window.location.href);
+        sessionStorage.setItem('auth_return_url', window.location.href);
         
         // Redirect based on current path
         const currentPath = window.location.pathname;
@@ -527,7 +527,7 @@ class AuthGuard {
         this.recordRedirect();
         
         // Store return URL
-        localStorage.setItem('auth_return_url', window.location.href);
+        sessionStorage.setItem('auth_return_url', window.location.href);
         
         setTimeout(() => {
             window.location.href = '/email-verification.html';

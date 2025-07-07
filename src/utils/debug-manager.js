@@ -11,6 +11,7 @@ class DebugManager {
         this.isProduction = environment.isProduction();
         this.isDevelopment = environment.isDevelopment();
         this.debugPanels = new Map();
+        this.initializationStatus = 'pending';
         
         // Initialize on DOM ready
         if (document.readyState === 'loading') {
@@ -24,12 +25,25 @@ class DebugManager {
      * Initialize debug manager
      */
     initialize() {
-        this.handleDebugPanels();
-        this.handleDebugButtons();
-        this.setupGlobalDebugUtils();
-        
-        if (this.isProduction) {
-            this.hideProductionDebugCode();
+        try {
+            this.initializationStatus = 'initializing';
+            
+            this.handleDebugPanels();
+            this.handleDebugButtons();
+            this.setupGlobalDebugUtils();
+            
+            if (this.isProduction) {
+                this.hideProductionDebugCode();
+                logger.info('Debug Manager: Production mode - all debug elements hidden');
+            } else {
+                logger.dev('Debug Manager: Development mode - debug features available');
+            }
+            
+            this.initializationStatus = 'completed';
+            logger.info('Debug Manager initialized successfully');
+        } catch (error) {
+            this.initializationStatus = 'failed';
+            logger.error('Debug Manager initialization failed:', error);
         }
     }
 
@@ -45,6 +59,10 @@ class DebugManager {
         
         if (this.isProduction) {
             this.hideElement(element);
+            logger.info(`Debug panel "${id}" hidden in production`);
+        } else {
+            this.addDebugWarning(element);
+            logger.dev(`Debug panel "${id}" registered for development`);
         }
     }
 
@@ -61,17 +79,23 @@ class DebugManager {
             '.debug-container'
         ];
 
+        let hiddenCount = 0;
         debugPanelSelectors.forEach(selector => {
             const elements = document.querySelectorAll(selector);
             elements.forEach(element => {
                 if (this.isProduction) {
                     this.hideElement(element);
+                    hiddenCount++;
                 } else {
                     // In development, ensure it's visible but add warning
                     this.addDebugWarning(element);
                 }
             });
         });
+
+        if (this.isProduction && hiddenCount > 0) {
+            logger.info(`Debug Manager: Hidden ${hiddenCount} debug elements in production`);
+        }
     }
 
     /**
@@ -82,19 +106,26 @@ class DebugManager {
             '.debug-show-btn',
             '.debug-close-btn',
             '[data-debug-trigger]',
-            'button[onclick*="debug"]'
+            'button[onclick*="debug"]',
+            'button[onclick*="Debug"]'
         ];
 
+        let hiddenButtonCount = 0;
         debugButtonSelectors.forEach(selector => {
             const elements = document.querySelectorAll(selector);
             elements.forEach(element => {
                 if (this.isProduction) {
                     this.hideElement(element);
+                    hiddenButtonCount++;
                 } else {
                     this.addDebugWarning(element);
                 }
             });
         });
+
+        if (this.isProduction && hiddenButtonCount > 0) {
+            logger.info(`Debug Manager: Hidden ${hiddenButtonCount} debug buttons in production`);
+        }
     }
 
     /**
@@ -107,9 +138,11 @@ class DebugManager {
         element.style.display = 'none';
         element.style.visibility = 'hidden';
         element.setAttribute('data-production-hidden', 'true');
+        element.setAttribute('aria-hidden', 'true');
         
         // Also remove from DOM in production to prevent tampering
         if (this.isProduction) {
+            // Instead of removing immediately, hide it completely
             element.remove();
         }
     }
@@ -154,6 +187,9 @@ class DebugManager {
                 delete window.authDebug;
                 delete window.debugUtils;
                 delete window.__DEBUG__;
+                delete window.firestoreLogger;
+                delete window.signInLogger;
+                delete window.signUpLogger;
             }
             return;
         }
@@ -187,6 +223,24 @@ class DebugManager {
                 
                 getEnvironmentInfo: () => {
                     logger.table(environment.getInfo());
+                },
+
+                // Security check utilities
+                checkForExposedDebug: () => {
+                    const debugElements = document.querySelectorAll('.debug-panel, .debug-show-btn, [data-debug]');
+                    const visibleDebugElements = Array.from(debugElements).filter(el => 
+                        el.style.display !== 'none' && 
+                        el.style.visibility !== 'hidden' &&
+                        !el.hasAttribute('data-production-hidden')
+                    );
+                    
+                    if (visibleDebugElements.length > 0) {
+                        logger.warn('⚠️ SECURITY WARNING: Debug elements visible in production!', visibleDebugElements);
+                        return false;
+                    }
+                    
+                    logger.info('✅ Security check passed: No debug elements exposed');
+                    return true;
                 }
             };
             
@@ -206,6 +260,9 @@ class DebugManager {
         
         // Disable debug event listeners
         this.disableDebugEvents();
+        
+        // Remove debug-related global variables
+        this.cleanupGlobalDebugVars();
     }
 
     /**
@@ -232,6 +289,10 @@ class DebugManager {
         }
 
         commentsToRemove.forEach(comment => comment.remove());
+        
+        if (commentsToRemove.length > 0) {
+            logger.info(`Debug Manager: Removed ${commentsToRemove.length} debug comments from DOM`);
+        }
     }
 
     /**
@@ -239,26 +300,46 @@ class DebugManager {
      */
     removeDebugClasses() {
         const debugClasses = ['debug-border', 'debug-highlight', 'debug-info'];
+        const allElements = document.querySelectorAll('*');
         
-        debugClasses.forEach(className => {
-            const elements = document.querySelectorAll(`.${className}`);
-            elements.forEach(element => {
-                element.classList.remove(className);
+        let cleanedCount = 0;
+        allElements.forEach(element => {
+            debugClasses.forEach(debugClass => {
+                if (element.classList.contains(debugClass)) {
+                    element.classList.remove(debugClass);
+                    cleanedCount++;
+                }
             });
         });
+
+        if (cleanedCount > 0) {
+            logger.info(`Debug Manager: Cleaned ${cleanedCount} debug CSS classes`);
+        }
     }
 
     /**
      * Disable debug event listeners
      */
     disableDebugEvents() {
-        // Remove onclick handlers that contain debug functionality
-        const elementsWithDebugHandlers = document.querySelectorAll('[onclick*="debug"], [onclick*="Debug"]');
-        
-        elementsWithDebugHandlers.forEach(element => {
-            element.removeAttribute('onclick');
-            element.style.pointerEvents = 'none';
+        // Remove debug-related event listeners
+        const debugButtons = document.querySelectorAll('[onclick*="debug"], [onclick*="Debug"]');
+        debugButtons.forEach(button => {
+            button.removeAttribute('onclick');
         });
+    }
+
+    /**
+     * Clean up global debug variables
+     */
+    cleanupGlobalDebugVars() {
+        if (typeof window !== 'undefined') {
+            const debugVars = ['authDebug', 'debugUtils', '__DEBUG__'];
+            debugVars.forEach(varName => {
+                if (window[varName]) {
+                    delete window[varName];
+                }
+            });
+        }
     }
 
     /**
@@ -270,12 +351,69 @@ class DebugManager {
             isProduction: this.isProduction,
             isDevelopment: this.isDevelopment,
             debugPanelsCount: this.debugPanels.size,
-            hiddenElementsCount: document.querySelectorAll('[data-production-hidden="true"]').length
+            hiddenElementsCount: document.querySelectorAll('[data-production-hidden="true"]').length,
+            initializationStatus: this.initializationStatus
         };
+    }
+
+    /**
+     * Perform security audit for debug exposure
+     */
+    performSecurityAudit() {
+        const audit = {
+            timestamp: new Date().toISOString(),
+            environment: environment.getEnvironment(),
+            issues: []
+        };
+
+        // Check for visible debug elements
+        const visibleDebugElements = document.querySelectorAll('.debug-panel:not([data-production-hidden]), .debug-show-btn:not([data-production-hidden]), [data-debug]:not([data-production-hidden])');
+        if (visibleDebugElements.length > 0 && this.isProduction) {
+            audit.issues.push({
+                type: 'DEBUG_ELEMENTS_VISIBLE',
+                severity: 'HIGH',
+                count: visibleDebugElements.length,
+                elements: Array.from(visibleDebugElements).map(el => ({
+                    id: el.id,
+                    class: el.className,
+                    tag: el.tagName
+                }))
+            });
+        }
+
+        // Check for global debug variables
+        const globalDebugVars = ['authDebug', 'debugUtils', '__DEBUG__'];
+        const exposedVars = globalDebugVars.filter(varName => typeof window[varName] !== 'undefined');
+        if (exposedVars.length > 0 && this.isProduction) {
+            audit.issues.push({
+                type: 'GLOBAL_DEBUG_VARS_EXPOSED',
+                severity: 'MEDIUM',
+                variables: exposedVars
+            });
+        }
+
+        audit.passed = audit.issues.length === 0;
+        
+        if (this.isProduction) {
+            if (audit.passed) {
+                logger.info('✅ Debug security audit passed');
+            } else {
+                logger.warn('⚠️ Debug security audit failed:', audit.issues);
+            }
+        }
+
+        return audit;
     }
 }
 
-// Create singleton instance
+// Initialize debug manager
 const debugManager = new DebugManager();
+
+// Perform initial security audit in production
+if (debugManager.isProduction) {
+    setTimeout(() => {
+        debugManager.performSecurityAudit();
+    }, 1000);
+}
 
 export default debugManager; 

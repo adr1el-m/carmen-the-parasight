@@ -3,6 +3,19 @@ import authService, { USER_ROLES } from '../services/auth-service.js';
 import authGuard from '../utils/auth-guard.js';
 import { createPatientDocument } from '../services/firestoredb.js';
 
+// Import logger for production-safe logging
+import('../utils/logger.js').then(({ default: logger }) => {
+    window.signUpLogger = logger;
+}).catch(() => {
+    // Fallback if logger not available
+    window.signUpLogger = {
+        info: (...args) => console.log(...args),
+        error: (...args) => console.error(...args),
+        warn: (...args) => console.warn(...args),
+        debug: (...args) => console.log(...args)
+    };
+});
+
 // Import validation utilities
 import { 
     validatePatientRegistrationForm,
@@ -45,13 +58,15 @@ class SignUpState {
         
         // Prevent rapid redirects (less than 2 seconds apart)
         if (timeSinceLastRedirect < 2000 && this.redirectAttempts > 0) {
-            console.warn('🚨 Preventing rapid redirect attempt');
+            const logger = window.signUpLogger || console;
+            logger.warn('🚨 Preventing rapid redirect attempt');
             return false;
         }
         
         // Prevent too many redirect attempts
         if (this.redirectAttempts >= 3) {
-            console.warn('🚨 Too many redirect attempts, blocking');
+            const logger = window.signUpLogger || console;
+            logger.warn('🚨 Too many redirect attempts, blocking');
             return false;
         }
         
@@ -118,18 +133,21 @@ function initializeDOMElements() {
     const missingElements = requiredElements.filter(name => !domElements[name]);
     
     if (missingElements.length > 0) {
-        console.error('Missing required DOM elements:', missingElements);
+        const logger = window.signUpLogger || console;
+        logger.error('Missing required DOM elements:', missingElements);
         showError('Page initialization failed. Please refresh the page.');
         return false;
     }
     
-    console.log('✅ DOM elements initialized successfully');
+    const logger = window.signUpLogger || console;
+    logger.info('✅ DOM elements initialized successfully');
     return true;
 }
 
 // Initialize when DOM is loaded
 document.addEventListener('DOMContentLoaded', function() {
-    console.log('🚀 DOM Content Loaded');
+    const logger = window.signUpLogger || console;
+    logger.info('🚀 DOM Content Loaded');
     
     if (!initializeDOMElements()) {
         return;
@@ -175,11 +193,13 @@ function debounce(func, wait) {
 // Enhanced redirect handling
 function performRedirect(reason, user = null) {
     if (!signUpState.canAttemptRedirect()) {
-        console.log('🚫 Redirect blocked:', reason);
+        const logger = window.signUpLogger || console;
+        logger.info('🚫 Redirect blocked:', reason);
         return false;
     }
     
-    console.log(`🔄 Performing redirect: ${reason}`, user?.email || 'no user');
+    const logger = window.signUpLogger || console;
+    logger.info(`🔄 Performing redirect: ${reason}`, user?.email || 'no user');
     signUpState.setRedirecting(true);
     
     // Clear any existing timeouts
@@ -212,7 +232,8 @@ function performRedirect(reason, user = null) {
             }
             
             if (!userRole) {
-                console.log('🔧 Setting default role for redirect');
+                const logger = window.signUpLogger || console;
+                logger.info('🔧 Setting default role for redirect');
                 authService.userRole = USER_ROLES.PATIENT;
             }
             
@@ -243,10 +264,10 @@ window.addEventListener('load', async () => {
         signUpState.reset();
         
         // Check for redirect messages first
-        const redirectMessage = localStorage.getItem('auth_redirect_message');
+        const redirectMessage = sessionStorage.getItem('auth_redirect_message');
         if (redirectMessage) {
             showError(redirectMessage);
-            localStorage.removeItem('auth_redirect_message');
+            sessionStorage.removeItem('auth_redirect_message');
         }
         
         // Check for Google redirect result immediately
@@ -345,12 +366,12 @@ async function checkGoogleRedirectResult() {
     }
 }
 
-// Secure storage utility
+// Secure storage utility - Uses sessionStorage to avoid XSS persistence
 class SecureStorage {
     static setItem(key, value, encrypt = true) {
         try {
             const data = encrypt ? btoa(JSON.stringify(value)) : JSON.stringify(value);
-            localStorage.setItem(key, data);
+            sessionStorage.setItem(key, data);
         } catch (error) {
             console.error('Error storing data:', error);
         }
@@ -358,7 +379,7 @@ class SecureStorage {
     
     static getItem(key, decrypt = true) {
         try {
-            const data = localStorage.getItem(key);
+            const data = sessionStorage.getItem(key);
             if (!data) return null;
             
             return decrypt ? JSON.parse(atob(data)) : JSON.parse(data);
@@ -369,7 +390,7 @@ class SecureStorage {
     }
     
     static removeItem(key) {
-        localStorage.removeItem(key);
+        sessionStorage.removeItem(key);
     }
 }
 

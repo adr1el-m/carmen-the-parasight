@@ -2,6 +2,7 @@
 import { signInWithEmailAndPassword } from 'firebase/auth';
 import { doc, getDoc } from 'firebase/firestore';
 import { auth, db } from '../config/firebase.ts';
+import { rateLimiter, sanitizeInput, validateEmail } from '../utils/validation.js';
 
 class BusinessSignIn {
     constructor() {
@@ -99,9 +100,16 @@ class BusinessSignIn {
             return;
         }
 
-        const email = this.emailInput.value.trim();
+        const email = sanitizeInput(this.emailInput.value.trim());
         const password = this.passwordInput.value;
         const rememberMe = this.rememberMeCheckbox.checked;
+
+        // Check rate limiting for business sign-in attempts
+        const userKey = email || 'anonymous_business';
+        if (!rateLimiter.isAllowed(userKey, 3, 60000)) {
+            this.showMessage('Too many sign-in attempts. Please wait 1 minute before trying again.', 'error');
+            return;
+        }
 
         this.setLoadingState(true);
 

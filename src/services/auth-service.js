@@ -38,6 +38,24 @@ import {
 import { firebaseConfig } from './config.js';
 import logger from '../utils/logger.js';
 
+// Import secure error handling with fallback
+let secureErrorHandler = {
+    handleAuthError: (error) => ({ message: 'Authentication failed. Please try again.' }),
+    handleSecureError: (error) => ({ message: 'An error occurred. Please try again.' })
+};
+
+// Initialize secure error handler asynchronously
+(async () => {
+    try {
+        const errorHandlerModule = await import('./secure-error-handler.js');
+        secureErrorHandler = errorHandlerModule.default || errorHandlerModule;
+        logger.info('✅ Secure error handler loaded successfully');
+    } catch (err) {
+        logger.warn('⚠️ Using fallback error handler:', err.message);
+        // Keep the fallback handlers above
+    }
+})();
+
 // Initialize Firebase (avoid duplicate initialization)
 let app;
 let auth;
@@ -88,14 +106,45 @@ const USER_ROLES = {
     SYSTEM_ADMIN: 'system_admin'
 };
 
-// Session storage keys
-const SESSION_KEYS = {
-    USER_DATA: 'auth_user_data',
+// Secure session storage keys - using sessionStorage for non-sensitive data only
+const SECURE_SESSION_KEYS = {
     SESSION_START: 'auth_session_start',
     LAST_ACTIVITY: 'auth_last_activity',
-    LOGIN_ATTEMPTS: 'auth_login_attempts',
-    LOCKOUT_UNTIL: 'auth_lockout_until'
+    LOGIN_ATTEMPTS: 'auth_login_attempts', // Keep in localStorage for security (rate limiting)
+    LOCKOUT_UNTIL: 'auth_lockout_until'     // Keep in localStorage for security (rate limiting)
 };
+
+// In-memory storage for sensitive data (cleared on page refresh)
+class SecureSessionManager {
+    constructor() {
+        this.sensitiveData = new Map();
+        this.sessionActive = false;
+    }
+
+    // Store sensitive data in memory only
+    setSensitiveData(key, value) {
+        this.sensitiveData.set(key, value);
+    }
+
+    getSensitiveData(key) {
+        return this.sensitiveData.get(key);
+    }
+
+    clearSensitiveData() {
+        this.sensitiveData.clear();
+        this.sessionActive = false;
+    }
+
+    isSessionActive() {
+        return this.sessionActive && this.sensitiveData.size > 0;
+    }
+
+    setSessionActive(active) {
+        this.sessionActive = active;
+    }
+}
+
+const secureSession = new SecureSessionManager();
 
 /**
  * Authentication Service Class
@@ -108,6 +157,7 @@ class AuthService {
         this.warningTimer = null;
         this.authListeners = [];
         this.sessionListeners = [];
+        this.authPopupWindow = null; // Track popup window
         
         // Initialize session management
         this.initializeSessionManagement();
@@ -115,16 +165,59 @@ class AuthService {
         // Set up auth state listener
         this.setupAuthStateListener();
         
-        // Authentication Service initialized
+        // Set up popup cleanup on page unload
+        this.setupPopupCleanup();
+        
+        logger.info('Authentication Service initialized');
     }
 
     /**
-     * Initialize session management
+     * Setup popup cleanup on page unload
+     */
+    setupPopupCleanup() {
+        // Close popup when page unloads
+        window.addEventListener('beforeunload', () => {
+            this.closeAuthPopup();
+        });
+        
+        // Listen for messages to close popups
+        window.addEventListener('message', (event) => {
+            if (event.origin === window.location.origin && event.data?.type === 'CLOSE_AUTH_POPUP') {
+                this.closeAuthPopup();
+            }
+        });
+    }
+
+    /**
+     * Close auth popup window if open
+     */
+    closeAuthPopup() {
+        try {
+            if (this.authPopupWindow && !this.authPopupWindow.closed) {
+                logger.info('Closing auth popup window');
+                this.authPopupWindow.close();
+                this.authPopupWindow = null;
+            }
+            
+            // Also close any global auth popup reference
+            if (window.authPopup && !window.authPopup.closed) {
+                window.authPopup.close();
+                window.authPopup = null;
+            }
+        } catch (error) {
+            logger.warn('Error closing auth popup:', error);
+        }
+    }
+    
+
+
+    /**
+     * Initialize secure session management
      */
     initializeSessionManagement() {
-        // Check for existing session
-        const sessionStart = localStorage.getItem(SESSION_KEYS.SESSION_START);
-        const lastActivity = localStorage.getItem(SESSION_KEYS.LAST_ACTIVITY);
+        // Check for existing session using sessionStorage (non-persistent)
+        const sessionStart = sessionStorage.getItem(SECURE_SESSION_KEYS.SESSION_START);
+        const lastActivity = sessionStorage.getItem(SECURE_SESSION_KEYS.LAST_ACTIVITY);
         
         if (sessionStart && lastActivity) {
             const now = Date.now();
@@ -160,10 +253,10 @@ class AuthService {
     }
 
     /**
-     * Update last activity timestamp
+     * Update last activity timestamp (non-sensitive data in sessionStorage)
      */
     updateLastActivity() {
-        localStorage.setItem(SESSION_KEYS.LAST_ACTIVITY, Date.now().toString());
+        sessionStorage.setItem(SECURE_SESSION_KEYS.LAST_ACTIVITY, Date.now().toString());
         
         // Reset session timer
         if (this.sessionTimer) {
@@ -257,8 +350,8 @@ class AuthService {
                         this.userRole = USER_ROLES.PATIENT;
                     }
                     
-                    // Start session
-                    this.startSession(user);
+                    // Start secure session
+                    this.startSecureSession(user);
                     
                     // Update last login in patient document if user is a patient
                     if (this.userRole === USER_ROLES.PATIENT) {
@@ -297,28 +390,17 @@ class AuthService {
      * Check if email verification is required
      */
     requireEmailVerification() {
-        // Google users are auto-verified, email users need verification
-        return true;
+        // Disable email verification requirement if configured
+        return true; // Can be made configurable
     }
 
     /**
      * Handle unverified email
      */
     async handleUnverifiedEmail(user) {
-        try {
-            // Send verification email
-            await sendEmailVerification(user);
-            
-            // Show verification message
-            this.showEmailVerificationMessage(user.email);
-            
-            // Sign out user until email is verified
-            await signOut(auth);
-            
-        } catch (error) {
-            logger.error('Error sending verification email:', error);
-            throw new Error('Failed to send verification email');
-        }
+        await signOut(auth);
+        this.showEmailVerificationMessage(user.email);
+        this.redirectToLogin('Please verify your email before signing in.');
     }
 
     /**
@@ -326,170 +408,179 @@ class AuthService {
      */
     showEmailVerificationMessage(email) {
         const message = `
-            <div style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); z-index: 10000; display: flex; align-items: center; justify-content: center;">
-                <div style="background: white; padding: 30px; border-radius: 10px; max-width: 500px; text-align: center;">
-                    <h3>Email Verification Required</h3>
-                    <p>We've sent a verification email to <strong>${email}</strong></p>
-                    <p>Please check your email and click the verification link before proceeding.</p>
-                    <button onclick="window.location.reload()" style="background: #007bff; color: white; border: none; padding: 10px 20px; border-radius: 5px; cursor: pointer; margin-top: 20px;">
-                        I've Verified My Email
-                    </button>
-                </div>
+            <div style="background: #f0f9ff; border: 1px solid #0ea5e9; padding: 16px; border-radius: 8px; margin: 16px 0;">
+                <h3 style="color: #0c4a6e; margin: 0 0 8px 0;">📧 Email Verification Required</h3>
+                <p style="color: #075985; margin: 0;">
+                    Please check your email (${email}) and click the verification link before signing in.
+                </p>
+                <p style="color: #075985; margin: 8px 0 0 0; font-size: 0.9em;">
+                    Didn't receive the email? Check your spam folder or try signing up again.
+                </p>
             </div>
         `;
         
-        document.body.insertAdjacentHTML('beforeend', message);
-    }
-
-    /**
-     * Load user data and role
-     */
-    async loadUserData(user) {
-        try {
-            // For Google users, we can assume they are patients and proceed
-            const isGoogleUser = user.providerData.some(provider => provider.providerId === 'google.com');
-            
-            if (isGoogleUser) {
-                logger.info(' Google user detected, setting role as patient');
-                this.userRole = USER_ROLES.PATIENT;
-                this.currentUser = user;
-                
-                // Try to get user document, but don't fail if permissions are insufficient
-                try {
-                    const userDoc = await getDoc(doc(db, 'users', user.uid));
-                    
-                    if (userDoc.exists()) {
-                        const userData = userDoc.data();
-                        this.userRole = userData.role || USER_ROLES.PATIENT;
-                        logger.info(' Found existing user document with role:', this.userRole);
-                        
-                        // Update last login if possible
-                        try {
-                            await updateDoc(doc(db, 'users', user.uid), {
-                                lastLogin: serverTimestamp(),
-                                lastActivity: serverTimestamp()
-                            });
-                        } catch (updateError) {
-                            console.warn('Could not update last login:', updateError);
-                        }
-                    } else {
-                        // Try to create user document
-                        try {
-                            await this.createUserDocument(user);
-                            logger.info(' Created new user document for Google user');
-                        } catch (createError) {
-                            console.warn('Could not create user document:', createError);
-                        }
-                    }
-                } catch (firestoreError) {
-                    console.warn('Firestore permission error, proceeding with default role:', firestoreError);
-                }
-                
-                logger.info(' Google user authentication complete:', { 
-                    email: user.email, 
-                    role: this.userRole, 
-                    uid: user.uid 
-                });
-                return; // Continue with authentication flow
-            }
-            
-            // For email users, try the standard flow
-            const userDoc = await getDoc(doc(db, 'users', user.uid));
-            
-            if (userDoc.exists()) {
-                const userData = userDoc.data();
-                this.userRole = userData.role || USER_ROLES.PATIENT;
-                
-                // Update last login
-                await updateDoc(doc(db, 'users', user.uid), {
-                    lastLogin: serverTimestamp(),
-                    lastActivity: serverTimestamp()
-                });
-            } else {
-                // Create user document if it doesn't exist
-                await this.createUserDocument(user);
-            }
-            
-            this.currentUser = user;
-            
-        } catch (error) {
-            logger.error('Error loading user data:', error);
-            
-            // If there are permission errors, still set the user as authenticated
-            // This allows the app to continue working even if Firestore has permission issues
-            console.warn('Continuing with limited functionality due to permission issues');
-            this.currentUser = user;
-            this.userRole = USER_ROLES.PATIENT; // Default to patient role
+        // Try to show in an existing container or create alert
+        const container = document.getElementById('auth-messages') || document.getElementById('error-container');
+        if (container) {
+            container.innerHTML = message;
+            container.scrollIntoView({ behavior: 'smooth' });
+        } else {
+            // Fallback to alert
+            alert(`Please verify your email (${email}) before signing in.`);
         }
     }
 
     /**
-     * Create user document
+     * Load user data and role from Firestore
+     */
+    async loadUserData(user) {
+        try {
+            logger.info(' Loading user data for:', user.email);
+            
+            // First, try to get user from patients collection
+            const patientDoc = await getDoc(doc(db, 'patients', user.uid));
+            
+            if (patientDoc.exists()) {
+                const patientData = patientDoc.data();
+                this.currentUser = user;
+                this.userRole = USER_ROLES.PATIENT;
+                
+                // Store role securely in memory only
+                secureSession.setSensitiveData('userRole', this.userRole);
+                secureSession.setSensitiveData('userType', 'patient');
+                
+                logger.info(' User loaded as patient');
+                return;
+            }
+            
+            // Try to get user from organizations collection
+            const organizationQuery = query(
+                collection(db, 'organizations'),
+                where('members', 'array-contains', user.uid)
+            );
+            const orgSnapshot = await getDocs(organizationQuery);
+            
+            if (!orgSnapshot.empty) {
+                const orgDoc = orgSnapshot.docs[0];
+                const orgData = orgDoc.data();
+                
+                // Determine role based on organization structure
+                if (orgData.admins && orgData.admins.includes(user.uid)) {
+                    this.userRole = USER_ROLES.ORGANIZATION_ADMIN;
+                } else {
+                    this.userRole = USER_ROLES.ORGANIZATION_MEMBER;
+                }
+                
+                this.currentUser = user;
+                
+                // Store role securely in memory only
+                secureSession.setSensitiveData('userRole', this.userRole);
+                secureSession.setSensitiveData('userType', 'organization');
+                secureSession.setSensitiveData('organizationId', orgDoc.id);
+                
+                logger.info(' User loaded as organization member with role:', this.userRole);
+                return;
+            }
+            
+            // Try to get user from staff collection
+            const staffDoc = await getDoc(doc(db, 'staff', user.uid));
+            
+            if (staffDoc.exists()) {
+                const staffData = staffDoc.data();
+                this.currentUser = user;
+                this.userRole = staffData.role || USER_ROLES.CLINIC_STAFF;
+                
+                // Store role securely in memory only
+                secureSession.setSensitiveData('userRole', this.userRole);
+                secureSession.setSensitiveData('userType', 'staff');
+                
+                logger.info(' User loaded as staff with role:', this.userRole);
+                return;
+            }
+            
+            // Default to patient role if no specific role found
+            this.currentUser = user;
+            this.userRole = USER_ROLES.PATIENT;
+            
+            // Store role securely in memory only
+            secureSession.setSensitiveData('userRole', this.userRole);
+            secureSession.setSensitiveData('userType', 'patient');
+            
+            logger.info(' User defaulted to patient role');
+            
+        } catch (error) {
+            logger.error('Error loading user data:', error);
+            throw error;
+        }
+    }
+
+    /**
+     * Create user document in Firestore
      */
     async createUserDocument(user) {
         try {
             const userData = {
-                uid: user.uid,
                 email: user.email,
-                displayName: user.displayName,
-                photoURL: user.photoURL,
-                role: USER_ROLES.PATIENT, // Default role
-                emailVerified: user.emailVerified,
-                authProvider: user.providerData[0]?.providerId === 'google.com' ? 'google' : 'email',
+                displayName: user.displayName || '',
                 createdAt: serverTimestamp(),
-                lastLogin: serverTimestamp(),
-                isActive: true
+                lastLoginAt: serverTimestamp(),
+                emailVerified: user.emailVerified,
+                provider: user.providerData[0]?.providerId || 'email'
             };
             
-            await setDoc(doc(db, 'users', user.uid), userData);
-            this.userRole = USER_ROLES.PATIENT;
-            logger.debug('User document created successfully');
+            await setDoc(doc(db, 'patients', user.uid), userData);
+            logger.info(' User document created');
             
         } catch (error) {
             logger.error('Error creating user document:', error);
-            console.warn('Proceeding without user document due to permission issues');
-            // Don't throw an error - we'll proceed with default role
-            this.userRole = USER_ROLES.PATIENT;
+            throw error;
         }
     }
 
     /**
-     * Update patient last login (using dynamic import to avoid circular dependencies)
+     * Update patient last login
      */
     async updatePatientLastLogin(userId) {
         try {
-            const { updateLastLogin } = await import('./firestoredb.js');
-            await updateLastLogin(userId);
+            await updateDoc(doc(db, 'patients', userId), {
+                lastLoginAt: serverTimestamp()
+            });
         } catch (error) {
-            logger.error('Error updating patient last login:', error);
+            logger.warn('Could not update last login:', error);
         }
     }
 
     /**
-     * Start session
+     * Start secure session (minimal data in sessionStorage, sensitive data in memory)
      */
-    startSession(user) {
+    startSecureSession(user) {
         const now = Date.now();
         
-        // Store session data
-        localStorage.setItem(SESSION_KEYS.SESSION_START, now.toString());
-        localStorage.setItem(SESSION_KEYS.LAST_ACTIVITY, now.toString());
-        localStorage.setItem(SESSION_KEYS.USER_DATA, JSON.stringify({
-            uid: user.uid,
-            email: user.email,
-            displayName: user.displayName,
-            role: this.userRole,
-            emailVerified: user.emailVerified
-        }));
+        // Store only non-sensitive session timing data in sessionStorage
+        sessionStorage.setItem(SECURE_SESSION_KEYS.SESSION_START, now.toString());
+        sessionStorage.setItem(SECURE_SESSION_KEYS.LAST_ACTIVITY, now.toString());
+        
+        // Store sensitive data in memory only (cleared on page refresh/close)
+        secureSession.setSensitiveData('userId', user.uid);
+        secureSession.setSensitiveData('userEmail', user.email);
+        secureSession.setSensitiveData('emailVerified', user.emailVerified);
+        secureSession.setSessionActive(true);
+        
+        // Initialize CSRF token for the session
+        if (window.csrfService && window.csrfService.fetchToken) {
+            window.csrfService.fetchToken().catch(error => {
+                logger.warn('Failed to initialize CSRF token:', error.message);
+            });
+        }
         
         // Set up session management
         this.updateLastActivity();
         
-        // Session started for user
+        logger.info('🔒 Secure session started for user');
     }
 
     /**
-     * Clear session
+     * Clear session (both sessionStorage and memory)
      */
     clearSession() {
         // Clear session timers
@@ -503,12 +594,22 @@ class AuthService {
             this.warningTimer = null;
         }
         
-        // Clear session data
-        Object.values(SESSION_KEYS).forEach(key => {
-            localStorage.removeItem(key);
+        // Clear non-sensitive session data from sessionStorage
+        Object.values(SECURE_SESSION_KEYS).forEach(key => {
+            if (key !== SECURE_SESSION_KEYS.LOGIN_ATTEMPTS && key !== SECURE_SESSION_KEYS.LOCKOUT_UNTIL) {
+                sessionStorage.removeItem(key);
+            }
         });
         
-        // Session cleared
+        // Clear CSRF tokens
+        if (window.csrfService && window.csrfService.logout) {
+            window.csrfService.logout();
+        }
+        
+        // Clear sensitive data from memory
+        secureSession.clearSensitiveData();
+        
+        logger.info('🔒 Secure session cleared');
     }
 
     /**
@@ -524,14 +625,17 @@ class AuthService {
         // Clear session
         this.clearSession();
         
-        // Clear any additional auth-related localStorage items
-        const authKeys = [
+        // Clear any additional auth-related storage items (non-sensitive only)
+        const nonSensitiveKeys = [
             'auth_redirect_message',
-            'pending_patient_data',
-            'patient-portal-cache'
+            'auth_return_url'
         ];
         
-        authKeys.forEach(key => {
+        nonSensitiveKeys.forEach(key => {
+            if (sessionStorage.getItem(key)) {
+                sessionStorage.removeItem(key);
+                logger.debug(`🧹 Cleared sessionStorage key: ${key}`);
+            }
             if (localStorage.getItem(key)) {
                 localStorage.removeItem(key);
                 logger.debug(`🧹 Cleared localStorage key: ${key}`);
@@ -549,10 +653,10 @@ class AuthService {
     }
 
     /**
-     * Check if user is locked out
+     * Check if user is locked out (keep rate limiting in localStorage for security)
      */
     isLockedOut() {
-        const lockoutUntil = localStorage.getItem(SESSION_KEYS.LOCKOUT_UNTIL);
+        const lockoutUntil = localStorage.getItem(SECURE_SESSION_KEYS.LOCKOUT_UNTIL);
         if (lockoutUntil) {
             const now = Date.now();
             const lockoutTime = parseInt(lockoutUntil);
@@ -561,8 +665,8 @@ class AuthService {
                 return true;
             } else {
                 // Lockout expired, clear it
-                localStorage.removeItem(SESSION_KEYS.LOCKOUT_UNTIL);
-                localStorage.removeItem(SESSION_KEYS.LOGIN_ATTEMPTS);
+                localStorage.removeItem(SECURE_SESSION_KEYS.LOCKOUT_UNTIL);
+                localStorage.removeItem(SECURE_SESSION_KEYS.LOGIN_ATTEMPTS);
                 return false;
             }
         }
@@ -570,24 +674,24 @@ class AuthService {
     }
 
     /**
-     * Track login attempts
+     * Track login attempts (keep in localStorage for security - rate limiting across sessions)
      */
     trackLoginAttempt(success = false) {
         if (success) {
             // Clear login attempts on success
-            localStorage.removeItem(SESSION_KEYS.LOGIN_ATTEMPTS);
-            localStorage.removeItem(SESSION_KEYS.LOCKOUT_UNTIL);
+            localStorage.removeItem(SECURE_SESSION_KEYS.LOGIN_ATTEMPTS);
+            localStorage.removeItem(SECURE_SESSION_KEYS.LOCKOUT_UNTIL);
             return;
         }
         
         // Increment failed attempts
-        const attempts = parseInt(localStorage.getItem(SESSION_KEYS.LOGIN_ATTEMPTS) || '0') + 1;
-        localStorage.setItem(SESSION_KEYS.LOGIN_ATTEMPTS, attempts.toString());
+        const attempts = parseInt(localStorage.getItem(SECURE_SESSION_KEYS.LOGIN_ATTEMPTS) || '0') + 1;
+        localStorage.setItem(SECURE_SESSION_KEYS.LOGIN_ATTEMPTS, attempts.toString());
         
         // Check if max attempts reached
         if (attempts >= MAX_LOGIN_ATTEMPTS) {
             const lockoutUntil = Date.now() + LOCKOUT_DURATION;
-            localStorage.setItem(SESSION_KEYS.LOCKOUT_UNTIL, lockoutUntil.toString());
+            localStorage.setItem(SECURE_SESSION_KEYS.LOCKOUT_UNTIL, lockoutUntil.toString());
             
             throw new Error(`Too many failed login attempts. Account locked for ${LOCKOUT_DURATION / 60000} minutes.`);
         }
@@ -603,7 +707,7 @@ class AuthService {
         try {
             // Check if locked out
             if (this.isLockedOut()) {
-                const lockoutUntil = localStorage.getItem(SESSION_KEYS.LOCKOUT_UNTIL);
+                const lockoutUntil = localStorage.getItem(SECURE_SESSION_KEYS.LOCKOUT_UNTIL);
                 const timeRemaining = Math.ceil((parseInt(lockoutUntil) - Date.now()) / 60000);
                 throw new Error(`Account locked. Try again in ${timeRemaining} minutes.`);
             }
@@ -691,8 +795,21 @@ class AuthService {
             // Try popup first
             try {
                 logger.debug(' Attempting Google sign-in with popup');
-                result = await signInWithPopup(auth, googleProvider);
+                
+                // Track popup window reference for cleanup
+                const popupPromise = signInWithPopup(auth, googleProvider);
+                
+                // Store popup reference if available (some browsers expose this)
+                if (auth._popupWindow) {
+                    this.authPopupWindow = auth._popupWindow;
+                    window.authPopup = auth._popupWindow;
+                }
+                
+                result = await popupPromise;
                 logger.info(' Google popup login successful');
+                
+                // Close popup explicitly after successful login
+                this.closeAuthPopup();
                 
                 // Set user role immediately for Google users
                 this.currentUser = result.user;
@@ -979,7 +1096,7 @@ class AuthService {
      */
     redirectToLogin(message = '') {
         if (message) {
-            localStorage.setItem('auth_message', message);
+            sessionStorage.setItem('auth_message', message);
         }
         
         // Determine redirect URL based on current location
@@ -1051,8 +1168,8 @@ class AuthService {
      * Get session info
      */
     getSessionInfo() {
-        const sessionStart = localStorage.getItem(SESSION_KEYS.SESSION_START);
-        const lastActivity = localStorage.getItem(SESSION_KEYS.LAST_ACTIVITY);
+        const sessionStart = sessionStorage.getItem(SECURE_SESSION_KEYS.SESSION_START);
+        const lastActivity = sessionStorage.getItem(SECURE_SESSION_KEYS.LAST_ACTIVITY);
         
         if (!sessionStart || !lastActivity) {
             return null;
@@ -1076,6 +1193,6 @@ class AuthService {
 const authService = new AuthService();
 
 // Export service and constants
-export { authService as default, AuthService, USER_ROLES, SESSION_KEYS, auth };
+export { authService as default, AuthService, USER_ROLES, SECURE_SESSION_KEYS, auth };
 
 // Authentication Service module loaded 

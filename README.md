@@ -35,10 +35,11 @@
     </td>
   </tr>
   
-  <!-- Second Row: 2 members centered -->
+  <!-- Second Row: 2 members centered with empty cells for balance -->
   <tr>
+    <td></td>
     <!-- Maxxine -->
-    <td align="center" width="50%">
+    <td align="center" width="33.33%">
       <img src="src/assets/img/max.png" alt="Maxxinne Lorin M. Fernandez" style="border-radius: 50%; width: 120px; height: 120px;"><br><br>
       <strong>Maxxinne Lorin M. Fernandez</strong><br>
       <p align="center">
@@ -48,7 +49,7 @@
       </p>
     </td>
     <!-- Adriel -->
-    <td align="center" width="50%">
+    <td align="center" width="33.33%">
       <img src="src/assets/img/Adriel.png" alt="Adriel Magsipoc Magalona" style="border-radius: 50%; width: 120px; height: 120px;"><br><br>
       <strong>Adriel Magsipoc Magalona</strong><br>
       <p align="center">

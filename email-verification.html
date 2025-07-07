@@ -221,7 +221,7 @@
                 setLoading(true);
                 
                 // Import Firebase auth functions
-                const { sendEmailVerification } = await import('firebase/auth');
+                const { sendEmailVerification } = await import('https://www.gstatic.com/firebasejs/11.9.1/firebase-auth.js');
                 
                 // Send verification email
                 await sendEmailVerification(currentUser);

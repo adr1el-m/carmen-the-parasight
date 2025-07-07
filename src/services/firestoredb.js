@@ -1,9 +1,9 @@
 // Firestore Database Service
-import { initializeApp, getApps, getApp } from 'firebase/app';
+import { initializeApp, getApps, getApp } from 'https://www.gstatic.com/firebasejs/11.9.1/firebase-app.js';
 import { 
     getAuth, 
     onAuthStateChanged
-} from 'firebase/auth';
+} from 'https://www.gstatic.com/firebasejs/11.9.1/firebase-auth.js';
 import { 
     getFirestore, 
     doc, 
@@ -22,7 +22,7 @@ import {
     arrayRemove,
     serverTimestamp,
     onSnapshot
-} from 'firebase/firestore';
+} from 'https://www.gstatic.com/firebasejs/11.9.1/firebase-firestore.js';
 
 // Import Firebase configuration from config.js
 import { firebaseConfig } from './config.js';
@@ -47,10 +47,10 @@ try {
     // Check if Firebase is already initialized
     if (getApps().length === 0) {
         app = initializeApp(firebaseConfig);
-        console.log('Firebase initialized by Firestore service');
+        // Firebase initialized by Firestore service
     } else {
         app = getApp();
-        console.log('Using existing Firebase instance');
+        // Using existing Firebase instance
     }
     
     auth = getAuth(app);
@@ -62,7 +62,7 @@ try {
 }
 
 // Log Firebase initialization
-console.log('Firestore DB Service initialized with project:', firebaseConfig.projectId);
+// Firestore DB Service initialized
 
 // Export Firebase instances for global access (if needed)
 window.firebaseApp = app;
@@ -103,7 +103,7 @@ export async function getPatientData(userId) {
         if (userDoc.exists()) {
             return userDoc.data();
         } else {
-            console.log('No patient data found for user:', userId);
+            // No patient data found for user
             return null;
         }
     } catch (error) {
@@ -132,9 +132,9 @@ export async function createPatientDocument(user, additionalData = {}) {
             throw new Error('User is required');
         }
 
-        const firstName = additionalData.firstName || user.displayName?.split(' ')[0] || '';
-        const lastName = additionalData.lastName || user.displayName?.split(' ').slice(1).join(' ') || '';
-        const fullName = `${firstName} ${lastName}`.trim() || user.displayName || '';
+        const firstName = additionalData.personalInfo?.firstName || additionalData.firstName || user.displayName?.split(' ')[0] || '';
+        const lastName = additionalData.personalInfo?.lastName || additionalData.lastName || user.displayName?.split(' ').slice(1).join(' ') || '';
+        const fullName = additionalData.personalInfo?.fullName || additionalData.fullName || `${firstName} ${lastName}`.trim() || user.displayName || user.email.split('@')[0];
         
         // Calculate age from birth date
         let age = null;
@@ -218,7 +218,7 @@ export async function createPatientDocument(user, additionalData = {}) {
         };
 
         await setDoc(doc(db, 'patients', user.uid), patientData, { merge: true });
-        console.log('Patient document created successfully');
+        // Patient document created successfully
         return patientData;
     } catch (error) {
         console.error('Error creating patient document:', error);
@@ -248,7 +248,7 @@ export async function updatePatientPersonalInfo(userId, personalInfo) {
         };
         
         await updateDoc(doc(db, 'patients', userId), updates);
-        console.log('Patient personal info updated successfully');
+        // Patient personal info updated successfully
         return true;
     } catch (error) {
         console.error('Error updating patient personal info:', error);
@@ -267,7 +267,7 @@ export async function updatePatientMedicalInfo(userId, medicalInfo) {
         };
         
         await updateDoc(doc(db, 'patients', userId), updates);
-        console.log('Patient medical info updated successfully');
+        // Patient medical info updated successfully
         return true;
     } catch (error) {
         console.error('Error updating patient medical info:', error);
@@ -286,7 +286,7 @@ export async function updatePatientSettings(userId, settings) {
         };
         
         await updateDoc(doc(db, 'patients', userId), updates);
-        console.log('Patient settings updated successfully');
+        // Patient settings updated successfully
         return true;
     } catch (error) {
         console.error('Error updating patient settings:', error);
@@ -568,12 +568,25 @@ export function listenToPatientData(userId, callback) {
  */
 export async function updateLastLogin(userId) {
     try {
-        await updateDoc(doc(db, 'patients', userId), {
-            lastLoginAt: serverTimestamp()
-        });
-        console.log('Last login updated successfully');
+        console.log('🕐 Updating last login for user:', userId);
+        
+        // First, check if patient document exists
+        const docRef = doc(db, 'patients', userId);
+        const docSnap = await getDoc(docRef);
+        
+        if (docSnap.exists()) {
+            // Document exists, update it
+            await updateDoc(docRef, {
+                lastLoginAt: serverTimestamp()
+            });
+            console.log('✅ Last login updated successfully');
+        } else {
+            // Document doesn't exist, skip update silently
+            console.log('⚠️ Patient document does not exist, skipping last login update');
+        }
     } catch (error) {
-        console.error('Error updating last login:', error);
+        // Don't throw error, just log it - last login update is not critical
+        console.warn('⚠️ Error updating last login (non-critical):', error.message);
     }
 }
 

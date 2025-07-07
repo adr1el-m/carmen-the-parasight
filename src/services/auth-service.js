@@ -1,7 +1,7 @@
 // Comprehensive Authentication Service
 // Handles session management, email verification, and role-based access control
 
-import { initializeApp, getApps, getApp } from 'firebase/app';
+import { initializeApp, getApps, getApp } from 'https://www.gstatic.com/firebasejs/11.9.1/firebase-app.js';
 import { 
     getAuth, 
     createUserWithEmailAndPassword, 
@@ -19,7 +19,7 @@ import {
     EmailAuthProvider,
     deleteUser,
     reload
-} from 'firebase/auth';
+} from 'https://www.gstatic.com/firebasejs/11.9.1/firebase-auth.js';
 import { 
     getFirestore, 
     doc, 
@@ -32,7 +32,7 @@ import {
     where,
     getDocs,
     collection
-} from 'firebase/firestore';
+} from 'https://www.gstatic.com/firebasejs/11.9.1/firebase-firestore.js';
 
 // Import Firebase configuration
 import { firebaseConfig } from './config.js';
@@ -80,7 +80,11 @@ const USER_ROLES = {
     DOCTOR: 'doctor',
     NURSE: 'nurse', 
     PATIENT: 'patient',
-    CLINIC_STAFF: 'clinic_staff'
+    CLINIC_STAFF: 'clinic_staff',
+    // New B2B roles
+    ORGANIZATION_ADMIN: 'organization_admin',
+    ORGANIZATION_MEMBER: 'organization_member',
+    SYSTEM_ADMIN: 'system_admin'
 };
 
 // Session storage keys
@@ -110,7 +114,7 @@ class AuthService {
         // Set up auth state listener
         this.setupAuthStateListener();
         
-        console.log('Authentication Service initialized');
+        // Authentication Service initialized
     }
 
     /**
@@ -206,36 +210,84 @@ class AuthService {
      * Set up auth state listener
      */
     setupAuthStateListener() {
+        let processingStateChange = false;
+        
         onAuthStateChanged(auth, async (user) => {
-            if (user) {
-                console.log('User authenticated:', user.uid);
-                
-                // Check email verification
-                if (!user.emailVerified && this.requireEmailVerification()) {
-                    console.log('Email not verified, requesting verification');
-                    await this.handleUnverifiedEmail(user);
-                    return;
+            // Prevent multiple simultaneous state changes
+            if (processingStateChange) {
+                console.log('🔄 Auth state change already in progress, skipping');
+                return;
+            }
+            
+            // Don't interfere with Google sign-up flow
+            if (window.isProcessingGoogleAuth) {
+                console.log('🔄 Google auth in progress, skipping auth state change');
+                return;
+            }
+            
+            // Prevent auth state listener from interfering during redirects
+            if (window.isRedirecting) {
+                console.log('🔄 Auth state changed during redirect, skipping processing');
+                return;
+            }
+            
+            processingStateChange = true;
+            
+            try {
+                if (user) {
+                    console.log('🔔 Auth state changed: user authenticated', user.email);
+                    
+                    // Check if user is a Google user (Google users are auto-verified)
+                    const isGoogleUser = user.providerData.some(provider => provider.providerId === 'google.com');
+                    
+                    // Check email verification (skip for Google users)
+                    if (!isGoogleUser && !user.emailVerified && this.requireEmailVerification()) {
+                        console.log('📧 Email not verified, requesting verification');
+                        await this.handleUnverifiedEmail(user);
+                        return;
+                    }
+                    
+                    // Load user data and role
+                    try {
+                        await this.loadUserData(user);
+                    } catch (error) {
+                        console.error('⚠️ Error loading user data, proceeding with default role:', error);
+                        this.currentUser = user;
+                        this.userRole = USER_ROLES.PATIENT;
+                    }
+                    
+                    // Start session
+                    this.startSession(user);
+                    
+                    // Update last login in patient document if user is a patient
+                    if (this.userRole === USER_ROLES.PATIENT) {
+                        try {
+                            await this.updatePatientLastLogin(user.uid);
+                        } catch (error) {
+                            console.warn('⚠️ Could not update patient last login:', error);
+                        }
+                    }
+                    
+                    // Notify listeners with delay to prevent rapid-fire events
+                    setTimeout(() => {
+                        this.notifyAuthListeners(user, this.userRole);
+                    }, 100);
+                } else {
+                    console.log('🔔 Auth state changed: user not authenticated');
+                    this.currentUser = null;
+                    this.userRole = null;
+                    this.clearSession();
+                    
+                    // Notify listeners with delay
+                    setTimeout(() => {
+                        this.notifyAuthListeners(null, null);
+                    }, 100);
                 }
-                
-                // Load user data and role
-                await this.loadUserData(user);
-                
-                // Start session
-                this.startSession(user);
-                
-                // Update last login in patient document if user is a patient
-                if (this.userRole === USER_ROLES.PATIENT) {
-                    this.updatePatientLastLogin(user.uid);
-                }
-                
-                // Notify listeners
-                this.notifyAuthListeners(user, this.userRole);
-            } else {
-                console.log('User not authenticated');
-                this.currentUser = null;
-                this.userRole = null;
-                this.clearSession();
-                this.notifyAuthListeners(null, null);
+            } finally {
+                // Reset processing flag after delay
+                setTimeout(() => {
+                    processingStateChange = false;
+                }, 200);
             }
         });
     }
@@ -244,7 +296,7 @@ class AuthService {
      * Check if email verification is required
      */
     requireEmailVerification() {
-        // Always require email verification for new users
+        // Google users are auto-verified, email users need verification
         return true;
     }
 
@@ -293,7 +345,54 @@ class AuthService {
      */
     async loadUserData(user) {
         try {
-            // Get user document from Firestore
+            // For Google users, we can assume they are patients and proceed
+            const isGoogleUser = user.providerData.some(provider => provider.providerId === 'google.com');
+            
+            if (isGoogleUser) {
+                console.log('✅ Google user detected, setting role as patient');
+                this.userRole = USER_ROLES.PATIENT;
+                this.currentUser = user;
+                
+                // Try to get user document, but don't fail if permissions are insufficient
+                try {
+                    const userDoc = await getDoc(doc(db, 'users', user.uid));
+                    
+                    if (userDoc.exists()) {
+                        const userData = userDoc.data();
+                        this.userRole = userData.role || USER_ROLES.PATIENT;
+                        console.log('📄 Found existing user document with role:', this.userRole);
+                        
+                        // Update last login if possible
+                        try {
+                            await updateDoc(doc(db, 'users', user.uid), {
+                                lastLogin: serverTimestamp(),
+                                lastActivity: serverTimestamp()
+                            });
+                        } catch (updateError) {
+                            console.warn('Could not update last login:', updateError);
+                        }
+                    } else {
+                        // Try to create user document
+                        try {
+                            await this.createUserDocument(user);
+                            console.log('📄 Created new user document for Google user');
+                        } catch (createError) {
+                            console.warn('Could not create user document:', createError);
+                        }
+                    }
+                } catch (firestoreError) {
+                    console.warn('Firestore permission error, proceeding with default role:', firestoreError);
+                }
+                
+                console.log('✅ Google user authentication complete:', { 
+                    email: user.email, 
+                    role: this.userRole, 
+                    uid: user.uid 
+                });
+                return; // Continue with authentication flow
+            }
+            
+            // For email users, try the standard flow
             const userDoc = await getDoc(doc(db, 'users', user.uid));
             
             if (userDoc.exists()) {
@@ -314,7 +413,12 @@ class AuthService {
             
         } catch (error) {
             console.error('Error loading user data:', error);
-            throw new Error('Failed to load user data');
+            
+            // If there are permission errors, still set the user as authenticated
+            // This allows the app to continue working even if Firestore has permission issues
+            console.warn('Continuing with limited functionality due to permission issues');
+            this.currentUser = user;
+            this.userRole = USER_ROLES.PATIENT; // Default to patient role
         }
     }
 
@@ -330,6 +434,7 @@ class AuthService {
                 photoURL: user.photoURL,
                 role: USER_ROLES.PATIENT, // Default role
                 emailVerified: user.emailVerified,
+                authProvider: user.providerData[0]?.providerId === 'google.com' ? 'google' : 'email',
                 createdAt: serverTimestamp(),
                 lastLogin: serverTimestamp(),
                 isActive: true
@@ -337,10 +442,13 @@ class AuthService {
             
             await setDoc(doc(db, 'users', user.uid), userData);
             this.userRole = USER_ROLES.PATIENT;
+            console.log('User document created successfully');
             
         } catch (error) {
             console.error('Error creating user document:', error);
-            throw new Error('Failed to create user document');
+            console.warn('Proceeding without user document due to permission issues');
+            // Don't throw an error - we'll proceed with default role
+            this.userRole = USER_ROLES.PATIENT;
         }
     }
 
@@ -376,7 +484,7 @@ class AuthService {
         // Set up session management
         this.updateLastActivity();
         
-        console.log('Session started for user:', user.uid);
+        // Session started for user
     }
 
     /**
@@ -399,7 +507,44 @@ class AuthService {
             localStorage.removeItem(key);
         });
         
-        console.log('Session cleared');
+        // Session cleared
+    }
+
+    /**
+     * Force clear all authentication state (for troubleshooting)
+     */
+    forceClearAuthState() {
+        console.log('🧹 Force clearing all authentication state');
+        
+        // Clear internal state
+        this.currentUser = null;
+        this.userRole = null;
+        
+        // Clear session
+        this.clearSession();
+        
+        // Clear any additional auth-related localStorage items
+        const authKeys = [
+            'auth_redirect_message',
+            'pending_patient_data',
+            'patient-portal-cache'
+        ];
+        
+        authKeys.forEach(key => {
+            if (localStorage.getItem(key)) {
+                localStorage.removeItem(key);
+                console.log(`🧹 Cleared localStorage key: ${key}`);
+            }
+        });
+        
+        // Reset redirect flags
+        if (typeof window !== 'undefined') {
+            window.isRedirecting = false;
+            window.redirectCount = 0;
+            window.lastRedirectTime = 0;
+        }
+        
+        console.log('✅ All authentication state cleared');
     }
 
     /**
@@ -468,7 +613,7 @@ class AuthService {
             // Track successful login
             this.trackLoginAttempt(true);
             
-            console.log('Login successful');
+            // Login successful
             return userCredential.user;
             
         } catch (error) {
@@ -510,7 +655,7 @@ class AuthService {
             // Sign out until email is verified
             await signOut(auth);
             
-            console.log('Registration successful, verification email sent');
+            // Registration successful, verification email sent
             return user;
             
         } catch (error) {
@@ -524,9 +669,10 @@ class AuthService {
      */
     async loginWithGoogle() {
         try {
-            console.log('Starting Google authentication...');
-            console.log('Current domain:', window.location.hostname);
-            console.log('Firebase config domain:', firebaseConfig.authDomain);
+            console.log('🚀 Starting Google authentication');
+            
+            // Set flag to prevent auth state listener interference
+            window.isProcessingGoogleAuth = true;
             
             let result;
             
@@ -534,26 +680,31 @@ class AuthService {
             try {
                 const redirectResult = await getRedirectResult(auth);
                 if (redirectResult) {
-                    console.log('Google login via redirect successful');
+                    console.log('✅ Google login via redirect successful');
                     return redirectResult.user;
                 }
             } catch (redirectError) {
-                console.log('No redirect result or redirect error:', redirectError);
+                console.log('No redirect result found');
             }
             
             // Try popup first
             try {
-                console.log('Attempting Google sign-in with popup...');
+                console.log('🔄 Attempting Google sign-in with popup');
                 result = await signInWithPopup(auth, googleProvider);
-                console.log('Google popup login successful');
+                console.log('✅ Google popup login successful');
+                
+                // Set user role immediately for Google users
+                this.currentUser = result.user;
+                this.userRole = USER_ROLES.PATIENT;
+                
                 return result.user;
                 
             } catch (popupError) {
-                console.log('Popup error:', popupError);
+                console.log('❌ Popup error occurred:', popupError);
                 
                 // Handle specific popup errors
                 if (popupError.code === 'auth/popup-blocked') {
-                    console.log('Popup blocked, trying redirect...');
+                    console.log('🔄 Popup blocked, trying redirect');
                     await signInWithRedirect(auth, googleProvider);
                     return null; // Redirect will reload the page
                 } else if (popupError.code === 'auth/popup-closed-by-user') {
@@ -567,19 +718,19 @@ class AuthService {
                     return null;
                 } else {
                     // For other errors, try redirect as fallback
-                    console.log('Popup failed, trying redirect as fallback...');
+                    console.log('🔄 Popup failed, trying redirect as fallback');
                     try {
                         await signInWithRedirect(auth, googleProvider);
                         return null; // Redirect will reload the page
                     } catch (redirectError) {
-                        console.error('Redirect also failed:', redirectError);
+                        console.error('❌ Redirect also failed:', redirectError);
                         throw popupError; // Throw original popup error
                     }
                 }
             }
             
         } catch (error) {
-            console.error('Google login error:', error);
+            console.error('❌ Google login error:', error);
             
             // Provide user-friendly error messages
             if (error.message.includes('Domain')) {
@@ -595,6 +746,11 @@ class AuthService {
             } else {
                 throw new Error(`Google sign-in failed: ${error.message || 'Unknown error'}`);
             }
+        } finally {
+            // Clear flag after a delay
+            setTimeout(() => {
+                window.isProcessingGoogleAuth = false;
+            }, 1000);
         }
     }
 
@@ -605,7 +761,7 @@ class AuthService {
         try {
             await signOut(auth);
             this.clearSession();
-            console.log('Logout successful');
+            // Logout successful
             
         } catch (error) {
             console.error('Logout error:', error);
@@ -629,7 +785,7 @@ class AuthService {
             // Update password
             await updatePassword(this.currentUser, newPassword);
             
-            console.log('Password updated successfully');
+            // Password updated successfully
             
         } catch (error) {
             console.error('Password update error:', error);
@@ -657,14 +813,14 @@ class AuthService {
             try {
                 await deleteDoc(doc(db, 'patients', this.currentUser.uid));
             } catch (error) {
-                console.log('No patient document to delete');
+                // No patient document to delete
             }
             
             // Delete user account
             await deleteUser(this.currentUser);
             
             this.clearSession();
-            console.log('Account deleted successfully');
+            // Account deleted successfully
             
         } catch (error) {
             console.error('Account deletion error:', error);
@@ -694,7 +850,7 @@ class AuthService {
                 roleUpdatedBy: this.currentUser.uid
             });
             
-            console.log(`User ${userId} role updated to ${newRole}`);
+            // User role updated
             
         } catch (error) {
             console.error('Role update error:', error);
@@ -717,10 +873,13 @@ class AuthService {
      */
     hasPermission(permission) {
         const rolePermissions = {
+            [USER_ROLES.SYSTEM_ADMIN]: ['all'],
             [USER_ROLES.ADMIN]: ['all'],
+            [USER_ROLES.ORGANIZATION_ADMIN]: ['manage_organization', 'read_organization_patients', 'write_organization_patients', 'manage_staff', 'read_appointments', 'write_appointments'],
             [USER_ROLES.DOCTOR]: ['read_patients', 'write_patients', 'read_appointments', 'write_appointments'],
             [USER_ROLES.NURSE]: ['read_patients', 'read_appointments', 'write_appointments'],
             [USER_ROLES.CLINIC_STAFF]: ['read_appointments', 'write_appointments'],
+            [USER_ROLES.ORGANIZATION_MEMBER]: ['read_organization_patients', 'read_appointments', 'write_appointments'],
             [USER_ROLES.PATIENT]: ['read_own_data', 'write_own_data']
         };
         
@@ -729,9 +888,32 @@ class AuthService {
     }
 
     /**
-     * Get current user
+     * Get current user with validation
      */
     getCurrentUser() {
+        // Validate that our stored user matches Firebase's current user
+        const firebaseCurrentUser = auth.currentUser;
+        
+        if (!this.currentUser && firebaseCurrentUser) {
+            console.log('🔄 Firebase user found but not in auth service, syncing...');
+            this.currentUser = firebaseCurrentUser;
+            return firebaseCurrentUser;
+        }
+        
+        if (this.currentUser && !firebaseCurrentUser) {
+            console.warn('⚠️ Auth service has user but Firebase doesn\'t, clearing...');
+            this.currentUser = null;
+            this.userRole = null;
+            return null;
+        }
+        
+        if (this.currentUser && firebaseCurrentUser && this.currentUser.uid !== firebaseCurrentUser.uid) {
+            console.warn('⚠️ User UID mismatch, clearing auth state');
+            this.currentUser = null;
+            this.userRole = null;
+            return null;
+        }
+        
         return this.currentUser;
     }
 
@@ -743,10 +925,24 @@ class AuthService {
     }
 
     /**
-     * Check if user is authenticated
+     * Check if user is authenticated with proper session validation
      */
     isAuthenticated() {
-        return this.currentUser !== null;
+        // Check if we have a current user and they have a valid UID
+        if (!this.currentUser || !this.currentUser.uid) {
+            return false;
+        }
+        
+        // Check if the Firebase auth state is consistent
+        const firebaseCurrentUser = auth.currentUser;
+        if (!firebaseCurrentUser || firebaseCurrentUser.uid !== this.currentUser.uid) {
+            console.warn('⚠️ Auth state mismatch detected, clearing current user');
+            this.currentUser = null;
+            this.userRole = null;
+            return false;
+        }
+        
+        return true;
     }
 
     /**
@@ -793,7 +989,7 @@ class AuthService {
         } else if (currentPath.includes('doctor')) {
             window.location.href = '/doctor/login.html';
         } else {
-            window.location.href = '/pages/patientSign-in.html';
+            window.location.href = '/public/patientSign-in.html';
         }
     }
 
@@ -801,25 +997,53 @@ class AuthService {
      * Redirect after login based on role
      */
     redirectAfterLogin() {
+        console.log('🔄 Redirecting after login with role:', this.userRole);
+        
+        // Ensure we have a valid user and role
+        if (!this.currentUser || !this.userRole) {
+            console.warn('⚠️ No user or role found, defaulting to patient portal');
+            this.userRole = USER_ROLES.PATIENT;
+        }
+        
+        // Set redirect flag to prevent interference
+        window.isRedirecting = true;
+        
+        let redirectUrl;
         switch (this.userRole) {
+            case USER_ROLES.SYSTEM_ADMIN:
+                redirectUrl = '/admin/system-dashboard.html';
+                break;
             case USER_ROLES.ADMIN:
-                window.location.href = '/admin/dashboard.html';
+                redirectUrl = '/admin/dashboard.html';
+                break;
+            case USER_ROLES.ORGANIZATION_ADMIN:
+                redirectUrl = '/business/organization-dashboard.html';
+                break;
+            case USER_ROLES.ORGANIZATION_MEMBER:
+                redirectUrl = '/business/member-dashboard.html';
                 break;
             case USER_ROLES.DOCTOR:
-                window.location.href = '/doctor/dashboard.html';
+                redirectUrl = '/doctor/dashboard.html';
                 break;
             case USER_ROLES.NURSE:
-                window.location.href = '/nurse/dashboard.html';
+                redirectUrl = '/nurse/dashboard.html';
                 break;
             case USER_ROLES.CLINIC_STAFF:
-                window.location.href = '/staff/dashboard.html';
+                redirectUrl = '/staff/dashboard.html';
                 break;
             case USER_ROLES.PATIENT:
-                window.location.href = '/pages/patientPortal.html';
+                redirectUrl = '/public/patientPortal.html';
                 break;
             default:
-                window.location.href = '/pages/patientPortal.html';
+                redirectUrl = '/public/patientPortal.html';
         }
+        
+        console.log('🎯 Redirecting to:', redirectUrl);
+        
+        // Perform redirect with delay to ensure auth state is stable
+        setTimeout(() => {
+            window.location.href = redirectUrl;
+        }, 500);
     }
 
     /**
@@ -851,6 +1075,6 @@ class AuthService {
 const authService = new AuthService();
 
 // Export service and constants
-export { authService as default, AuthService, USER_ROLES, SESSION_KEYS };
+export { authService as default, AuthService, USER_ROLES, SESSION_KEYS, auth };
 
-console.log('Authentication Service module loaded'); 
+// Authentication Service module loaded 

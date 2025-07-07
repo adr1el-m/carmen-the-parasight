@@ -4,108 +4,942 @@
     <meta charset="UTF-8" />
     <link rel="icon" type="image/svg+xml" href="/vite.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <meta name="description" content="LingapLink: Connecting Care, Bridging Gaps. Isang AI-powered platform para sa healthcare coordination sa Pilipinas." />
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-    <title>LingapLink - Kinabukasan ng Kalusugan</title>
-    <!-- CSS files -->
-    <link rel="stylesheet" href="../src/styles/shared-header.css">
-<link rel="stylesheet" href="../src/styles/index.css">
+    
+    <!-- SEO Meta Tags -->
+    <meta name="description" content="LingapLink - Find the best healthcare facilities in the Philippines. Connect with hospitals, clinics, and healthcare providers. Book appointments online with 180+ verified healthcare facilities." />
+    <meta name="keywords" content="healthcare, hospitals, clinics, Philippines, medical appointments, telemedicine, doctors, medical facilities" />
+    <meta name="author" content="LingapLink" />
+    <meta name="robots" content="index, follow" />
+    <link rel="canonical" href="https://lingaplink.ph" />
+    
+    <!-- Open Graph Meta Tags -->
+    <meta property="og:title" content="LingapLink - Healthcare Platform Philippines" />
+    <meta property="og:description" content="Connect with the best healthcare facilities in the Philippines. Book appointments online with verified hospitals and clinics." />
+    <meta property="og:type" content="website" />
+    <meta property="og:url" content="https://lingaplink.ph" />
+    <meta property="og:image" content="https://lingaplink.ph/assets/og-image.png" />
+    <meta property="og:site_name" content="LingapLink" />
+    <meta property="og:locale" content="en_PH" />
+    
+    <!-- Twitter Card Meta Tags -->
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="LingapLink - Healthcare Platform Philippines" />
+    <meta name="twitter:description" content="Find and book appointments with the best healthcare facilities in the Philippines." />
+    <meta name="twitter:image" content="https://lingaplink.ph/assets/twitter-image.png" />
+    
+    <!-- Preconnect for Performance -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link rel="preconnect" href="https://cdnjs.cloudflare.com" />
+    <link rel="preconnect" href="https://images.unsplash.com" />
+    
+    <!-- DNS Prefetch -->
+    <link rel="dns-prefetch" href="//fonts.googleapis.com" />
+    <link rel="dns-prefetch" href="//fonts.gstatic.com" />
+    <link rel="dns-prefetch" href="//cdnjs.cloudflare.com" />
+    <link rel="dns-prefetch" href="//images.unsplash.com" />
+    
+    <!-- Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" integrity="sha512-iecdLmaskl7CVkqkXNQ/ZH/XLlvWZOJyj7Yy7tcenmpD1ypASozpmT/E0iPtmFIB46ZmdtAc9eNBvH0H/ZpiBw==" crossorigin="anonymous" referrerpolicy="no-referrer" />
+    
+    <title>LingapLink - Healthcare Platform Philippines | Find Doctors & Book Appointments</title>
+    <link rel="stylesheet" href="/src/styles/index.css" />
+    
+    <!-- Structured Data -->
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "Organization",
+      "name": "LingapLink",
+      "description": "Healthcare platform connecting patients with medical facilities in the Philippines",
+      "url": "https://lingaplink.ph",
+      "logo": "https://lingaplink.ph/assets/logo.png",
+      "contactPoint": {
+        "@type": "ContactPoint",
+        "telephone": "+63-2-123-4567",
+        "contactType": "customer service",
+        "areaServed": "PH",
+        "availableLanguage": ["en", "tl"]
+      },
+      "address": {
+        "@type": "PostalAddress",
+        "addressLocality": "Makati City",
+        "addressRegion": "Metro Manila",
+        "addressCountry": "PH"
+      },
+      "sameAs": [
+        "https://facebook.com/lingaplink",
+        "https://twitter.com/lingaplink",
+        "https://instagram.com/lingaplink"
+      ]
+    }
+    </script>
   </head>
   <body>
-    <!-- Unified Header -->
-    <header class="unified-header">
+    <!-- Skip to main content for accessibility -->
+    <a href="#main-content" class="skip-link" aria-label="Skip to main content">Skip to main content</a>
+    
+    <!-- Live region for screen reader announcements -->
+    <div id="live-region" aria-live="polite" aria-atomic="true" class="sr-only"></div>
+    
+    <!-- Navigation Header -->
+    <header class="header" role="banner">
       <div class="header-container">
-        <a href="index.html" class="header-logo">
-          <span class="logo-text">LingapLink</span>
-          <span class="logo-tagline">PH</span>
-        </a>
+        <div class="logo">
+          <i class="fas fa-heartbeat" aria-hidden="true"></i>
+          <span>LingapLink</span>
+          <span class="logo-badge">PH</span>
+        </div>
         
-        <nav class="header-nav">
-          <ul class="nav-links">
-            <li><a href="index.html" class="nav-link active">Home</a></li>
-            <li><a href="#features" class="nav-link">Features</a></li>
-            <li><a href="#about" class="nav-link">About</a></li>
-            <li><a href="#contact" class="nav-link">Contact</a></li>
-          </ul>
+        <nav class="header-actions" role="navigation" aria-label="Main navigation">
+          <a href="/public/patientSign-in.html" class="login-btn" aria-label="Sign in to your patient account">Login</a>
+          <a href="/public/patientSign-up.html" class="register-btn" aria-label="Create a new patient account">Register</a>
         </nav>
-        
-        <div class="header-actions">
-          <a href="patientSign-up.html" class="header-btn btn-secondary">Patient Portal</a>
-          <a href="patientSign-up.html" class="header-btn btn-primary">Get Started</a>
-        </div>
-        
-        <!-- Mobile Menu Toggle -->
-        <button class="mobile-menu-toggle">
-          <span class="hamburger-line"></span>
-          <span class="hamburger-line"></span>
-          <span class="hamburger-line"></span>
-        </button>
       </div>
-      
-      <!-- Mobile Navigation -->
-      <nav class="mobile-nav">
-        <ul class="mobile-nav-links">
-          <li><a href="index.html" class="nav-link active">Home</a></li>
-          <li><a href="#features" class="nav-link">Features</a></li>
-          <li><a href="#about" class="nav-link">About</a></li>
-          <li><a href="#contact" class="nav-link">Contact</a></li>
-        </ul>
-        <div class="mobile-actions">
-          <a href="patientSign-up.html" class="header-btn btn-secondary">Patient Portal</a>
-          <a href="patientSign-up.html" class="header-btn btn-primary">Get Started</a>
-          <a href="ai-assistant.html" class="header-btn btn-secondary">AI Assistant</a>
-          <a href="analytics.html" class="header-btn btn-success">Analytics</a>
-        </div>
-      </nav>
     </header>
 
-    <main class="main">
-      <div class="container">
-        <section class="hero">
-          <div class="hero__container">
-            <div class="hero__data">
-              <h1 class="hero__title">Kasama mo sa <span class="highlight">Makabagong Kalusugan</span></h1>
-              <p class="hero__subtitle">Nagbibigay-lakas sa mga Ospital, Klinika, at Pasyente sa pamamagitan ng makabagong digital na solusyon para sa lahat ng Pilipino.</p>
-              
-              <div class="mock-stats">
-                <div class="stat-item">
-                  <h3>150+</h3>
-                  <p>Mga Ospital na Kasosyo</p>
+    <!-- Main Content -->
+    <main id="main-content" class="main-hero" role="main">
+      <div class="hero-container">
+        <div class="hero-content">
+          <div class="hero-left">
+            <h1>No need to visit local hospitals</h1>
+            <h2>Get your consultation online</h2>
+            <p class="consultation-types">Audio/text/video/in-person</p>
+            
+            <div class="online-stats">
+              <div class="doctor-avatars" role="img" aria-label="Healthcare professionals">
+                <div class="avatar">
+                  <img src="https://images.unsplash.com/photo-1559839734-2b71ea197ec2?w=50&h=50&fit=crop&crop=face&auto=format" 
+                       alt="Healthcare Professional" 
+                       loading="lazy"
+                       width="50" 
+                       height="50" />
                 </div>
-                <div class="stat-item">
-                  <h3>75K+</h3>
-                  <p>Mga Pasyenteng Natutugunan</p>
+                <div class="avatar">
+                  <img src="https://images.unsplash.com/photo-1612349317150-e413f6a5b16d?w=50&h=50&fit=crop&crop=face&auto=format" 
+                       alt="Healthcare Professional" 
+                       loading="lazy"
+                       width="50" 
+                       height="50" />
                 </div>
-                <div class="stat-item">
-                  <h3>99.8%</h3>
-                  <p>Mataas na Reliability</p>
+                <div class="avatar">
+                  <img src="https://images.unsplash.com/photo-1594824425955-bd2e7b9e7838?w=50&h=50&fit=crop&crop=face&auto=format" 
+                       alt="Healthcare Professional" 
+                       loading="lazy"
+                       width="50" 
+                       height="50" />
                 </div>
               </div>
-              
-              <div class="role-buttons">
-                <button class="button button--primary" id="hospitalClinicBtn">Para sa mga Ospital/Klinika</button>
-                <button class="button button--secondary" id="patientBtn">Para sa mga Pasyente</button>
-              </div>
-            </div>
-            <div class="hero__image">
-              <div class="hero__image-bg"></div>
+              <span class="stats-text">+180 healthcare facilities are online</span>
             </div>
           </div>
-        </section>
+          
+          <div class="hero-right">
+            <div class="medical-team">
+              <img src="https://images.unsplash.com/photo-1559839734-2b71ea197ec2?w=400&h=500&fit=crop&auto=format" 
+                   alt="Primary healthcare professional in medical attire" 
+                   class="doctor-main"
+                   loading="lazy"
+                   width="400" 
+                   height="500" />
+              <img src="https://images.unsplash.com/photo-1612349317150-e413f6a5b16d?w=400&h=500&fit=crop&auto=format" 
+                   alt="Secondary healthcare professional in medical attire" 
+                   class="doctor-secondary"
+                   loading="lazy"
+                   width="400" 
+                   height="500" />
+            </div>
+          </div>
+        </div>
       </div>
+
+      <!-- Search Section -->
+      <section class="search-section" aria-label="Healthcare facility search">
+        <div class="search-container">
+          <form class="search-bar" role="search" aria-label="Search for healthcare facilities">
+            <div class="search-input">
+              <label for="facility-search" class="sr-only">Search for hospitals and clinics</label>
+              <i class="fas fa-search" aria-hidden="true"></i>
+              <input type="text" 
+                     id="facility-search"
+                     name="facility-search"
+                     placeholder="Find hospitals and clinics" 
+                     aria-describedby="search-help" />
+              <div id="search-help" class="sr-only">Enter the name or type of healthcare facility you're looking for</div>
+            </div>
+            <div class="location-input">
+              <label for="location-search" class="sr-only">Enter location</label>
+              <i class="fas fa-map-marker-alt" aria-hidden="true"></i>
+              <input type="text" 
+                     id="location-search"
+                     name="location-search"
+                     placeholder="Location" 
+                     aria-describedby="location-help" />
+              <div id="location-help" class="sr-only">Enter city, province, or area to search nearby facilities</div>
+              <button type="button" 
+                      class="location-detect-btn" 
+                      aria-label="Detect current location"
+                      title="Use my current location">
+                <i class="fas fa-crosshairs" aria-hidden="true"></i>
+              </button>
+            </div>
+            <button type="submit" class="search-button" aria-label="Search healthcare facilities">Search</button>
+          </form>
+        </div>
+      </section>
     </main>
 
-    <!-- Hidden sections for future development -->
-    <section class="features" id="features"></section>
-    <section class="about" id="about"></section>
-    <section class="contact" id="contact"></section>
-    <footer class="footer"></footer>
+    <!-- Recommended Healthcare Facilities -->
+    <section class="recommended-facilities" aria-labelledby="recommended-heading">
+      <div class="container">
+        <div class="section-header">
+          <h2 id="recommended-heading">Recommended Healthcare Facilities</h2>
+          <a href="#" class="view-all" aria-label="View all recommended healthcare facilities">View All <i class="fas fa-chevron-right" aria-hidden="true"></i></a>
+        </div>
+        
+        <div class="facilities-grid" role="list" aria-label="List of recommended healthcare facilities">
+          <!-- Metro General Hospital -->
+          <article class="facility-card" role="listitem">
+            <div class="facility-profile">
+              <div class="facility-image">
+                <img src="https://images.unsplash.com/photo-1586773860418-d37222d8fce3?w=80&h=80&fit=crop&auto=format" 
+                     alt="Metro General Hospital building exterior" 
+                     loading="lazy"
+                     width="80" 
+                     height="80" />
+              </div>
+              <div class="facility-details">
+                <h3>Metro General Hospital</h3>
+                <p class="facility-type">Multi-specialty Hospital | 25 years experience</p>
+                <span class="specialty-tag" aria-label="Specialty: Emergency Care">Emergency Care</span>
+              </div>
+            </div>
+            
+            <div class="facility-schedule">
+              <div class="schedule-info">
+                <i class="fas fa-clock" aria-hidden="true"></i>
+                <span>24/7 Available</span>
+              </div>
+              <div class="price-info">
+                <i class="fas fa-peso-sign" aria-hidden="true"></i>
+                <span>₱2,500</span>
+                <small>Starting</small>
+              </div>
+            </div>
+            
+            <button class="book-appointment" 
+                    aria-label="Book an appointment with Metro General Hospital"
+                    data-facility="Metro General Hospital">
+              Book an appointment
+            </button>
+          </article>
+
+          <!-- Sunshine Medical Clinic -->
+          <article class="facility-card" role="listitem">
+            <div class="facility-profile">
+              <div class="facility-image">
+                <img src="https://images.unsplash.com/photo-1519494026892-80bbd2d6fd0d?w=80&h=80&fit=crop&auto=format" 
+                     alt="Sunshine Medical Clinic entrance" 
+                     loading="lazy"
+                     width="80" 
+                     height="80" />
+              </div>
+              <div class="facility-details">
+                <h3>Sunshine Medical Clinic</h3>
+                <p class="facility-type">Family Medicine Clinic | 15 years experience</p>
+                <span class="specialty-tag" aria-label="Specialty: Primary Care">Primary Care</span>
+              </div>
+            </div>
+            
+            <div class="facility-schedule">
+              <div class="schedule-info">
+                <i class="fas fa-clock" aria-hidden="true"></i>
+                <span>Mon-Sat 8AM-6PM</span>
+              </div>
+              <div class="price-info">
+                <i class="fas fa-peso-sign" aria-hidden="true"></i>
+                <span>₱1,200</span>
+                <small>Starting</small>
+              </div>
+            </div>
+            
+            <button class="book-appointment" 
+                    aria-label="Book an appointment with Sunshine Medical Clinic"
+                    data-facility="Sunshine Medical Clinic">
+              Book an appointment
+            </button>
+          </article>
+
+          <!-- Heart Care Center -->
+          <article class="facility-card" role="listitem">
+            <div class="facility-profile">
+              <div class="facility-image">
+                <img src="https://images.unsplash.com/photo-1576091160399-112ba8d25d1f?w=80&h=80&fit=crop&auto=format" 
+                     alt="Heart Care Center medical facility" 
+                     loading="lazy"
+                     width="80" 
+                     height="80" />
+              </div>
+              <div class="facility-details">
+                <h3>Heart Care Center</h3>
+                <p class="facility-type">Cardiology Specialist | 20 years experience</p>
+                <span class="specialty-tag" aria-label="Specialty: Cardiology">Cardiology</span>
+              </div>
+            </div>
+            
+            <div class="facility-schedule">
+              <div class="schedule-info">
+                <i class="fas fa-clock" aria-hidden="true"></i>
+                <span>Mon-Fri 9AM-5PM</span>
+              </div>
+              <div class="price-info">
+                <i class="fas fa-peso-sign" aria-hidden="true"></i>
+                <span>₱3,000</span>
+                <small>Starting</small>
+              </div>
+            </div>
+            
+            <button class="book-appointment" 
+                    aria-label="Book an appointment with Heart Care Center"
+                    data-facility="Heart Care Center">
+              Book an appointment
+            </button>
+          </article>
+        </div>
+      </div>
+    </section>
+
+    <!-- Nearby Healthcare Facilities -->
+    <section class="nearby-facilities" aria-labelledby="nearby-heading">
+      <div class="container">
+        <h2 id="nearby-heading">Nearby Healthcare Facilities</h2>
+        <div class="location-prompt">
+          <div class="location-icon">
+            <i class="fas fa-map-marker-alt" aria-hidden="true"></i>
+          </div>
+          <div class="location-message">
+            <p>Please enable your location, so we can find nearby healthcare facilities</p>
+            <a href="#" class="enable-location" aria-label="Enable location services to find nearby facilities">Enable Now</a>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Healthcare Provider CTA Section -->
+    <section class="provider-cta" aria-labelledby="provider-heading">
+      <div class="container">
+        <div class="cta-content">
+          <div class="cta-text">
+            <h2 id="provider-heading">Are you a Healthcare Provider?</h2>
+            <p>Join LingapLink and connect with thousands of patients across the Philippines. Streamline your practice with our comprehensive healthcare platform.</p>
+            <div class="cta-features" role="list" aria-label="Platform features for healthcare providers">
+              <div class="cta-feature" role="listitem">
+                <i class="fas fa-check-circle" aria-hidden="true"></i>
+                <span>Patient Management System</span>
+              </div>
+              <div class="cta-feature" role="listitem">
+                <i class="fas fa-check-circle" aria-hidden="true"></i>
+                <span>Online Consultation Tools</span>
+              </div>
+              <div class="cta-feature" role="listitem">
+                <i class="fas fa-check-circle" aria-hidden="true"></i>
+                <span>Appointment Scheduling</span>
+              </div>
+              <div class="cta-feature" role="listitem">
+                <i class="fas fa-check-circle" aria-hidden="true"></i>
+                <span>Analytics & Reports</span>
+              </div>
+            </div>
+          </div>
+          <div class="cta-action">
+            <a href="/public/businessRegistration.html" 
+               class="partner-btn"
+               aria-label="Register your healthcare practice with LingapLink">
+              <i class="fas fa-handshake" aria-hidden="true"></i>
+              Partner with LingapLink
+            </a>
+            <p class="cta-note">Join 150+ healthcare providers already on our platform</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+
+
+    <!-- Footer -->
+    <footer class="footer" role="contentinfo">
+      <div class="container">
+        <!-- Business Partnership CTA -->
+        <div class="footer-cta">
+          <div class="footer-cta-content">
+            <div class="cta-text-section">
+              <h3>
+                <i class="fas fa-hospital" aria-hidden="true"></i>
+                Healthcare Providers - Join LingapLink
+              </h3>
+              <p>Connect with thousands of patients across the Philippines. Grow your practice with our digital platform.</p>
+            </div>
+            <div class="cta-actions-section">
+              <a href="/public/businessRegistration.html" 
+                 class="cta-primary-btn"
+                 aria-label="Register your healthcare facility">
+                <i class="fas fa-plus-circle" aria-hidden="true"></i>
+                Register Your Practice
+              </a>
+              <a href="/public/businessSignIn.html" 
+                 class="cta-secondary-btn"
+                 aria-label="Sign in to provider portal">
+                <i class="fas fa-sign-in-alt" aria-hidden="true"></i>
+                Provider Login
+              </a>
+            </div>
+          </div>
+        </div>
+        
+        <!-- Main Footer Content -->
+        <div class="footer-main">
+          <div class="footer-grid">
+            <!-- Company Info -->
+            <div class="footer-brand">
+              <div class="footer-logo">
+                <i class="fas fa-heartbeat" aria-hidden="true"></i>
+                <span>LingapLink</span>
+                <span class="logo-badge">PH</span>
+              </div>
+              <p class="footer-description">
+                The Philippines' leading digital healthcare platform connecting patients with trusted medical facilities.
+              </p>
+              <div class="footer-stats">
+                <div class="stat-item">
+                  <span class="stat-number">180+</span>
+                  <span class="stat-label">Partners</span>
+                </div>
+                <div class="stat-item">
+                  <span class="stat-number">50K+</span>
+                  <span class="stat-label">Patients</span>
+                </div>
+                <div class="stat-item">
+                  <span class="stat-number">24/7</span>
+                  <span class="stat-label">Available</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- For Patients -->
+            <nav class="footer-nav" aria-labelledby="patient-nav">
+              <h3 id="patient-nav">For Patients</h3>
+              <ul class="nav-list">
+                <li><a href="/public/patientSign-up.html">Create Account</a></li>
+                <li><a href="/public/patientSign-in.html">Patient Login</a></li>
+                <li><a href="#">Find Healthcare</a></li>
+                <li><a href="#">Book Appointment</a></li>
+                <li><a href="#">Medical Records</a></li>
+                <li><a href="#">Telemedicine</a></li>
+              </ul>
+            </nav>
+
+            <!-- For Providers -->
+            <nav class="footer-nav provider-nav" aria-labelledby="provider-nav">
+              <h3 id="provider-nav">
+                <i class="fas fa-user-md" aria-hidden="true"></i>
+                For Providers
+              </h3>
+              <ul class="nav-list">
+                <li class="featured">
+                  <a href="/public/businessRegistration.html">
+                    <i class="fas fa-star" aria-hidden="true"></i>
+                    Join LingapLink
+                  </a>
+                </li>
+                <li><a href="/public/businessSignIn.html">Provider Portal</a></li>
+                <li><a href="#">Practice Tools</a></li>
+                <li><a href="#">Patient Management</a></li>
+                <li><a href="#">Analytics</a></li>
+                <li><a href="#">Support</a></li>
+              </ul>
+            </nav>
+
+            <!-- Support & Contact -->
+            <div class="footer-contact">
+              <h3>Get in Touch</h3>
+              <div class="contact-methods">
+                <a href="mailto:support@lingaplink.ph" class="contact-item">
+                  <i class="fas fa-envelope" aria-hidden="true"></i>
+                  <span>support@lingaplink.ph</span>
+                </a>
+                <a href="tel:+6321234567" class="contact-item">
+                  <i class="fas fa-phone" aria-hidden="true"></i>
+                  <span>+63 (2) 123-4567</span>
+                </a>
+                <div class="contact-item">
+                  <i class="fas fa-map-marker-alt" aria-hidden="true"></i>
+                  <span>Makati City, Philippines</span>
+                </div>
+              </div>
+              
+              <div class="footer-links-section">
+                <h4>Quick Links</h4>
+                <ul class="quick-links">
+                  <li><a href="#">Help Center</a></li>
+                  <li><a href="#">Privacy Policy</a></li>
+                  <li><a href="#">Terms of Service</a></li>
+                  <li><a href="#">HIPAA Compliance</a></li>
+                </ul>
+              </div>
+            </div>
+          </div>
+        </div>
+        
+        <!-- Footer Bottom -->
+        <div class="footer-bottom">
+          <div class="footer-bottom-content">
+            <div class="copyright">
+              <p>&copy; <span id="current-year">2024</span> LingapLink. All rights reserved.</p>
+            </div>
+            <div class="social-links">
+              <a href="#" class="social-link" aria-label="Facebook">
+                <i class="fab fa-facebook" aria-hidden="true"></i>
+              </a>
+              <a href="#" class="social-link" aria-label="Twitter">
+                <i class="fab fa-twitter" aria-hidden="true"></i>
+              </a>
+              <a href="#" class="social-link" aria-label="Instagram">
+                <i class="fab fa-instagram" aria-hidden="true"></i>
+              </a>
+              <a href="#" class="social-link" aria-label="LinkedIn">
+                <i class="fab fa-linkedin" aria-hidden="true"></i>
+              </a>
+            </div>
+          </div>
+        </div>
+      </div>
+    </footer>
+
+    <!-- CSS for accessibility -->
+    <style>
+      .skip-link {
+        position: absolute;
+        top: -40px;
+        left: 6px;
+        background: #4A90E2;
+        color: white;
+        padding: 8px;
+        text-decoration: none;
+        border-radius: 4px;
+        z-index: 10000;
+        font-weight: 600;
+      }
+      
+      .skip-link:focus {
+        top: 6px;
+      }
+      
+      .sr-only {
+        position: absolute !important;
+        left: -10000px !important;
+        width: 1px !important;
+        height: 1px !important;
+        overflow: hidden !important;
+        clip: rect(1px, 1px, 1px, 1px) !important;
+        clip-path: inset(50%) !important;
+        white-space: nowrap !important;
+      }
+      
+      @media (prefers-reduced-motion: reduce) {
+        * {
+          animation-duration: 0.01ms !important;
+          animation-iteration-count: 1 !important;
+          transition-duration: 0.01ms !important;
+        }
+      }
+      
+      @media (prefers-contrast: high) {
+        .facility-card {
+          border: 2px solid #000;
+        }
+        
+        .search-button, .book-appointment {
+          border: 2px solid #000;
+        }
+      }
+
+
+
+      /* Modern Footer Styles */
+      .footer {
+        background: #f8f9fa;
+        border-top: 1px solid #e9ecef;
+        margin-top: 80px;
+      }
+
+      /* Footer CTA Section */
+      .footer-cta {
+        background: linear-gradient(135deg, #4A90E2 0%, #357ABD 100%);
+        border-radius: 16px;
+        padding: 40px;
+        margin-bottom: 50px;
+        color: white;
+        box-shadow: 0 10px 30px rgba(74, 144, 226, 0.2);
+      }
+
+      .footer-cta-content {
+        display: grid;
+        grid-template-columns: 2fr 1fr;
+        gap: 40px;
+        align-items: center;
+      }
+
+      .cta-text-section h3 {
+        font-size: 1.8rem;
+        margin-bottom: 12px;
+        font-weight: 700;
+        display: flex;
+        align-items: center;
+        gap: 12px;
+      }
+
+      .cta-text-section p {
+        font-size: 1.1rem;
+        opacity: 0.95;
+        line-height: 1.6;
+      }
+
+      .cta-actions-section {
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+      }
+
+      .cta-primary-btn, .cta-secondary-btn {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 10px;
+        padding: 14px 24px;
+        border-radius: 12px;
+        text-decoration: none;
+        font-weight: 600;
+        font-size: 1rem;
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        text-align: center;
+      }
+
+      .cta-primary-btn {
+        background: white;
+        color: #4A90E2;
+        border: 2px solid white;
+      }
+
+      .cta-primary-btn:hover {
+        background: #f8f9fa;
+        transform: translateY(-2px);
+        box-shadow: 0 8px 25px rgba(255, 255, 255, 0.3);
+      }
+
+      .cta-secondary-btn {
+        background: transparent;
+        color: white;
+        border: 2px solid rgba(255, 255, 255, 0.7);
+      }
+
+      .cta-secondary-btn:hover {
+        background: rgba(255, 255, 255, 0.1);
+        border-color: white;
+        transform: translateY(-1px);
+      }
+
+      /* Main Footer Content */
+      .footer-main {
+        padding: 60px 0 40px;
+      }
+
+      .footer-grid {
+        display: grid;
+        grid-template-columns: 2fr 1fr 1fr 1.2fr;
+        gap: 50px;
+        margin-bottom: 40px;
+      }
+
+      /* Footer Brand Section */
+      .footer-brand {
+        padding-right: 20px;
+      }
+
+      .footer-logo {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        margin-bottom: 20px;
+        font-size: 1.5rem;
+        font-weight: 700;
+        color: #2c3e50;
+      }
+
+      .footer-logo i {
+        color: #4A90E2;
+        font-size: 1.8rem;
+      }
+
+      .logo-badge {
+        background: #4A90E2;
+        color: white;
+        padding: 4px 8px;
+        border-radius: 6px;
+        font-size: 0.8rem;
+        font-weight: 600;
+      }
+
+      .footer-description {
+        color: #6c757d;
+        line-height: 1.6;
+        margin-bottom: 25px;
+        font-size: 1rem;
+      }
+
+      .footer-stats {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 20px;
+        padding: 20px 0;
+        border-top: 2px solid #e9ecef;
+        border-bottom: 2px solid #e9ecef;
+      }
+
+      .footer-stats .stat-item {
+        text-align: center;
+      }
+
+      .stat-number {
+        display: block;
+        font-size: 1.5rem;
+        font-weight: 700;
+        color: #4A90E2;
+        margin-bottom: 4px;
+      }
+
+      .stat-label {
+        font-size: 0.85rem;
+        color: #6c757d;
+        font-weight: 500;
+      }
+
+      /* Footer Navigation */
+      .footer-nav h3 {
+        color: #2c3e50;
+        font-size: 1.1rem;
+        font-weight: 600;
+        margin-bottom: 20px;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+      }
+
+      .nav-list {
+        list-style: none;
+        padding: 0;
+        margin: 0;
+      }
+
+      .nav-list li {
+        margin-bottom: 10px;
+      }
+
+      .nav-list a {
+        color: #6c757d;
+        text-decoration: none;
+        font-size: 0.95rem;
+        transition: all 0.3s ease;
+        display: block;
+        padding: 4px 0;
+      }
+
+      .nav-list a:hover {
+        color: #4A90E2;
+        transform: translateX(4px);
+      }
+
+      /* Provider Navigation Special Styling */
+      .provider-nav {
+        background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+        padding: 25px 20px;
+        border-radius: 12px;
+        border: 2px solid rgba(74, 144, 226, 0.1);
+        position: relative;
+      }
+
+      .provider-nav h3 {
+        color: #4A90E2;
+        font-weight: 700;
+      }
+
+      .provider-nav .featured a {
+        background: linear-gradient(135deg, #4A90E2 0%, #357ABD 100%);
+        color: white;
+        padding: 12px 16px;
+        border-radius: 8px;
+        margin-bottom: 8px;
+        font-weight: 600;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        transform: translateX(0);
+      }
+
+      .provider-nav .featured a:hover {
+        transform: translateY(-2px) translateX(0);
+        box-shadow: 0 6px 20px rgba(74, 144, 226, 0.3);
+      }
+
+      /* Contact Section */
+      .footer-contact h3 {
+        color: #2c3e50;
+        font-size: 1.1rem;
+        font-weight: 600;
+        margin-bottom: 20px;
+      }
+
+      .contact-methods {
+        margin-bottom: 25px;
+      }
+
+      .contact-item {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        margin-bottom: 12px;
+        color: #6c757d;
+        text-decoration: none;
+        font-size: 0.95rem;
+        transition: all 0.3s ease;
+      }
+
+      .contact-item:hover {
+        color: #4A90E2;
+      }
+
+      .contact-item i {
+        width: 20px;
+        text-align: center;
+        color: #4A90E2;
+      }
+
+      .footer-links-section h4 {
+        color: #2c3e50;
+        font-size: 1rem;
+        font-weight: 600;
+        margin-bottom: 15px;
+        padding-top: 20px;
+        border-top: 1px solid #e9ecef;
+      }
+
+      .quick-links {
+        list-style: none;
+        padding: 0;
+        margin: 0;
+      }
+
+      .quick-links li {
+        margin-bottom: 8px;
+      }
+
+      .quick-links a {
+        color: #6c757d;
+        text-decoration: none;
+        font-size: 0.9rem;
+        transition: all 0.3s ease;
+      }
+
+      .quick-links a:hover {
+        color: #4A90E2;
+      }
+
+      /* Footer Bottom */
+      .footer-bottom {
+        border-top: 2px solid #e9ecef;
+        padding: 25px 0;
+        background: white;
+      }
+
+      .footer-bottom-content {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+      }
+
+      .copyright {
+        color: #6c757d;
+        font-size: 0.9rem;
+      }
+
+      .social-links {
+        display: flex;
+        gap: 15px;
+      }
+
+      .social-link {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        width: 40px;
+        height: 40px;
+        border-radius: 50%;
+        background: #f8f9fa;
+        color: #6c757d;
+        text-decoration: none;
+        transition: all 0.3s ease;
+      }
+
+      .social-link:hover {
+        background: #4A90E2;
+        color: white;
+        transform: translateY(-2px);
+      }
+
+      /* Responsive Design */
+      @media (max-width: 1024px) {
+        .footer-grid {
+          grid-template-columns: 1fr 1fr;
+          gap: 40px;
+        }
+      }
+
+             @media (max-width: 768px) {
+         .footer-cta {
+           padding: 30px 20px;
+           margin-bottom: 30px;
+         }
+
+         .footer-cta-content {
+           grid-template-columns: 1fr;
+           gap: 25px;
+           text-align: center;
+         }
+
+         .footer-grid {
+           grid-template-columns: 1fr;
+           gap: 30px;
+         }
+
+         .footer-stats {
+           grid-template-columns: 1fr;
+           gap: 15px;
+         }
+
+         .footer-bottom-content {
+           flex-direction: column;
+           gap: 20px;
+           text-align: center;
+         }
+       }
+    </style>
+
+    <script src="/src/pages/index.js"></script>
     
-    <!-- JavaScript files -->
-    <script src="../src/utils/shared-header.js"></script>
-<script src="../src/pages/index.js"></script>
+    <!-- Set current year -->
+    <script>
+      document.getElementById('current-year').textContent = new Date().getFullYear();
+    </script>
   </body>
 </html>
-

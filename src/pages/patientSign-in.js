@@ -40,13 +40,22 @@ window.addEventListener('load', async () => {
         // Check if user is already authenticated
         if (authService.isAuthenticated()) {
             const user = authService.getCurrentUser();
-            if (user.emailVerified) {
+            
+            // Check if user is verified (email verification or Google user)
+            const isGoogleUser = user.providerData.some(provider => provider.providerId === 'google.com');
+            const isVerified = user.emailVerified || isGoogleUser;
+            
+            if (isVerified) {
+                console.log('User is already authenticated and verified, redirecting to portal...');
                 // Redirect to appropriate dashboard
                 showSuccess('Already signed in! Redirecting...');
-                setTimeout(() => {
+                if (!window.isRedirecting) {
+                    window.isRedirecting = true;
                     authService.redirectAfterLogin();
-                }, 1500);
+                }
                 return;
+            } else {
+                console.log('User is authenticated but not verified');
             }
         }
     } catch (error) {
@@ -58,10 +67,10 @@ window.addEventListener('load', async () => {
 async function checkGoogleRedirectResult() {
     try {
         // Import Firebase auth functions for redirect result
-        const { getRedirectResult } = await import('firebase/auth');
+        const { getRedirectResult } = await import('https://www.gstatic.com/firebasejs/11.9.1/firebase-auth.js');
         
         // Get auth instance from auth service (using the same instance)
-        const { auth } = await import('./auth-service.js');
+        const { auth } = await import('../services/auth-service.js');
         
         const result = await getRedirectResult(auth);
         if (result) {
@@ -72,9 +81,10 @@ async function checkGoogleRedirectResult() {
             
             showSuccess('Google sign-in successful! Welcome!');
             
-            setTimeout(() => {
+            if (!window.isRedirecting) {
+                window.isRedirecting = true;
                 authService.redirectAfterLogin();
-            }, 1500);
+            }
             
             return true;
         }
@@ -257,20 +267,40 @@ async function handleEmailSignIn(formData) {
 // Ensure patient document exists for the user
 async function ensurePatientDocumentExists(user) {
     try {
-        const { getPatientData } = await import('./firestoredb.js');
-        const patientData = await getPatientData(user.uid);
+        console.log('Checking/creating patient document for:', user.email);
+        
+        const { getPatientData } = await import('../services/firestoredb.js');
+        let patientData = await getPatientData(user.uid);
         
         if (!patientData) {
-            // Create patient document with basic info
+            console.log('Creating new patient document...');
+            
+            // Determine auth provider
+            const isGoogleUser = user.providerData.some(provider => provider.providerId === 'google.com');
+            const authProvider = isGoogleUser ? 'google' : 'email';
+            
+            // Create patient document with Google user info
             await createPatientDocument(user, {
-                authProvider: 'email',
+                authProvider: authProvider,
                 firstName: user.displayName?.split(' ')[0] || '',
-                lastName: user.displayName?.split(' ').slice(1).join(' ') || ''
+                lastName: user.displayName?.split(' ').slice(1).join(' ') || '',
+                phone: '', // Will be filled later
+                emailVerified: user.emailVerified || isGoogleUser
             });
-            console.log('Patient document created for existing user');
+            console.log('Patient document created successfully for:', user.email);
+        } else {
+            console.log('Patient document already exists for:', user.email);
+            
+            // Update last login
+            const { updateLastLogin } = await import('../services/firestoredb.js');
+            await updateLastLogin(user.uid);
         }
+        
+        return true;
     } catch (error) {
         console.error('Error ensuring patient document exists:', error);
+        console.log('User can still proceed to portal, document will be created later');
+        return false;
     }
 }
 
@@ -280,19 +310,24 @@ async function handleGoogleSignIn() {
         setLoading(true);
         hideMessages();
 
+        console.log('Starting Google sign-in...');
+        
         // Use auth service for Google login
         const user = await authService.loginWithGoogle();
         
         if (user) {
-            // Ensure patient document exists
+            console.log('Google sign-in successful for:', user.email);
+            
+            // Ensure patient document exists and track user
             await ensurePatientDocumentExists(user);
             
             showSuccess('Google sign-in successful! Welcome!');
             
-            // Auth service will handle redirect based on email verification and role
-            setTimeout(() => {
-                authService.redirectAfterLogin();
-            }, 1500);
+            // Immediate redirect to patient portal
+            console.log('Redirecting to patient portal...');
+            window.location.href = '/public/patientPortal.html';
+        } else {
+            console.log('Google sign-in returned null, likely using redirect method');
         }
 
     } catch (error) {
@@ -384,15 +419,15 @@ async function handleForgotPassword() {
     
     try {
         // Import Firebase auth functions for password reset
-        const { sendPasswordResetEmail } = await import('firebase/auth');
+        const { sendPasswordResetEmail } = await import('https://www.gstatic.com/firebasejs/11.9.1/firebase-auth.js');
         
         // Get auth instance from auth service
         const auth = authService.getCurrentUser()?.auth || (await import('./auth-service.js')).auth;
         
         if (!auth) {
             // If we can't get auth instance, use direct Firebase
-            const { initializeApp } = await import('firebase/app');
-            const { getAuth } = await import('firebase/auth');
+            const { initializeApp } = await import('https://www.gstatic.com/firebasejs/11.9.1/firebase-app.js');
+            const { getAuth } = await import('https://www.gstatic.com/firebasejs/11.9.1/firebase-auth.js');
             const { firebaseConfig } = await import('../services/config.js');
             
             const app = initializeApp(firebaseConfig);

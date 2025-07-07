@@ -25,6 +25,7 @@
     "dotenv": "^16.5.0",
     "eslint-plugin-react": "^7.37.5",
     "express": "^5.1.0",
+    "express-mongo-sanitize": "^2.2.0",
     "express-rate-limit": "^7.1.5",
     "express-validator": "^7.0.1",
     "firebase": "^11.9.1",
@@ -37,7 +38,9 @@
     "react": "^19.1.0",
     "react-dom": "^19.1.0",
     "react-router-dom": "^7.6.2",
-    "recharts": "^3.0.0"
+    "recharts": "^3.0.0",
+    "validator": "^13.12.0",
+    "xss": "^1.0.14"
   },
   "devDependencies": {
     "@eslint/js": "^9.25.0",

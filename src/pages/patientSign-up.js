@@ -1,11 +1,12 @@
-// Patient Registration JavaScript
+// Patient Registration JavaScript - Updated for New Design
 import authService, { USER_ROLES } from '../services/auth-service.js';
 import authGuard from '../utils/auth-guard.js';
 import { createPatientDocument } from '../services/firestoredb.js';
 
 // Import validation utilities
 import { 
-    validatePatientRegistrationForm, 
+    validatePatientRegistrationForm,
+    validateSimplifiedSignUpForm,
     validateEmail, 
     validateName, 
     validatePhone, 
@@ -17,269 +18,560 @@ import {
     rateLimiter 
 } from '../utils/validation.js';
 
-// Log initialization
-console.log('Patient Registration initialized');
+// Import comprehensive validation schemas
+import { 
+    userRegistrationSchema, 
+    validateData 
+} from '../utils/validation-schemas.js';
 
-// DOM Elements - declare variables first
-let registrationForm;
-let registerBtn;
-let googleSignUpBtn;
-let errorMessage;
-let successMessage;
-let loadingSpinner;
-let btnText;
+// State management class for better organization
+class SignUpState {
+    constructor() {
+        this.isProcessing = false;
+        this.isRedirecting = false;
+        this.redirectAttempts = 0;
+        this.lastRedirectTime = 0;
+        this.activeTimeouts = new Set();
+        this.isInitialized = false;
+    }
+
+    setProcessing(value) {
+        this.isProcessing = value;
+    }
+
+    canAttemptRedirect() {
+        const now = Date.now();
+        const timeSinceLastRedirect = now - this.lastRedirectTime;
+        
+        // Prevent rapid redirects (less than 2 seconds apart)
+        if (timeSinceLastRedirect < 2000 && this.redirectAttempts > 0) {
+            console.warn('🚨 Preventing rapid redirect attempt');
+            return false;
+        }
+        
+        // Prevent too many redirect attempts
+        if (this.redirectAttempts >= 3) {
+            console.warn('🚨 Too many redirect attempts, blocking');
+            return false;
+        }
+        
+        return !this.isRedirecting;
+    }
+
+    setRedirecting(value) {
+        if (value) {
+            this.redirectAttempts++;
+            this.lastRedirectTime = Date.now();
+        }
+        this.isRedirecting = value;
+    }
+
+    addTimeout(timeoutId) {
+        this.activeTimeouts.add(timeoutId);
+    }
+
+    clearAllTimeouts() {
+        this.activeTimeouts.forEach(timeoutId => clearTimeout(timeoutId));
+        this.activeTimeouts.clear();
+    }
+
+    reset() {
+        this.isProcessing = false;
+        this.isRedirecting = false;
+        this.redirectAttempts = 0;
+        this.lastRedirectTime = 0;
+        this.clearAllTimeouts();
+    }
+}
+
+// Initialize state manager
+const signUpState = new SignUpState();
+
+// DOM Elements
+let domElements = {};
 
 // Initialize DOM elements when DOM is ready
 function initializeDOMElements() {
-    registrationForm = document.getElementById('registrationForm');
-    registerBtn = document.getElementById('registerBtn');
-    googleSignUpBtn = document.getElementById('googleSignUp');
-    errorMessage = document.getElementById('errorMessage');
-    successMessage = document.getElementById('successMessage');
-    loadingSpinner = document.querySelector('.loading-spinner');
-    btnText = document.querySelector('.btn-text');
+    domElements = {
+        registrationForm: document.getElementById('registrationForm'),
+        registerBtn: document.getElementById('registerBtn'),
+        googleSignUpBtn: document.getElementById('googleSignUp'),
+        errorMessage: document.getElementById('errorMessage'),
+        successMessage: document.getElementById('successMessage'),
+        loadingSpinner: document.querySelector('.loading-spinner'),
+        btnText: document.querySelector('.btn-text'),
+        password: document.getElementById('password'),
+        email: document.getElementById('email'),
+        phone: document.getElementById('phone'),
+        birthDate: document.getElementById('birthDate'),
+        countryCode: document.getElementById('countryCode'),
+        // Hidden fields
+        firstName: document.getElementById('firstName'),
+        lastName: document.getElementById('lastName'),
+        confirmPassword: document.getElementById('confirmPassword'),
+        address: document.getElementById('address'),
+        terms: document.getElementById('terms')
+    };
     
-    // Debug logging
-    console.log('DOM elements initialized:');
-    console.log('- Registration Form:', registrationForm);
-    console.log('- Register Button:', registerBtn);
-    console.log('- Google Sign-Up Button:', googleSignUpBtn);
-    console.log('- Error Message:', errorMessage);
-    console.log('- Success Message:', successMessage);
+    // Validate required elements
+    const requiredElements = ['registrationForm', 'registerBtn', 'googleSignUpBtn'];
+    const missingElements = requiredElements.filter(name => !domElements[name]);
     
-    // Check if Google button exists
-    if (!googleSignUpBtn) {
-        console.error('Google sign-up button not found! Make sure element with ID "googleSignUp" exists.');
+    if (missingElements.length > 0) {
+        console.error('Missing required DOM elements:', missingElements);
+        showError('Page initialization failed. Please refresh the page.');
         return false;
     }
     
+    console.log('✅ DOM elements initialized successfully');
     return true;
 }
 
 // Initialize when DOM is loaded
 document.addEventListener('DOMContentLoaded', function() {
-    console.log('DOM Content Loaded');
+    console.log('🚀 DOM Content Loaded');
     
     if (!initializeDOMElements()) {
-        console.error('Failed to initialize DOM elements');
         return;
     }
     
-    // Set up event listeners
     setupEventListeners();
+    signUpState.isInitialized = true;
 });
 
 // Set up all event listeners
 function setupEventListeners() {
     // Form submission handler
-    if (registrationForm) {
-        registrationForm.addEventListener('submit', handleFormSubmission);
-    }
+    domElements.registrationForm.addEventListener('submit', handleFormSubmission);
     
-    // Google sign-up button handler with debouncing
-    if (googleSignUpBtn) {
-        console.log('Setting up Google sign-up button event listener');
-        googleSignUpBtn.addEventListener('click', handleGoogleSignUpClick);
-    } else {
-        console.error('Cannot set up Google sign-up button - element not found');
-    }
-    
-    // Real-time password confirmation validation
-    const confirmPasswordField = document.getElementById('confirmPassword');
-    if (confirmPasswordField) {
-        confirmPasswordField.addEventListener('input', handlePasswordConfirmation);
-    }
+    // Google sign-up button handler with proper debouncing
+    domElements.googleSignUpBtn.addEventListener('click', debounce(handleGoogleSignUpClick, 1000));
     
     // Enhanced form field validation
-    document.querySelectorAll('input[required], textarea[required]').forEach(field => {
+    document.querySelectorAll('input[required]').forEach(field => {
         field.addEventListener('blur', handleFieldBlur);
         field.addEventListener('input', handleFieldInput);
     });
+    
+    // Real-time password strength indicator (optional)
+    if (domElements.password) {
+        domElements.password.addEventListener('input', handlePasswordInput);
+    }
 }
 
-// Check for authentication state and redirect messages
+// Debounce utility function
+function debounce(func, wait) {
+    let timeout;
+    return function executedFunction(...args) {
+        const later = () => {
+            clearTimeout(timeout);
+            func(...args);
+        };
+        clearTimeout(timeout);
+        timeout = setTimeout(later, wait);
+    };
+}
+
+// Enhanced redirect handling
+function performRedirect(reason, user = null) {
+    if (!signUpState.canAttemptRedirect()) {
+        console.log('🚫 Redirect blocked:', reason);
+        return false;
+    }
+    
+    console.log(`🔄 Performing redirect: ${reason}`, user?.email || 'no user');
+    signUpState.setRedirecting(true);
+    
+    // Clear any existing timeouts
+    signUpState.clearAllTimeouts();
+    
+    // Set a timeout to reset redirect flag in case something goes wrong
+    const resetTimeout = setTimeout(() => {
+        signUpState.setRedirecting(false);
+    }, 5000);
+    signUpState.addTimeout(resetTimeout);
+    
+    // Use auth service redirect function for proper role-based routing
+    const redirectTimeout = setTimeout(() => {
+        try {
+            // Double-check that we have a user and role
+            const currentUser = authService.getCurrentUser();
+            const userRole = authService.getUserRole();
+            
+            console.log('🔍 Pre-redirect check:', {
+                hasCurrentUser: !!currentUser,
+                userEmail: currentUser?.email,
+                userRole: userRole,
+                isAuthenticated: authService.isAuthenticated()
+            });
+            
+            if (!currentUser && user) {
+                console.log('🔧 Setting current user for redirect');
+                authService.currentUser = user;
+                authService.userRole = USER_ROLES.PATIENT;
+            }
+            
+            if (!userRole) {
+                console.log('🔧 Setting default role for redirect');
+                authService.userRole = USER_ROLES.PATIENT;
+            }
+            
+            // Use auth service redirect
+            authService.redirectAfterLogin();
+        } catch (redirectError) {
+            console.error('❌ Redirect error:', redirectError);
+            // Fallback direct redirect
+            window.location.href = '/public/patientPortal.html';
+        }
+    }, 800);
+    signUpState.addTimeout(redirectTimeout);
+    
+    return true;
+}
+
+// Check for authentication state and handle redirects
 window.addEventListener('load', async () => {
-    console.log('Window loaded, checking authentication state');
+    if (!signUpState.isInitialized) {
+        console.log('Waiting for initialization...');
+        return;
+    }
+    
+    console.log('🔍 Checking authentication state on page load');
     
     try {
-        // Check for Google sign-in redirect result first
-        await checkGoogleRedirectResult();
+        // Clear any stale state
+        signUpState.reset();
         
-        // Check for redirect message
+        // Check for redirect messages first
         const redirectMessage = localStorage.getItem('auth_redirect_message');
         if (redirectMessage) {
             showError(redirectMessage);
             localStorage.removeItem('auth_redirect_message');
         }
         
-        // Check if user is already authenticated
-        if (authService.isAuthenticated()) {
-            const user = authService.getCurrentUser();
-            if (user.emailVerified) {
-                // Redirect to appropriate dashboard
-                authService.redirectAfterLogin();
+        // Check for Google redirect result immediately
+        const hasRedirectResult = await checkGoogleRedirectResult();
+        if (hasRedirectResult) {
+            console.log('✅ Google redirect result processed, ending page load check');
+            return;
+        }
+        
+        // Wait for auth guard to handle initial authentication checks
+        await new Promise(resolve => setTimeout(resolve, 1000));
+        
+        // Check authentication state
+        const isAuthenticated = authService.isAuthenticated();
+        const user = authService.getCurrentUser();
+        
+        console.log('📊 Page load auth status:', {
+            isAuthenticated,
+            hasUser: !!user,
+            userEmail: user?.email,
+            userRole: authService.getUserRole()
+        });
+        
+        if (isAuthenticated && user && user.uid) {
+            try {
+                // Check if user is verified
+                const isGoogleUser = user.providerData.some(provider => provider.providerId === 'google.com');
+                const isVerified = user.emailVerified || isGoogleUser;
+                
+                if (isVerified) {
+                    console.log('✅ User is authenticated and verified, redirecting');
+                    
+                    // Ensure role is set
+                    if (!authService.getUserRole()) {
+                        authService.userRole = USER_ROLES.PATIENT;
+                    }
+                    
+                    showSuccess('Welcome back! Redirecting to your dashboard...');
+                    performRedirect('user already authenticated', user);
+                } else {
+                    console.log('ℹ️ User is authenticated but not verified, staying on sign-up page');
+                }
+            } catch (error) {
+                console.log('❌ Error checking user verification:', error);
+                // Don't clear auth state, just log the error
             }
         }
     } catch (error) {
-        console.error('Page load error:', error);
+        console.error('❌ Error during page load auth check:', error);
+        showError('An error occurred while checking your authentication status.');
     }
 });
 
 // Check for Google redirect result
 async function checkGoogleRedirectResult() {
     try {
-        console.log('Checking for Google redirect result...');
+        console.log('🔍 Checking for Google redirect result...');
         
-        // Import Firebase auth functions for redirect result
-        const { getRedirectResult } = await import('firebase/auth');
-        
-        // Get auth instance from auth service (using the same instance)
-        const { auth } = await import('./auth-service.js');
+        const { getRedirectResult } = await import('https://www.gstatic.com/firebasejs/11.9.1/firebase-auth.js');
+        const authServiceModule = await import('../services/auth-service.js');
+        const auth = authServiceModule.auth;
         
         const result = await getRedirectResult(auth);
         if (result) {
-            console.log('Google redirect result found:', result.user.email);
+            console.log('✅ Google redirect result found:', result.user.email);
             
-            // Handle the successful Google sign-up
+            // Set user role immediately
+            authService.currentUser = result.user;
+            authService.userRole = USER_ROLES.PATIENT;
+            
             await handleGoogleAuthResult(result.user);
-            
             return true;
         }
-        return false;
-    } catch (error) {
-        console.error('Error checking Google redirect result:', error);
         
-        // Handle specific errors
-        if (error.code === 'auth/unauthorized-domain') {
-            showError(`Domain "${window.location.hostname}" is not authorized. Please add it to Firebase Console > Authentication > Settings > Authorized Domains.`);
-        } else if (error.code === 'auth/operation-not-allowed') {
-            showError('Google sign-in is not enabled in Firebase Console.');
-        } else if (error.message && !error.message.includes('No redirect operation')) {
-            showError(`Google sign-in error: ${error.message}`);
+        // Check if user is already authenticated from redirect
+        const user = auth.currentUser;
+        if (user) {
+            console.log('✅ User already authenticated from redirect:', user.email);
+            
+            // Ensure role is set
+            if (!authService.getUserRole()) {
+                authService.userRole = USER_ROLES.PATIENT;
+            }
+            
+            showSuccess('Welcome back! Redirecting to your dashboard...');
+            performRedirect('google redirect completed', user);
+            return true;
         }
         
+        console.log('ℹ️ No Google redirect result found');
+        return false;
+    } catch (error) {
+        console.error('❌ Error checking Google redirect result:', error);
+        handleGoogleAuthError(error);
         return false;
     }
 }
 
-// Form validation using the comprehensive validation system
+// Secure storage utility
+class SecureStorage {
+    static setItem(key, value, encrypt = true) {
+        try {
+            const data = encrypt ? btoa(JSON.stringify(value)) : JSON.stringify(value);
+            localStorage.setItem(key, data);
+        } catch (error) {
+            console.error('Error storing data:', error);
+        }
+    }
+    
+    static getItem(key, decrypt = true) {
+        try {
+            const data = localStorage.getItem(key);
+            if (!data) return null;
+            
+            return decrypt ? JSON.parse(atob(data)) : JSON.parse(data);
+        } catch (error) {
+            console.error('Error retrieving data:', error);
+            return null;
+        }
+    }
+    
+    static removeItem(key) {
+        localStorage.removeItem(key);
+    }
+}
+
+// Auto-generate names from email
+function generateNamesFromEmail(email) {
+    const username = email.split('@')[0];
+    const nameParts = username.split(/[._-]/);
+    
+    // Capitalize first letter of each part
+    const capitalize = (str) => str.charAt(0).toUpperCase() + str.slice(1).toLowerCase();
+    
+    const firstName = nameParts[0] ? capitalize(nameParts[0]) : '';
+    const lastName = nameParts[1] ? capitalize(nameParts[1]) : '';
+    
+    return { firstName, lastName };
+}
+
+// Enhanced form validation
 function validateForm(formData) {
-    // Check rate limiting first
+    // Rate limiting check
     const userKey = formData.email || 'anonymous';
     if (!rateLimiter.isAllowed(userKey, 3, 60000)) {
-        return { valid: false, errors: ['Too many attempts. Please wait 1 minute before trying again.'] };
+        return { 
+            valid: false, 
+            errors: ['Too many registration attempts. Please wait 1 minute before trying again.'] 
+        };
     }
 
-    // Sanitize all inputs before validation
-    const sanitizedFormData = {
-        firstName: sanitizeInput(formData.firstName),
-        lastName: sanitizeInput(formData.lastName),
-        email: sanitizeInput(formData.email),
-        password: formData.password, // Don't sanitize password - keep as is for validation
-        confirmPassword: formData.confirmPassword,
-        dateOfBirth: formData.birthDate,
-        phone: sanitizeInput(formData.phone),
-        address: sanitizeInput(formData.address),
-        bio: sanitizeInput(formData.bio || ''),
-        terms: formData.terms
+    // Prepare form data for comprehensive validation
+    const formDataForValidation = {
+        firstName: formData.firstName || '',
+        lastName: formData.lastName || '',
+        email: formData.email || '',
+        password: formData.password || '',
+        phone: formData.phone ? `${formData.countryCode || '+1'} ${formData.phone}` : '',
+        dateOfBirth: formData.birthDate || ''
     };
 
-    // Use the comprehensive validation system
-    const validationResult = validatePatientRegistrationForm(sanitizedFormData);
+    // Use comprehensive validation schema
+    const validationResult = validateData(formDataForValidation, userRegistrationSchema);
     
     if (!validationResult.valid) {
-        return { valid: false, errors: validationResult.errors };
+        return { 
+            valid: false, 
+            errors: validationResult.errors
+        };
     }
 
-    // Additional business logic validation
+    // Additional security validations
     const errors = [];
-    
-    // Validate age (must be 18+)
-    const birthDate = new Date(sanitizedFormData.dateOfBirth);
-    const today = new Date();
-    let age = today.getFullYear() - birthDate.getFullYear();
-    const monthDiff = today.getMonth() - birthDate.getMonth();
-    
-    if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
-        age--;
+
+    // Check for suspicious patterns in input
+    const suspiciousPatterns = [
+        /(<script|javascript:|vbscript:|on\w+\s*=)/i,
+        /(union\s+select|drop\s+table|delete\s+from)/i,
+        /(\${|\{\{|\[\[)/,
+        /(eval\(|exec\(|system\()/i
+    ];
+
+    for (const [field, value] of Object.entries(validationResult.data)) {
+        if (typeof value === 'string') {
+            for (const pattern of suspiciousPatterns) {
+                if (pattern.test(value)) {
+                    errors.push(`Invalid characters detected in ${field}`);
+                    break;
+                }
+            }
+        }
     }
-    
-    if (age < 18) {
-        errors.push('You must be at least 18 years old to register');
+
+    // Additional age validation
+    if (validationResult.data.dateOfBirth) {
+        const birthDate = new Date(validationResult.data.dateOfBirth);
+        const today = new Date();
+        let age = today.getFullYear() - birthDate.getFullYear();
+        const monthDiff = today.getMonth() - birthDate.getMonth();
+        
+        if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
+            age--;
+        }
+        
+        if (age < 13) {
+            errors.push('You must be at least 13 years old to register');
+        }
+        
+        if (age > 120) {
+            errors.push('Please enter a valid date of birth');
+        }
+    }
+
+    // Password security check
+    if (validationResult.data.password) {
+        const password = validationResult.data.password;
+        
+        // Check for common weak passwords
+        const commonPasswords = [
+            'password', '123456', '123456789', 'qwerty', 'abc123', 
+            'password123', 'admin', 'root', 'user', 'guest', 'test'
+        ];
+        
+        if (commonPasswords.includes(password.toLowerCase())) {
+            errors.push('Password is too common. Please choose a more secure password.');
+        }
+
+        // Check for personal information in password
+        if (validationResult.data.firstName && 
+            password.toLowerCase().includes(validationResult.data.firstName.toLowerCase())) {
+            errors.push('Password should not contain your name');
+        }
+        
+        if (validationResult.data.email && 
+            password.toLowerCase().includes(validationResult.data.email.split('@')[0].toLowerCase())) {
+            errors.push('Password should not contain your email');
+        }
     }
 
     if (errors.length > 0) {
         return { valid: false, errors };
     }
 
-    return { valid: true, sanitizedData: validationResult.sanitizedData };
+    return { valid: true, sanitizedData: validationResult.data };
 }
 
-// Show/hide messages
+// Message display utilities
 function showError(message) {
-    errorMessage.textContent = message;
-    errorMessage.style.display = 'block';
-    successMessage.style.display = 'none';
+    if (!domElements.errorMessage) return;
     
-    // Auto-hide error after 10 seconds
-    setTimeout(() => {
-        hideMessages();
-    }, 10000);
+    domElements.errorMessage.textContent = message;
+    domElements.errorMessage.style.display = 'block';
+    if (domElements.successMessage) {
+        domElements.successMessage.style.display = 'none';
+    }
+    
+    // Auto-hide after 10 seconds
+    const hideTimeout = setTimeout(hideMessages, 10000);
+    signUpState.addTimeout(hideTimeout);
 }
 
 function showSuccess(message) {
-    successMessage.textContent = message;
-    successMessage.style.display = 'block';
-    errorMessage.style.display = 'none';
+    if (!domElements.successMessage) return;
+    
+    domElements.successMessage.textContent = message;
+    domElements.successMessage.style.display = 'block';
+    if (domElements.errorMessage) {
+        domElements.errorMessage.style.display = 'none';
+    }
 }
 
 function hideMessages() {
-    errorMessage.style.display = 'none';
-    successMessage.style.display = 'none';
+    if (domElements.errorMessage) domElements.errorMessage.style.display = 'none';
+    if (domElements.successMessage) domElements.successMessage.style.display = 'none';
 }
 
 // Loading state management
 function setLoading(isLoading) {
-    if (isLoading) {
-        registerBtn.disabled = true;
-        loadingSpinner.style.display = 'block';
-        btnText.style.display = 'none';
-        googleSignUpBtn.disabled = true;
-    } else {
-        registerBtn.disabled = false;
-        loadingSpinner.style.display = 'none';
-        btnText.style.display = 'block';
-        googleSignUpBtn.disabled = false;
+    signUpState.setProcessing(isLoading);
+    
+    if (domElements.registerBtn) {
+        domElements.registerBtn.disabled = isLoading;
+    }
+    
+    if (domElements.loadingSpinner) {
+        domElements.loadingSpinner.style.display = isLoading ? 'block' : 'none';
+    }
+    
+    if (domElements.btnText) {
+        domElements.btnText.style.display = isLoading ? 'none' : 'block';
+    }
+    
+    if (domElements.googleSignUpBtn) {
+        domElements.googleSignUpBtn.disabled = isLoading;
     }
 }
 
 // Handle email/password registration
 async function handleEmailRegistration(formData) {
+    if (signUpState.isProcessing) {
+        console.log('Registration already in progress');
+        return;
+    }
+    
     try {
         setLoading(true);
         hideMessages();
 
-        // Validate form data with comprehensive validation
         const validationResult = validateForm(formData);
         if (!validationResult.valid) {
             showError(validationResult.errors[0]);
             return;
         }
 
-        // Use sanitized data for registration
         const sanitizedData = validationResult.sanitizedData;
 
         // Register with auth service
         const user = await authService.registerWithEmail(
             sanitizedData.email, 
             sanitizedData.password,
-            {
-                displayName: `${sanitizedData.firstName} ${sanitizedData.lastName}`
-            }
+            { displayName: `${sanitizedData.firstName} ${sanitizedData.lastName}` }
         );
 
-        // Store additional patient data for later use when email is verified
-        localStorage.setItem('pending_patient_data', JSON.stringify({
+        // Store patient data securely for later use
+        SecureStorage.setItem('pending_patient_data', {
             firstName: sanitizedData.firstName,
             lastName: sanitizedData.lastName,
             birthDate: sanitizedData.dateOfBirth,
@@ -287,128 +579,119 @@ async function handleEmailRegistration(formData) {
             address: sanitizedData.address,
             bio: sanitizedData.bio,
             authProvider: 'email'
-        }));
+        });
 
-        showSuccess('Registration successful! Please check your email to verify your account before signing in.');
+        showSuccess('Registration successful! Please check your email to verify your account.');
         
         // Clear form
-        registrationForm.reset();
+        domElements.registrationForm.reset();
 
     } catch (error) {
         console.error('Registration error:', error);
-        
-        let errorMsg = 'Registration failed. Please try again.';
-        
-        if (error.message.includes('Too many failed login attempts')) {
-            errorMsg = error.message;
-        } else {
-            switch (error.code) {
-                case 'auth/email-already-in-use':
-                    errorMsg = 'This email is already registered. Please use a different email or sign in.';
-                    break;
-                case 'auth/weak-password':
-                    errorMsg = 'Password is too weak. Please choose a stronger password.';
-                    break;
-                case 'auth/invalid-email':
-                    errorMsg = 'Please enter a valid email address.';
-                    break;
-                case 'auth/operation-not-allowed':
-                    errorMsg = 'Email registration is currently disabled. Please contact support.';
-                    break;
-                default:
-                    errorMsg = error.message || errorMsg;
-            }
-        }
-        
-        showError(errorMsg);
+        showError(getErrorMessage(error));
     } finally {
         setLoading(false);
     }
 }
 
+// Get user-friendly error message
+function getErrorMessage(error) {
+    if (error.message.includes('Too many failed login attempts')) {
+        return error.message;
+    }
+    
+    const errorMessages = {
+        'auth/email-already-in-use': 'This email is already registered. Please use a different email or sign in.',
+        'auth/weak-password': 'Password is too weak. Please choose a stronger password.',
+        'auth/invalid-email': 'Please enter a valid email address.',
+        'auth/operation-not-allowed': 'Email registration is currently disabled. Please contact support.',
+        'default': 'Registration failed. Please try again.'
+    };
+    
+    return errorMessages[error.code] || errorMessages.default;
+}
+
 // Handle Google authentication result
 async function handleGoogleAuthResult(user) {
+    if (signUpState.isProcessing || signUpState.isRedirecting) {
+        console.log('Already processing Google auth result');
+        return;
+    }
+    
     try {
-        console.log('Google authentication result:', user);
+        signUpState.setProcessing(true);
+        console.log('🔄 Processing Google authentication result for:', user.email);
         
-        // For Google users, we can proceed even if there are some Firestore permission issues initially
-        // The user is already authenticated, so we should redirect them to the portal
+        // Clear any error messages
+        hideMessages();
         
-        let userExists = false;
-        let patientDocumentCreated = false;
+        // Show success message
+        showSuccess('Welcome to LingapLink! Setting up your account...');
         
-        // Try to check if user exists (handle permission errors gracefully)
+        // Try to create or update patient document
         try {
-            userExists = await checkIfUserExists(user.uid);
-            console.log('User exists check result:', userExists);
-        } catch (error) {
-            console.warn('Could not check user existence (permission issue):', error);
-            // Assume new user if we can't check due to permissions
-            userExists = false;
-        }
-        
-        // Try to create patient document if needed (handle permission errors gracefully)
-        if (!userExists) {
-            try {
+            const userExists = await checkIfUserExists(user.uid);
+            
+            if (!userExists) {
+                console.log('📝 Creating new patient document for Google user');
                 await createPatientDocument(user, { 
                     authProvider: 'google',
                     firstName: user.displayName?.split(' ')[0] || '',
                     lastName: user.displayName?.split(' ').slice(1).join(' ') || '',
-                    emailVerified: true // Google users are auto-verified
+                    emailVerified: true
                 });
-                patientDocumentCreated = true;
-                console.log('Patient document created successfully');
-            } catch (error) {
-                console.warn('Could not create patient document (permission issue):', error);
-                // Store the data for later creation when permissions are fixed
-                localStorage.setItem('pending_patient_data', JSON.stringify({
-                    firstName: user.displayName?.split(' ')[0] || '',
-                    lastName: user.displayName?.split(' ').slice(1).join(' ') || '',
-                    authProvider: 'google',
-                    emailVerified: true,
-                    needsCreation: true
-                }));
+                showSuccess('Welcome to LingapLink! Your account has been created successfully.');
+            } else {
+                console.log('👋 Existing user found, welcoming back');
+                showSuccess('Welcome back! Signing you in...');
             }
-        }
-        
-        // Show success message
-        if (patientDocumentCreated) {
-            showSuccess('Welcome to LingapLink! Your account has been created successfully.');
-        } else if (userExists) {
-            showSuccess('Welcome back! Signing you in...');
-        } else {
+        } catch (error) {
+            console.warn('⚠️ Could not create/update patient document:', error);
             showSuccess('Welcome to LingapLink! Your account setup will be completed shortly.');
         }
 
-        // Always redirect to patient portal after successful Google authentication
-        // The auth guard will handle any additional setup needed
-        console.log('Redirecting to patient portal...');
+        // Wait a moment for user to see the success message
+        await new Promise(resolve => setTimeout(resolve, 1500));
         
-        setTimeout(() => {
-            window.location.href = '/pages/patientPortal.html';
-        }, 2000);
+        // Ensure auth service has the correct role set
+        if (authService.getUserRole() !== USER_ROLES.PATIENT) {
+            console.log('🔧 Setting user role to patient');
+            authService.userRole = USER_ROLES.PATIENT;
+        }
+        
+        // Redirect to patient portal
+        console.log('🎯 Initiating redirect to patient portal');
+        performRedirect('successful Google authentication', user);
 
     } catch (error) {
-        console.error('Google auth result error:', error);
+        console.error('❌ Google auth result error:', error);
         
-        // Even if there are some errors, if the user is authenticated, we should redirect
+        // If user is authenticated, still try to redirect
         if (user && user.uid) {
-            console.log('User is authenticated despite errors, redirecting to portal...');
-            showSuccess('Welcome to LingapLink! Some features may be limited until setup is complete.');
+            console.log('🔧 User authenticated despite errors, attempting redirect');
+            showSuccess('Welcome! Some features may be limited until setup is complete.');
             
-            setTimeout(() => {
-                window.location.href = '/pages/patientPortal.html';
-            }, 2000);
+            // Set role if not set
+            if (!authService.getUserRole()) {
+                authService.userRole = USER_ROLES.PATIENT;
+            }
+            
+            const redirectTimeout = setTimeout(() => {
+                performRedirect('Google auth with errors', user);
+            }, 1500);
+            signUpState.addTimeout(redirectTimeout);
         } else {
             showError('Failed to complete Google registration. Please try again.');
         }
+    } finally {
+        signUpState.setProcessing(false);
     }
 }
 
-// Check if user exists in Firestore
+// Check if user exists
 async function checkIfUserExists(uid) {
     try {
-        const { getPatientData } = await import('./firestoredb.js');
+        const { getPatientData } = await import('../services/firestoredb.js');
         const patientData = await getPatientData(uid);
         return patientData !== null;
     } catch (error) {
@@ -417,115 +700,58 @@ async function checkIfUserExists(uid) {
     }
 }
 
-// Handle Google authentication errors
+// Enhanced Google auth error handling
 function handleGoogleAuthError(error) {
     console.error('Google authentication error:', error);
-    console.log('Error code:', error.code);
-    console.log('Error message:', error.message);
-    console.log('Current domain:', window.location.hostname);
     
-    let errorMsg = 'Google sign-in failed. Please try again.';
+    const errorMessages = {
+        'auth/unauthorized-domain': `Domain "${window.location.hostname}" is not authorized. Please contact support.`,
+        'auth/operation-not-allowed': 'Google sign-in is not enabled. Please contact support.',
+        'auth/account-exists-with-different-credential': 'An account already exists with this email using a different sign-in method.',
+        'auth/popup-closed-by-user': 'Sign-in was cancelled. Please try again.',
+        'auth/popup-blocked': 'Popup was blocked. Please allow popups for this site.',
+        'auth/network-request-failed': 'Network error. Please check your internet connection.',
+        'auth/cancelled-popup-request': null, // Don't show error for cancelled popup
+        'default': 'Google sign-in failed. Please try again.'
+    };
     
-    switch (error.code) {
-        case 'auth/unauthorized-domain':
-            errorMsg = `❌ Domain Not Authorized\n\nTo fix this:\n1. Go to Firebase Console\n2. Navigate to Authentication > Settings\n3. Add "${window.location.hostname}" to Authorized Domains\n4. Save and try again\n\nCurrent domain: ${window.location.hostname}`;
-            break;
-        case 'auth/operation-not-allowed':
-            errorMsg = '❌ Google Sign-In Not Enabled\n\nTo fix this:\n1. Go to Firebase Console\n2. Navigate to Authentication > Sign-in method\n3. Enable Google provider\n4. Configure OAuth consent screen\n5. Save and try again';
-            break;
-        case 'auth/account-exists-with-different-credential':
-            errorMsg = 'An account already exists with this email using a different sign-in method. Please try signing in with email and password.';
-            break;
-        case 'auth/popup-closed-by-user':
-            errorMsg = 'Sign-in was cancelled. Please try again.';
-            break;
-        case 'auth/popup-blocked':
-            errorMsg = 'Popup was blocked by your browser. Please allow popups for this site and try again, or the page will automatically redirect.';
-            break;
-        case 'auth/cancelled-popup-request':
-            // Don't show error for cancelled popup - user might have clicked multiple times
-            return;
-        case 'auth/network-request-failed':
-            errorMsg = 'Network error. Please check your internet connection and try again.';
-            break;
-        case 'auth/internal-error':
-            errorMsg = 'Internal error occurred. Please check your Firebase configuration and try again.';
-            break;
-        case 'auth/invalid-api-key':
-            errorMsg = 'Invalid API key. Please check your Firebase configuration.';
-            break;
-        case 'auth/app-not-authorized':
-            errorMsg = 'App not authorized. Please check your Firebase project settings.';
-            break;
-        default:
-            // Check if it's a configuration-related error
-            if (error.message.includes('not enabled')) {
-                errorMsg = 'Google sign-in is not properly configured. Please check Firebase Console settings.';
-            } else if (error.message.includes('Domain')) {
-                errorMsg = error.message; // Use the detailed message from auth service
-            } else {
-                errorMsg = `Google sign-in failed: ${error.message || 'Unknown error'}`;
-            }
+    const message = errorMessages[error.code] || errorMessages.default;
+    if (message) {
+        showError(message);
     }
-    
-    showError(errorMsg);
-    
-    // Log helpful debugging information
-    console.log('🔧 Debugging Information:');
-    console.log('- Check Firebase Console > Authentication > Sign-in method');
-    console.log('- Ensure Google provider is enabled');
-    console.log('- Check Authorized Domains includes:', window.location.hostname);
-    console.log('- Verify OAuth consent screen is configured');
-    console.log('- Check browser console for additional errors');
 }
 
-// Handle Google sign-up button click
-let isGoogleSignInInProgress = false;
-
-async function handleGoogleSignUpClick() {
-    console.log('Google sign-up button clicked');
+// Handle Google sign-up button click with improved error handling
+async function handleGoogleSignUpClick(event) {
+    event.preventDefault();
+    event.stopPropagation();
     
-    if (isGoogleSignInInProgress) {
-        console.log('Google sign-in already in progress, ignoring click');
+    if (signUpState.isProcessing) {
+        console.log('Google sign-in already in progress');
         return;
     }
     
-    isGoogleSignInInProgress = true;
-    
-    try {
-        await handleGoogleRegistration();
-    } finally {
-        // Reset after a delay to prevent rapid clicking
-        setTimeout(() => {
-            isGoogleSignInInProgress = false;
-        }, 2000);
-    }
-}
-
-// Handle Google registration 
-async function handleGoogleRegistration() {
-    console.log('Starting Google registration process...');
+    console.log('🚀 Starting Google registration process...');
     
     try {
         setLoading(true);
         hideMessages();
 
-        console.log('Calling authService.loginWithGoogle()...');
-        
-        // Use auth service for Google login
+        // Show loading message
+        showSuccess('Connecting to Google...');
+
         const user = await authService.loginWithGoogle();
         
-        console.log('Google authentication result:', user);
-        
         if (user) {
-            // Handle the authentication result
+            console.log('✅ Google authentication successful:', user.email);
             await handleGoogleAuthResult(user);
         } else {
-            console.log('Google authentication returned null (likely redirect in progress)');
+            console.log('ℹ️ Google authentication returned null (likely redirect)');
+            // If null, it means a redirect was initiated, so don't show error
         }
 
     } catch (error) {
-        console.error('Google registration error:', error);
+        console.error('❌ Google registration error:', error);
         handleGoogleAuthError(error);
     } finally {
         setLoading(false);
@@ -536,71 +762,224 @@ async function handleGoogleRegistration() {
 async function handleFormSubmission(e) {
     e.preventDefault();
     
-    const formData = new FormData(registrationForm);
-    const data = {
-        firstName: formData.get('firstName'),
-        lastName: formData.get('lastName'),
-        email: formData.get('email'),
-        password: formData.get('password'),
-        confirmPassword: formData.get('confirmPassword'),
-        birthDate: formData.get('birthDate'),
-        phone: formData.get('phone'),
-        address: formData.get('address'),
-        bio: formData.get('bio') || '',
-        terms: formData.get('terms') === 'on'
-    };
-
-    // Validate form using the comprehensive validation system
-    const validationResult = validateForm(data);
-    if (!validationResult.valid) {
-        showError(validationResult.errors[0]); // Show first error
+    if (signUpState.isProcessing) {
+        console.log('Form submission already in progress');
         return;
     }
+    
+    const formData = new FormData(domElements.registrationForm);
+    const data = {
+        email: formData.get('email'),
+        password: formData.get('password'),
+        birthDate: formData.get('birthDate'),
+        phone: formData.get('phone'),
+        countryCode: formData.get('countryCode') || '+1'
+    };
 
-    // Handle registration (validation will be done again inside handleEmailRegistration)
     await handleEmailRegistration(data);
 }
 
-// Handle password confirmation
-function handlePasswordConfirmation() {
-    const password = document.getElementById('password').value;
-    const confirmPassword = this.value;
+// Form field event handlers
+function handlePasswordInput() {
+    // Optional: Add password strength indicator
+    const password = this.value;
+    const strength = getPasswordStrength(password);
     
-    if (confirmPassword && password !== confirmPassword) {
-        this.setCustomValidity('Passwords do not match');
-        this.style.borderColor = '#dc3545';
-    } else {
-        this.setCustomValidity('');
-        this.style.borderColor = '';
+    // You can add visual feedback here
+    // console.log('Password strength:', strength);
+}
+
+function handleFieldBlur(event) {
+    const field = event.target;
+    const fieldName = field.name || field.id;
+    const value = field.value;
+    
+    // Clear previous error for this field
+    clearFieldError(field);
+    
+    // Validate specific field based on its type
+    let validationResult = null;
+    
+    switch (fieldName) {
+        case 'email':
+            validationResult = validateEmail(value);
+            break;
+        case 'firstName':
+        case 'lastName':
+            validationResult = validateName(value, fieldName);
+            break;
+        case 'phone':
+            const fullPhone = `${domElements.countryCode?.value || '+1'} ${value}`;
+            validationResult = validatePhone(fullPhone);
+            break;
+        case 'password':
+            validationResult = validatePassword(value);
+            break;
+        case 'birthDate':
+            validationResult = validateDateOfBirth(value);
+            break;
+        default:
+            // Generic validation for other fields
+            if (field.required && !value.trim()) {
+                validationResult = { valid: false, error: `${fieldName} is required` };
+            }
+    }
+    
+    // Show validation result
+    if (validationResult && !validationResult.valid) {
+        showFieldError(field, validationResult.error);
+    } else if (validationResult && validationResult.valid) {
+        showFieldSuccess(field);
     }
 }
 
-// Handle field blur
-function handleFieldBlur() {
-    if (!this.value.trim()) {
-        this.style.borderColor = '#dc3545';
-    } else {
-        this.style.borderColor = '';
+function handleFieldInput(event) {
+    const field = event.target;
+    const fieldName = field.name || field.id;
+    const value = field.value;
+    
+    // Real-time validation for specific fields
+    if (fieldName === 'password') {
+        updatePasswordStrength(value);
+    }
+    
+    // Clear error state when user starts typing
+    if (field.classList.contains('error')) {
+        clearFieldError(field);
+    }
+    
+    // Basic security check - prevent obvious injection attempts
+    const suspiciousPatterns = [
+        /<script/i,
+        /javascript:/i,
+        /on\w+\s*=/i,
+        /\${/,
+        /\{\{/
+    ];
+    
+    for (const pattern of suspiciousPatterns) {
+        if (pattern.test(value)) {
+            showFieldError(field, 'Invalid characters detected');
+            return;
+        }
     }
 }
 
-// Handle field input
-function handleFieldInput() {
-    if (this.style.borderColor === 'rgb(220, 53, 69)') {
-        this.style.borderColor = '';
+function showFieldError(field, message) {
+    // Add error class
+    field.classList.add('error');
+    field.classList.remove('success');
+    
+    // Create or update error message
+    let errorElement = field.parentElement.querySelector('.field-error');
+    if (!errorElement) {
+        errorElement = document.createElement('div');
+        errorElement.className = 'field-error';
+        errorElement.style.color = '#dc3545';
+        errorElement.style.fontSize = '0.875rem';
+        errorElement.style.marginTop = '0.25rem';
+        field.parentElement.appendChild(errorElement);
+    }
+    errorElement.textContent = message;
+    errorElement.style.display = 'block';
+}
+
+function showFieldSuccess(field) {
+    // Add success class
+    field.classList.add('success');
+    field.classList.remove('error');
+    
+    // Hide error message
+    const errorElement = field.parentElement.querySelector('.field-error');
+    if (errorElement) {
+        errorElement.style.display = 'none';
     }
 }
 
-// Listen for auth state changes to handle email verification completion
+function clearFieldError(field) {
+    // Remove error/success classes
+    field.classList.remove('error', 'success');
+    
+    // Hide error message
+    const errorElement = field.parentElement.querySelector('.field-error');
+    if (errorElement) {
+        errorElement.style.display = 'none';
+    }
+}
+
+function updatePasswordStrength(password) {
+    const strength = getPasswordStrength(password);
+    let level = 'weak';
+    let score = 0;
+    
+    if (strength >= 4) {
+        level = 'strong';
+        score = 100;
+    } else if (strength >= 3) {
+        level = 'medium';
+        score = 75;
+    } else if (strength >= 2) {
+        level = 'fair';
+        score = 50;
+    } else if (strength >= 1) {
+        level = 'weak';
+        score = 25;
+    }
+    
+    // Create or update password strength indicator
+    let strengthElement = domElements.password?.parentElement.querySelector('.password-strength');
+    if (!strengthElement && domElements.password) {
+        strengthElement = document.createElement('div');
+        strengthElement.className = 'password-strength';
+        strengthElement.style.marginTop = '0.5rem';
+        domElements.password.parentElement.appendChild(strengthElement);
+    }
+    
+    if (strengthElement && password.length > 0) {
+        strengthElement.innerHTML = `
+            <div class="strength-bar" style="width: 100%; height: 4px; background-color: #e9ecef; border-radius: 2px; overflow: hidden;">
+                <div class="strength-fill" style="height: 100%; background-color: ${getStrengthColor(level)}; width: ${score}%; transition: width 0.3s ease;"></div>
+            </div>
+            <div class="strength-text" style="font-size: 0.75rem; margin-top: 0.25rem; color: ${getStrengthColor(level)};">
+                Password strength: ${level}
+            </div>
+        `;
+        strengthElement.style.display = 'block';
+    } else if (strengthElement) {
+        strengthElement.style.display = 'none';
+    }
+}
+
+function getStrengthColor(level) {
+    const colors = {
+        weak: '#dc3545',
+        fair: '#fd7e14',
+        medium: '#ffc107',
+        strong: '#198754'
+    };
+    return colors[level] || colors.weak;
+}
+
+// Password strength utility
+function getPasswordStrength(password) {
+    let strength = 0;
+    if (password.length >= 8) strength++;
+    if (/[A-Z]/.test(password)) strength++;
+    if (/[a-z]/.test(password)) strength++;
+    if (/\d/.test(password)) strength++;
+    if (/[^A-Za-z\d]/.test(password)) strength++;
+    
+    return strength;
+}
+
+// Listen for auth state changes
 authService.onAuthStateChange(async (user, role) => {
     if (user && user.emailVerified) {
-        // User has verified their email, create patient document if needed
-        const pendingData = localStorage.getItem('pending_patient_data');
+        const pendingData = SecureStorage.getItem('pending_patient_data');
         if (pendingData) {
             try {
-                const patientData = JSON.parse(pendingData);
-                await createPatientDocument(user, patientData);
-                localStorage.removeItem('pending_patient_data');
+                await createPatientDocument(user, pendingData);
+                SecureStorage.removeItem('pending_patient_data');
                 console.log('Patient document created after email verification');
             } catch (error) {
                 console.error('Error creating patient document:', error);
@@ -609,7 +988,12 @@ authService.onAuthStateChange(async (user, role) => {
     }
 });
 
-// Console log for debugging
-console.log('Patient Registration page loaded');
+// Cleanup on page unload
+window.addEventListener('beforeunload', () => {
+    signUpState.clearAllTimeouts();
+    signUpState.reset();
+});
+
+// Initialize
+console.log('✅ Patient Registration page loaded');
 console.log('Current domain:', window.location.hostname);
-console.log('Google Provider configured for authentication');

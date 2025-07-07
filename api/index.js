@@ -2,27 +2,36 @@ const express = require('express');
 const cors = require('cors');
 const helmet = require('helmet');
 const rateLimit = require('express-rate-limit');
-const { body, validationResult } = require('express-validator');
+const { body, param, query, validationResult } = require('express-validator');
 const jwt = require('jsonwebtoken');
 const morgan = require('morgan');
 const { GoogleGenerativeAI } = require('@google/generative-ai');
 const { initializeApp } = require('firebase/app');
 const { getFirestore, doc, setDoc, getDoc, collection, getDocs, query, where, orderBy, addDoc, updateDoc } = require('firebase/firestore');
 const { getAuth } = require('firebase-admin/auth');
+const mongoSanitize = require('express-mongo-sanitize');
+const xss = require('xss');
+const validator = require('validator');
 require('dotenv').config();
 
 const app = express();
 
-// Security Headers
+// Enhanced Security Headers
 app.use(helmet({
   contentSecurityPolicy: {
     directives: {
       defaultSrc: ["'self'"],
-      styleSrc: ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com"],
-      fontSrc: ["'self'", "https://fonts.gstatic.com"],
-      scriptSrc: ["'self'", "'unsafe-inline'", "https://www.gstatic.com"],
+      styleSrc: ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com", "https://cdnjs.cloudflare.com"],
+      fontSrc: ["'self'", "https://fonts.gstatic.com", "https://cdnjs.cloudflare.com"],
+      scriptSrc: ["'self'", "https://cdn.jsdelivr.net"],
       imgSrc: ["'self'", "data:", "https:"],
-      connectSrc: ["'self'", "https://firebaseapp.com", "https://identitytoolkit.googleapis.com"]
+      connectSrc: ["'self'", "https://lingaplink-ph.firebaseapp.com", "https://api.gemini.google.com"],
+      objectSrc: ["'none'"],
+      frameAncestors: ["'none'"],
+      baseUri: ["'self'"],
+      formAction: ["'self'"],
+      workerSrc: ["'none'"],
+      mediaSrc: ["'self'"]
     }
   },
   crossOriginEmbedderPolicy: false, // Disable for Firebase compatibility
@@ -30,8 +39,93 @@ app.use(helmet({
     maxAge: 31536000,
     includeSubDomains: true,
     preload: true
-  }
+  },
+  noSniff: true,
+  xssFilter: true,
+  referrerPolicy: { policy: 'strict-origin-when-cross-origin' },
+  permittedCrossDomainPolicies: false,
+  dnsPrefetchControl: { allow: false },
+  frameguard: { action: 'deny' },
+  hidePoweredBy: true
 }));
+
+// Additional security middleware
+app.use((req, res, next) => {
+  // Additional security headers
+  res.setHeader('X-Download-Options', 'noopen');
+  res.setHeader('X-Permitted-Cross-Domain-Policies', 'none');
+  res.setHeader('Permissions-Policy', 'geolocation=(), microphone=(), camera=(), payment=(), usb=()');
+  
+  // Prevent caching of sensitive endpoints
+  if (req.path.includes('/api/')) {
+    res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
+    res.setHeader('Pragma', 'no-cache');
+    res.setHeader('Expires', '0');
+    res.setHeader('Surrogate-Control', 'no-store');
+  }
+  
+  next();
+});
+
+// Request validation and security middleware
+app.use((req, res, next) => {
+  // Validate request size
+  const contentLength = req.headers['content-length'];
+  if (contentLength && parseInt(contentLength) > 10485760) { // 10MB
+    return res.status(413).json({
+      error: 'Request Entity Too Large',
+      message: 'Request size exceeds maximum allowed limit'
+    });
+  }
+  
+  // Validate content type for POST/PUT requests
+  if (['POST', 'PUT', 'PATCH'].includes(req.method)) {
+    const contentType = req.headers['content-type'];
+    if (contentType && !contentType.includes('application/json') && 
+        !contentType.includes('application/x-www-form-urlencoded') &&
+        !contentType.includes('multipart/form-data')) {
+      return res.status(415).json({
+        error: 'Unsupported Media Type',
+        message: 'Content type not supported'
+      });
+    }
+  }
+  
+  // Block suspicious user agents
+  const userAgent = req.headers['user-agent'];
+  const suspiciousAgents = [
+    /sqlmap/i,
+    /nikto/i,
+    /nessus/i,
+    /masscan/i,
+    /nmap/i,
+    /scanner/i,
+    /burpsuite/i,
+    /zap/i
+  ];
+  
+  if (userAgent && suspiciousAgents.some(pattern => pattern.test(userAgent))) {
+    console.warn(`Blocked suspicious user agent: ${userAgent} from IP: ${req.ip}`);
+    return res.status(403).json({
+      error: 'Forbidden',
+      message: 'Request blocked'
+    });
+  }
+  
+  // Block requests with suspicious headers
+  const suspiciousHeaders = ['x-forwarded-host', 'x-real-ip'];
+  for (const header of suspiciousHeaders) {
+    if (req.headers[header] && req.headers[header] !== req.headers.host) {
+      console.warn(`Blocked request with suspicious header: ${header} from IP: ${req.ip}`);
+      return res.status(403).json({
+        error: 'Forbidden', 
+        message: 'Invalid request headers'
+      });
+    }
+  }
+  
+  next();
+});
 
 // HTTPS Redirect for production
 if (process.env.NODE_ENV === 'production') {
@@ -44,8 +138,64 @@ if (process.env.NODE_ENV === 'production') {
   });
 }
 
-// Request Logging
+// Request Logging with security monitoring
 app.use(morgan(process.env.NODE_ENV === 'production' ? 'combined' : 'dev'));
+
+// Security event logging middleware
+app.use((req, res, next) => {
+  // Track potentially suspicious activity
+  const suspiciousPatterns = [
+    // SQL injection attempts
+    /(union|select|insert|delete|drop|update|exec|script)/i,
+    // XSS attempts
+    /(<script|javascript:|on\w+\s*=|vbscript:)/i,
+    // Path traversal
+    /(\.\.\/|\.\.\\)/,
+    // Command injection
+    /(;|&&|\|\|)/,
+    // Template injection
+    /(\${|\{\{|\[\[)/
+  ];
+  
+  const checkForSuspiciousContent = (obj, path = '') => {
+    if (typeof obj === 'string') {
+      for (const pattern of suspiciousPatterns) {
+        if (pattern.test(obj)) {
+          console.warn(`🚨 Suspicious content detected in ${path}: ${obj.substring(0, 100)}... from IP: ${req.ip}`);
+          return true;
+        }
+      }
+    } else if (typeof obj === 'object' && obj !== null) {
+      for (const [key, value] of Object.entries(obj)) {
+        if (checkForSuspiciousContent(value, `${path}.${key}`)) {
+          return true;
+        }
+      }
+    }
+    return false;
+  };
+  
+  // Check URL parameters
+  if (checkForSuspiciousContent(req.query, 'query')) {
+    console.warn(`🚨 Suspicious query parameters from IP: ${req.ip}, URL: ${req.url}`);
+  }
+  
+  // Check request body
+  if (req.body && checkForSuspiciousContent(req.body, 'body')) {
+    console.warn(`🚨 Suspicious request body from IP: ${req.ip}, Method: ${req.method}, URL: ${req.url}`);
+  }
+  
+  // Check headers for suspicious content
+  const suspiciousHeaderValue = Object.entries(req.headers).find(([key, value]) => {
+    return typeof value === 'string' && suspiciousPatterns.some(pattern => pattern.test(value));
+  });
+  
+  if (suspiciousHeaderValue) {
+    console.warn(`🚨 Suspicious header detected: ${suspiciousHeaderValue[0]} from IP: ${req.ip}`);
+  }
+  
+  next();
+});
 
 // Rate Limiting
 const limiter = rateLimit({
@@ -106,6 +256,9 @@ app.use(cors({
   maxAge: 86400 // 24 hours
 }));
 
+// Input Sanitization Middleware
+app.use(mongoSanitize());
+
 // Body Parser with size limits
 app.use(express.json({ 
   limit: '10mb',
@@ -115,6 +268,82 @@ app.use(express.urlencoded({
   extended: true, 
   limit: '10mb' 
 }));
+
+// Input Sanitization Utilities
+const sanitizeString = (str, maxLength = 1000) => {
+  if (!str || typeof str !== 'string') return '';
+  // Remove dangerous characters and patterns
+  let sanitized = str
+    .replace(/[\x00-\x1F\x7F]/g, '') // Remove control characters
+    .replace(/[<>]/g, '') // Remove angle brackets
+    .replace(/javascript:/gi, '') // Remove javascript: protocol
+    .replace(/on\w+\s*=/gi, '') // Remove event handlers
+    .replace(/data:/gi, '') // Remove data: protocol
+    .replace(/vbscript:/gi, '') // Remove vbscript: protocol
+    .replace(/file:/gi, '') // Remove file: protocol
+    .trim()
+    .substring(0, maxLength);
+  
+  return xss(validator.escape(sanitized));
+};
+
+const sanitizeEmail = (email) => {
+  if (!email || typeof email !== 'string') return '';
+  const sanitized = email.trim().toLowerCase()
+    .replace(/[^\w@\.\-\+]/g, '') // Only allow valid email characters
+    .substring(0, 254); // RFC standard max length
+  return validator.isEmail(sanitized) ? validator.normalizeEmail(sanitized) : '';
+};
+
+const sanitizePhone = (phone) => {
+  if (!phone || typeof phone !== 'string') return '';
+  // Remove all characters except digits, +, -, (, ), and spaces
+  const sanitized = phone.replace(/[^\d\+\-\(\)\s]/g, '').trim().substring(0, 20);
+  // Validate basic phone format
+  return /^[\+]?[0-9\s\-\(\)]{7,20}$/.test(sanitized) ? sanitized : '';
+};
+
+const sanitizeNumber = (num, min = 0, max = Number.MAX_SAFE_INTEGER) => {
+  const parsed = parseFloat(num);
+  if (isNaN(parsed) || !isFinite(parsed)) return min;
+  return Math.min(Math.max(parsed, min), max);
+};
+
+const sanitizeArray = (arr, maxLength = 100, itemValidator = null) => {
+  if (!Array.isArray(arr)) return [];
+  return arr.slice(0, maxLength).map(item => {
+    if (typeof item === 'string') {
+      return sanitizeString(item, 200);
+    } else if (itemValidator && typeof itemValidator === 'function') {
+      return itemValidator(item);
+    }
+    return item;
+  }).filter(item => item !== null && item !== undefined);
+};
+
+const sanitizeUrl = (url) => {
+  if (!url || typeof url !== 'string') return '';
+  const sanitized = url.trim().substring(0, 2048);
+  try {
+    const urlObj = new URL(sanitized);
+    // Only allow http and https protocols
+    if (urlObj.protocol === 'http:' || urlObj.protocol === 'https:') {
+      return validator.isURL(sanitized) ? sanitized : '';
+    }
+  } catch {
+    return '';
+  }
+  return '';
+};
+
+const sanitizeFilename = (filename) => {
+  if (!filename || typeof filename !== 'string') return '';
+  return filename
+    .replace(/[^a-zA-Z0-9\.\-\_]/g, '') // Only allow safe filename characters
+    .replace(/\.{2,}/g, '.') // Prevent directory traversal
+    .substring(0, 255)
+    .trim();
+};
 
 // Firebase Configuration - using environment variables for security
 const firebaseConfig = {
@@ -310,11 +539,32 @@ app.get('/api/health', (req, res) => {
 });
 
 // Get dashboard statistics (requires authentication)
-app.get('/api/dashboard/stats', authenticateUser, requireRole(['admin', 'doctor', 'nurse']), async (req, res) => {
+app.get('/api/dashboard/stats', 
+  authenticateUser, 
+  requireRole(['admin', 'doctor', 'nurse']),
+  [
+    query('startDate')
+      .optional()
+      .isISO8601()
+      .withMessage('Start date must be in ISO8601 format'),
+    query('endDate')
+      .optional()
+      .isISO8601()
+      .withMessage('End date must be in ISO8601 format'),
+    query('hospital')
+      .optional()
+      .isString()
+      .isLength({ min: 1, max: 100 })
+      .matches(/^[a-zA-Z0-9\s\-\_\.]+$/)
+      .withMessage('Hospital must be under 100 characters and contain only alphanumeric characters')
+  ],
+  validateInput,
+  async (req, res) => {
   try {
     // In production, this would fetch from Firebase based on user's hospital/clinic
     const userId = req.user.uid;
     const userRole = req.user.role || req.user.custom_claims?.role;
+    const { startDate, endDate, hospital } = req.query;
     
     // Demo data - in production, filter by user's access level
     const stats = {
@@ -339,10 +589,41 @@ app.get('/api/dashboard/stats', authenticateUser, requireRole(['admin', 'doctor'
 });
 
 // Surgery prioritization endpoints (requires authentication)
-app.get('/api/surgery/queue', authenticateUser, requireRole(['admin', 'doctor', 'surgeon']), async (req, res) => {
+app.get('/api/surgery/queue', 
+  authenticateUser, 
+  requireRole(['admin', 'doctor', 'surgeon']),
+  [
+    query('limit')
+      .optional()
+      .isInt({ min: 1, max: 100 })
+      .withMessage('Limit must be between 1 and 100'),
+    query('offset')
+      .optional()
+      .isInt({ min: 0 })
+      .withMessage('Offset must be a non-negative integer'),
+    query('urgency')
+      .optional()
+      .isIn(['Low', 'Medium', 'High', 'Critical'])
+      .withMessage('Invalid urgency level'),
+    query('specialty')
+      .optional()
+      .isString()
+      .isLength({ min: 1, max: 50 })
+      .matches(/^[a-zA-Z\s\-]+$/)
+      .withMessage('Specialty must be under 50 characters and contain only letters'),
+    query('location')
+      .optional()
+      .isString()
+      .isLength({ min: 1, max: 100 })
+      .matches(/^[a-zA-Z0-9\s\-\,\.]+$/)
+      .withMessage('Location must be under 100 characters')
+  ],
+  validateInput,
+  async (req, res) => {
   try {
     const userId = req.user.uid;
     const userRole = req.user.role || req.user.custom_claims?.role;
+    const { limit, offset, urgency, specialty, location } = req.query;
     
     // Sample data - in production, fetch from Firebase based on user's hospital/location
     const surgeryQueue = [
@@ -407,10 +688,35 @@ app.get('/api/surgery/queue', authenticateUser, requireRole(['admin', 'doctor', 
 });
 
 // OR optimization endpoints (requires authentication)
-app.get('/api/or/status', authenticateUser, requireRole(['admin', 'doctor', 'nurse', 'or_coordinator']), async (req, res) => {
+app.get('/api/or/status', 
+  authenticateUser, 
+  requireRole(['admin', 'doctor', 'nurse', 'or_coordinator']),
+  [
+    query('status')
+      .optional()
+      .isIn(['Available', 'In Use', 'Maintenance', 'Scheduled'])
+      .withMessage('Invalid OR status'),
+    query('specialty')
+      .optional()
+      .isString()
+      .isLength({ min: 1, max: 50 })
+      .matches(/^[a-zA-Z\s\-]+$/)
+      .withMessage('Specialty must be under 50 characters and contain only letters'),
+    query('minUtilization')
+      .optional()
+      .isInt({ min: 0, max: 100 })
+      .withMessage('Minimum utilization must be between 0 and 100'),
+    query('maxUtilization')
+      .optional()
+      .isInt({ min: 0, max: 100 })
+      .withMessage('Maximum utilization must be between 0 and 100')
+  ],
+  validateInput,
+  async (req, res) => {
   try {
     const userId = req.user.uid;
     const userRole = req.user.role || req.user.custom_claims?.role;
+    const { status, specialty, minUtilization, maxUtilization } = req.query;
     
     const orStatus = [
       { 
@@ -578,11 +884,35 @@ app.post('/api/or/optimize',
   }
 );
 
-// Telemedicine and rural patient endpoints (requires authentication)
-app.get('/api/telemedicine/patients', authenticateUser, requireRole(['admin', 'doctor', 'nurse', 'chw']), async (req, res) => {
-  try {
-    const userId = req.user.uid;
-    const userRole = req.user.role || req.user.custom_claims?.role;
+// Telemedicine and rural patient endpoints (requires authentication and query validation)
+app.get('/api/telemedicine/patients', 
+  authenticateUser, 
+  requireRole(['admin', 'doctor', 'nurse', 'chw']), 
+  [
+    query('limit')
+      .optional()
+      .isInt({ min: 1, max: 100 })
+      .withMessage('Limit must be between 1 and 100'),
+    query('offset')
+      .optional()
+      .isInt({ min: 0 })
+      .withMessage('Offset must be a non-negative integer'),
+    query('location')
+      .optional()
+      .isString()
+      .isLength({ min: 1, max: 100 })
+      .withMessage('Location must be under 100 characters'),
+    query('urgency')
+      .optional()
+      .isIn(['Low', 'Medium', 'High', 'Critical'])
+      .withMessage('Invalid urgency level')
+  ],
+  validateInput,
+  async (req, res) => {
+    try {
+      const userId = req.user.uid;
+      const userRole = req.user.role || req.user.custom_claims?.role;
+      const { limit = 50, offset = 0, location, urgency } = req.query;
     
     const ruralPatients = [
       {
@@ -617,9 +947,25 @@ app.get('/api/telemedicine/patients', authenticateUser, requireRole(['admin', 'd
       }
     ];
     
+    // Apply filters
+    let filteredPatients = ruralPatients;
+    if (location) {
+      filteredPatients = filteredPatients.filter(p => 
+        p.location.toLowerCase().includes(location.toLowerCase())
+      );
+    }
+    if (urgency) {
+      filteredPatients = filteredPatients.filter(p => p.urgency === urgency);
+    }
+    
+    // Apply pagination
+    const paginatedPatients = filteredPatients.slice(offset, offset + parseInt(limit));
+    
     res.json({ 
-      patients: ruralPatients,
-      totalCount: ruralPatients.length,
+      patients: paginatedPatients,
+      totalCount: filteredPatients.length,
+      limit: parseInt(limit),
+      offset: parseInt(offset),
       lastUpdated: new Date().toISOString()
     });
   } catch (error) {
@@ -631,31 +977,79 @@ app.get('/api/telemedicine/patients', authenticateUser, requireRole(['admin', 'd
   }
 });
 
-// Schedule offline consultation
-app.post('/api/telemedicine/schedule-offline', async (req, res) => {
-  try {
-    const { patientId, method, scheduledDate } = req.body;
-    
-    // In production, save to Firebase
-    const consultation = {
-      id: Date.now().toString(),
-      patientId,
-      method,
-      scheduledDate,
-      status: 'scheduled',
-      createdAt: new Date().toISOString()
-    };
-    
-    res.json({ 
-      success: true, 
-      message: `${method} consultation scheduled successfully`,
-      consultation 
-    });
-  } catch (error) {
-    console.error('Error scheduling offline consultation:', error);
-    res.status(500).json({ error: 'Failed to schedule consultation' });
+// Schedule offline consultation (NOW WITH PROPER VALIDATION)
+app.post('/api/telemedicine/schedule-offline', 
+  authenticateUser,
+  requireRole(['admin', 'doctor', 'nurse', 'chw']),
+  [
+    body('patientId')
+      .isString()
+      .isLength({ min: 1, max: 50 })
+      .withMessage('Patient ID is required and must be under 50 characters'),
+    body('method')
+      .isIn(['Radio', 'CHW', 'Mobile Clinic', 'Offline Form', 'SMS'])
+      .withMessage('Invalid consultation method'),
+    body('scheduledDate')
+      .isISO8601()
+      .toDate()
+      .withMessage('Valid scheduled date is required'),
+    body('notes')
+      .optional()
+      .isString()
+      .isLength({ max: 1000 })
+      .withMessage('Notes must be under 1000 characters'),
+    body('priority')
+      .optional()
+      .isIn(['Low', 'Medium', 'High', 'Critical'])
+      .withMessage('Invalid priority level')
+  ],
+  validateInput,
+  async (req, res) => {
+    try {
+      const { patientId, method, scheduledDate, notes, priority } = req.body;
+      const userId = req.user.uid;
+      
+      // Sanitize inputs
+      const sanitizedData = {
+        patientId: sanitizeString(patientId, 50),
+        method: sanitizeString(method, 50),
+        scheduledDate: new Date(scheduledDate),
+        notes: sanitizeString(notes || '', 1000),
+        priority: sanitizeString(priority || 'Medium', 20),
+        scheduledBy: userId
+      };
+      
+      // Validate date is in the future
+      if (sanitizedData.scheduledDate <= new Date()) {
+        return res.status(400).json({
+          error: 'Invalid Date',
+          message: 'Scheduled date must be in the future'
+        });
+      }
+      
+      // In production, save to Firebase
+      const consultation = {
+        id: `consult_${Date.now()}`,
+        ...sanitizedData,
+        status: 'scheduled',
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString()
+      };
+      
+      res.json({ 
+        success: true, 
+        message: `${sanitizedData.method} consultation scheduled successfully`,
+        consultation 
+      });
+    } catch (error) {
+      console.error('Error scheduling offline consultation:', error);
+      res.status(500).json({ 
+        error: 'Failed to schedule consultation',
+        message: process.env.NODE_ENV === 'development' ? error.message : 'Internal server error'
+      });
+    }
   }
-});
+);
 
 // AI health consultation endpoint (requires authentication and strict rate limiting)
 app.post('/api/ai/consultation', 
@@ -741,18 +1135,29 @@ app.post('/api/ai/consultation',
   }
 );
 
-// Patient portal endpoints (requires authentication)
+// Patient portal endpoints (requires authentication and parameter validation)
 app.get('/api/patient/:id', 
   authenticateUser,
   requireRole(['admin', 'doctor', 'nurse', 'patient']),
+  [
+    param('id')
+      .isString()
+      .isLength({ min: 1, max: 50 })
+      .matches(/^[a-zA-Z0-9_-]+$/)
+      .withMessage('Invalid patient ID format')
+  ],
+  validateInput,
   async (req, res) => {
     try {
       const { id } = req.params;
       const userId = req.user.uid;
       const userRole = req.user.role || req.user.custom_claims?.role;
       
+      // Sanitize patient ID
+      const sanitizedId = sanitizeString(id, 50);
+      
       // Authorization check: patients can only access their own data
-      if (userRole === 'patient' && id !== userId) {
+      if (userRole === 'patient' && sanitizedId !== userId) {
         return res.status(403).json({ 
           error: 'Forbidden',
           message: 'You can only access your own patient data'
@@ -761,7 +1166,7 @@ app.get('/api/patient/:id',
       
       // Sample patient data - in production, fetch from Firebase
       const patient = {
-        id,
+        id: sanitizedId,
         name: 'Maria Santos',
         age: 34,
         condition: 'Uterine Fibroids',
@@ -795,14 +1200,31 @@ app.get('/api/patient/:id',
   }
 );
 
-// Analytics endpoints (requires authentication)
+// Analytics endpoints (requires authentication and query validation)
 app.get('/api/analytics/wait-times', 
   authenticateUser,
   requireRole(['admin', 'doctor', 'analyst']),
+  [
+    query('startDate')
+      .optional()
+      .isISO8601()
+      .withMessage('Start date must be in ISO8601 format'),
+    query('endDate')
+      .optional()
+      .isISO8601()
+      .withMessage('End date must be in ISO8601 format'),
+    query('department')
+      .optional()
+      .isString()
+      .isLength({ min: 1, max: 100 })
+      .withMessage('Department must be under 100 characters')
+  ],
+  validateInput,
   async (req, res) => {
     try {
       const userId = req.user.uid;
       const userRole = req.user.role || req.user.custom_claims?.role;
+      const { startDate, endDate, department } = req.query;
       
       const waitTimeData = [
         { month: 'Sep', averageWait: 165, target: 120, improvement: -27 },
@@ -816,6 +1238,11 @@ app.get('/api/analytics/wait-times',
         data: waitTimeData,
         totalImprovement: 46, // percentage improvement from Sep to Jan
         trend: 'decreasing',
+        filters: {
+          startDate: startDate || null,
+          endDate: endDate || null,
+          department: department || 'All'
+        },
         lastUpdated: new Date().toISOString()
       });
     } catch (error) {

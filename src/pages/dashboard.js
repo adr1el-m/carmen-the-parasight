@@ -274,15 +274,15 @@ class HealthcareDashboard {
             }
 
             dayElement.appendChild(dayNumber);
-            dayElement.addEventListener('click', () => {
-                this.selectCalendarDay(day);
+            dayElement.addEventListener('click', (event) => {
+                this.selectCalendarDay(day, event);
             });
 
             calendarGrid.appendChild(dayElement);
         }
     }
 
-    selectCalendarDay(day) {
+    selectCalendarDay(day, event) {
         // Remove previous selection
         document.querySelectorAll('.calendar-day.selected').forEach(el => {
             el.classList.remove('selected');
@@ -329,36 +329,58 @@ class HealthcareDashboard {
     }
 
     handleSearch(query, inputElement) {
-        if (query.length < 2) return;
-
-        // Determine search context based on input location
         const section = inputElement.closest('.content-section');
         const sectionId = section?.id;
+        const trimmedQuery = query.trim().toLowerCase();
+
+        // Determine which elements to search through
+        let elementsToSearch;
+        let displayStyle = 'block';
+
+        if (sectionId === 'patient-records-section') {
+            elementsToSearch = section.querySelectorAll('.consultation-item');
+            displayStyle = 'flex';
+        } else if (sectionId === 'appointments-section') {
+            elementsToSearch = section.querySelectorAll('.appointment-card');
+            displayStyle = 'flex';
+        } else if (sectionId === 'help-section') {
+            elementsToSearch = section.querySelectorAll('.help-category, .faq-item');
+        }
+
+        // Reset visibility if query is short or empty
+        if (trimmedQuery.length < 2) {
+            if (elementsToSearch) {
+                elementsToSearch.forEach(el => {
+                    el.style.display = displayStyle;
+                });
+            }
+        }
+
+        if (trimmedQuery.length < 2) return;
 
         switch (sectionId) {
             case 'patient-records-section':
-                this.searchPatients(query);
+                this.searchPatients(trimmedQuery);
                 break;
             case 'appointments-section':
-                this.searchAppointments(query);
+                this.searchAppointments(trimmedQuery);
                 break;
             case 'help-section':
-                this.searchHelp(query);
+                this.searchHelp(trimmedQuery);
                 break;
             default:
-                this.globalSearch(query);
+                this.globalSearch(trimmedQuery);
         }
     }
 
     searchPatients(query) {
-        const patientCards = document.querySelectorAll('.record-card');
+        const patientCards = document.querySelectorAll('#patient-records-section .consultation-item');
         
         patientCards.forEach(card => {
-            const patientName = card.querySelector('.patient-info h4')?.textContent.toLowerCase();
-            const patientId = card.querySelector('.patient-info p')?.textContent.toLowerCase();
+            const patientDetails = card.querySelector('.consultation-details h4')?.textContent.toLowerCase();
             
-            if (patientName?.includes(query.toLowerCase()) || patientId?.includes(query.toLowerCase())) {
-                card.style.display = 'block';
+            if (patientDetails?.includes(query)) {
+                card.style.display = 'flex';
             } else {
                 card.style.display = 'none';
             }
@@ -366,14 +388,14 @@ class HealthcareDashboard {
     }
 
     searchAppointments(query) {
-        const appointmentCards = document.querySelectorAll('.appointment-card');
+        const appointmentCards = document.querySelectorAll('#appointments-section .appointment-card');
         
         appointmentCards.forEach(card => {
-            const doctorName = card.querySelector('.doctor-details h4')?.textContent.toLowerCase();
-            const patientName = card.querySelector('.patient-details h5')?.textContent.toLowerCase();
+            const doctorName = card.querySelector('.appointment-info h4')?.textContent.toLowerCase();
+            const patientInfo = card.querySelector('.appointment-info .appointment-time')?.textContent.toLowerCase();
             
-            if (doctorName?.includes(query.toLowerCase()) || patientName?.includes(query.toLowerCase())) {
-                card.style.display = 'block';
+            if (doctorName?.includes(query) || patientInfo?.includes(query)) {
+                card.style.display = 'flex';
             } else {
                 card.style.display = 'none';
             }
@@ -381,14 +403,15 @@ class HealthcareDashboard {
     }
 
     searchHelp(query) {
-        const helpCategories = document.querySelectorAll('.help-category');
-        const faqItems = document.querySelectorAll('.faq-item');
+        const helpContainer = document.getElementById('help-section');
+        const helpCategories = helpContainer.querySelectorAll('.help-category');
+        const faqItems = helpContainer.querySelectorAll('.faq-item');
         
         helpCategories.forEach(category => {
             const title = category.querySelector('h4')?.textContent.toLowerCase();
             const description = category.querySelector('p')?.textContent.toLowerCase();
             
-            if (title?.includes(query.toLowerCase()) || description?.includes(query.toLowerCase())) {
+            if (title?.includes(query) || description?.includes(query)) {
                 category.style.display = 'block';
             } else {
                 category.style.display = 'none';
@@ -399,7 +422,7 @@ class HealthcareDashboard {
             const question = item.querySelector('.faq-question span')?.textContent.toLowerCase();
             const answer = item.querySelector('.faq-answer p')?.textContent.toLowerCase();
             
-            if (question?.includes(query.toLowerCase()) || answer?.includes(query.toLowerCase())) {
+            if (question?.includes(query) || answer?.includes(query)) {
                 item.style.display = 'block';
             } else {
                 item.style.display = 'none';
@@ -438,43 +461,94 @@ class HealthcareDashboard {
     }
 
     filterPatientRecords(filter) {
-        // Mock filtering logic
-        const records = document.querySelectorAll('.record-card');
-        
+        const records = document.querySelectorAll('#patient-records-section .consultation-item');
+        const now = new Date();
+        now.setHours(0, 0, 0, 0);
+
         records.forEach(record => {
+            const lastVisitText = record.querySelector('p')?.textContent || '';
+            const nextAppointmentText = record.querySelector('.consultation-notes p:last-child')?.textContent || '';
+
+            let show = false;
             switch (filter) {
+                case 'all':
+                    show = true;
+                    break;
                 case 'recent':
-                    // Show only recent visits
-                    record.style.display = Math.random() > 0.5 ? 'block' : 'none';
+                    if (lastVisitText.includes('days ago')) {
+                        const days = parseInt(lastVisitText.split(' ')[2]);
+                        if (!isNaN(days) && days <= 7) {
+                            show = true;
+                        }
+                    } else if (lastVisitText.includes('week ago')) {
+                        show = true;
+                    }
                     break;
                 case 'upcoming':
-                    // Show only upcoming appointments
-                    record.style.display = Math.random() > 0.7 ? 'block' : 'none';
+                    if (nextAppointmentText.startsWith('Next Appointment:')) {
+                        try {
+                            const dateStr = nextAppointmentText.replace('Next Appointment: ', '').trim();
+                            const apptDate = new Date(dateStr);
+                            if (!isNaN(apptDate.getTime()) && apptDate >= now) {
+                                show = true;
+                            }
+                        } catch (e) {
+                            console.error("Could not parse date:", nextAppointmentText);
+                        }
+                    }
                     break;
-                default:
-                    record.style.display = 'block';
             }
+            record.style.display = show ? 'flex' : 'none';
         });
     }
 
     filterAppointments(filter) {
-        // Mock filtering logic
-        const appointments = document.querySelectorAll('.appointment-card');
-        
+        const appointments = document.querySelectorAll('#appointments-section .appointment-card');
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+
         appointments.forEach(appointment => {
-            switch (filter) {
-                case 'today':
-                    appointment.style.display = Math.random() > 0.6 ? 'block' : 'none';
-                    break;
-                case 'past':
-                    appointment.style.display = Math.random() > 0.8 ? 'block' : 'none';
-                    break;
-                case 'cancelled':
-                    appointment.style.display = 'none';
-                    break;
-                default:
-                    appointment.style.display = 'block';
+            const dateText = appointment.querySelector('.appointment-date .date')?.textContent; // e.g., "May 15"
+            const statusSpan = appointment.querySelector('.status');
+            const status = statusSpan ? statusSpan.className.split(' ').find(c => c !== 'status') : '';
+
+            let show = false;
+
+            if (!dateText) {
+                appointment.style.display = 'none';
+                return;
             }
+
+            try {
+                // Assuming current year for appointments. This is brittle.
+                const appointmentDate = new Date(`${dateText}, ${this.currentYear}`);
+                appointmentDate.setHours(0, 0, 0, 0);
+
+                if (isNaN(appointmentDate.getTime())) {
+                    appointment.style.display = 'none';
+                    return;
+                }
+
+                switch (filter) {
+                    case 'upcoming':
+                        if (appointmentDate > today && status !== 'cancelled') show = true;
+                        break;
+                    case 'today':
+                        if (appointmentDate.getTime() === today.getTime() && status !== 'cancelled') show = true;
+                        break;
+                    case 'past':
+                        if (appointmentDate < today) show = true;
+                        break;
+                    case 'cancelled':
+                        if (status === 'cancelled') show = true;
+                        break;
+                }
+            } catch (e) {
+                console.error("Could not parse date:", dateText);
+                show = false;
+            }
+
+            appointment.style.display = show ? 'flex' : 'none';
         });
     }
 
@@ -603,8 +677,8 @@ class HealthcareDashboard {
     }
 
     toggleUserMenu() {
-        // Implement user menu dropdown
-        const existingMenu = document.querySelector('.user-dropdown');
+        const userAvatar = document.getElementById('userAvatar');
+        const existingMenu = userAvatar.querySelector('.user-dropdown');
         
         if (existingMenu) {
             existingMenu.remove();
@@ -613,32 +687,39 @@ class HealthcareDashboard {
 
         const userMenu = document.createElement('div');
         userMenu.className = 'user-dropdown';
-        userMenu.innerHTML = `
-            <div class="dropdown-item" onclick="dashboard.editProfile()">
-                <i class="fas fa-user"></i>
-                Edit Profile
-            </div>
-            <div class="dropdown-item" onclick="dashboard.showSettings()">
-                <i class="fas fa-cog"></i>
-                Settings
-            </div>
-            <div class="dropdown-item" onclick="dashboard.handleLogout()">
-                <i class="fas fa-sign-out-alt"></i>
-                Logout
-            </div>
-        `;
 
-        const userAvatar = document.getElementById('userAvatar');
+        const menuItems = [
+            { icon: 'fa-user', text: 'Edit Profile', action: this.editProfile },
+            { icon: 'fa-cog', text: 'Settings', action: this.showSettings },
+            { icon: 'fa-sign-out-alt', text: 'Logout', action: this.handleLogout }
+        ];
+
+        menuItems.forEach(itemData => {
+            const itemElement = document.createElement('div');
+            itemElement.className = 'dropdown-item';
+            itemElement.addEventListener('click', () => itemData.action.call(this));
+
+            const icon = document.createElement('i');
+            icon.className = `fas ${itemData.icon}`;
+            icon.setAttribute('aria-hidden', 'true');
+
+            itemElement.appendChild(icon);
+            itemElement.appendChild(document.createTextNode(` ${itemData.text}`));
+            userMenu.appendChild(itemElement);
+        });
+
         userAvatar.appendChild(userMenu);
 
         // Close menu when clicking outside
         setTimeout(() => {
-            document.addEventListener('click', (e) => {
+            const clickOutsideHandler = (e) => {
                 if (!userAvatar.contains(e.target)) {
                     userMenu.remove();
+                    document.removeEventListener('click', clickOutsideHandler);
                 }
-            }, { once: true });
-        }, 100);
+            };
+            document.addEventListener('click', clickOutsideHandler);
+        }, 0);
     }
 
     showNotifications() {

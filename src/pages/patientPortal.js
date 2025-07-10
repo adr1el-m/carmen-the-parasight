@@ -201,6 +201,8 @@ class PatientPortal {
 
     displayUserInfo(user, patientData) {
         try {
+            this.patientData = patientData; // Store patient data for later use
+
             // Get user's name
             let firstName = '';
             let lastName = '';
@@ -228,6 +230,13 @@ class PatientPortal {
 
             // Update UI elements
             this.updateUserElements(firstName, lastName, fullName, user.email, patientData);
+
+            // Check if profile is complete and show modal if not
+            if (patientData && patientData.profileComplete === false) {
+                this.showNotification('Welcome! Please complete your profile to continue.', 'info');
+                // Use a short delay to ensure the UI is ready before showing the modal
+                setTimeout(() => this.openEditProfileModal(), 500);
+            }
 
         } catch (error) {
             console.error('Error displaying user info:', error);
@@ -343,8 +352,8 @@ class PatientPortal {
         });
 
         // Calendar navigation
-        const prevBtn = document.querySelector('.prev-btn');
-        const nextBtn = document.querySelector('.next-btn');
+        const prevBtn = document.getElementById('prevMonth');
+        const nextBtn = document.getElementById('nextMonth');
         
         if (prevBtn) {
             prevBtn.addEventListener('click', () => this.previousMonth());
@@ -354,11 +363,21 @@ class PatientPortal {
             nextBtn.addEventListener('click', () => this.nextMonth());
         }
 
-        // Action buttons
+        // Action buttons in quick actions
         document.querySelectorAll('.action-btn').forEach(btn => {
             btn.addEventListener('click', (e) => {
-                const actionType = this.getActionType(e.target);
-                this.handleAction(actionType, e.target);
+                const actionType = this.getActionType(e.currentTarget);
+                this.handleAction(actionType, e.currentTarget);
+            });
+        });
+
+        // Action buttons in other sections (like appointments list)
+        document.querySelectorAll('.btn-primary, .btn-outline').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                const actionType = this.getActionType(e.currentTarget);
+                if (actionType !== 'unknown') {
+                    this.handleAction(actionType, e.currentTarget);
+                }
             });
         });
 
@@ -368,6 +387,16 @@ class PatientPortal {
                 this.handleButtonClick(e.target);
             });
         });
+
+        const uploadDocumentBtn = document.getElementById('uploadDocumentBtn');
+        if (uploadDocumentBtn) {
+            uploadDocumentBtn.addEventListener('click', () => this.handleUploadDocument());
+        }
+
+        const documentUploadInput = document.getElementById('documentUploadInput');
+        if (documentUploadInput) {
+            documentUploadInput.addEventListener('change', (e) => this.handleFileSelected(e.target.files));
+        }
 
         // FAQ interactions
         document.querySelectorAll('.faq-question').forEach(question => {
@@ -396,6 +425,25 @@ class PatientPortal {
                 this.handleLogout();
             });
         }
+        
+        // Global modal handler via event delegation
+        document.body.addEventListener('click', (e) => {
+            const target = e.target;
+            const closeButton = target.closest('[data-action="close"]');
+
+            if (closeButton) {
+                e.preventDefault();
+                const modalToClose = closeButton.closest('.modal');
+                if (modalToClose) {
+                    this.closeModal(modalToClose);
+                }
+                return;
+            }
+
+            if (target.classList.contains('modal')) {
+                this.closeModal(target);
+            }
+        });
     }
 
     switchSection(sectionName) {
@@ -429,39 +477,138 @@ class PatientPortal {
     }
 
     setupTabHandlers() {
-        document.querySelectorAll('.tab-btn').forEach(tab => {
+        // Update tab click handlers
+        document.querySelectorAll('.tab-button').forEach(tab => {
             tab.addEventListener('click', (e) => {
-                this.switchTab(e.target);
+                const tabContainer = e.target.closest('.profile-tabs');
+                if (!tabContainer) return;
+
+                // Remove active class from all tabs
+                tabContainer.querySelectorAll('.tab-button').forEach(t => {
+                    t.classList.remove('active');
+                });
+
+                // Add active class to clicked tab
+                e.target.classList.add('active');
+
+                // Hide all tab content
+                tabContainer.querySelectorAll('.tab-content').forEach(content => {
+                    content.classList.remove('active');
+                });
+
+                // Show selected tab content
+                const tabId = e.target.getAttribute('data-tab');
+                const selectedContent = tabContainer.querySelector(`#${tabId}-tab`);
+                if (selectedContent) {
+                    selectedContent.classList.add('active');
+                }
+
+                // Load tab-specific data if needed
+                this.loadTabContent(tabId);
             });
+        });
+
+        // Setup document filters
+        document.querySelectorAll('.document-filters .filter-btn').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                // Remove active class from all filter buttons
+                document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+                // Add active class to clicked button
+                e.target.classList.add('active');
+
+                const filter = e.target.getAttribute('data-filter');
+                this.filterDocuments(filter);
+            });
+        });
+
+        // Setup consultation filters
+        const consultationFilter = document.getElementById('consultationFilter');
+        if (consultationFilter) {
+            consultationFilter.addEventListener('change', (e) => {
+                this.filterConsultations(e.target.value);
+            });
+        }
+
+        const dateFilter = document.getElementById('dateFilter');
+        if (dateFilter) {
+            dateFilter.addEventListener('change', (e) => {
+                this.filterConsultationsByDate(e.target.value);
+            });
+        }
+    }
+
+    loadTabContent(tabId) {
+        switch (tabId) {
+            case 'consultation-history':
+                this.loadConsultationHistory();
+                break;
+            case 'patient-documents':
+                this.loadPatientDocuments();
+                break;
+            case 'general':
+                this.loadGeneralProfile();
+                break;
+        }
+    }
+
+    filterDocuments(filter) {
+        const documents = document.querySelectorAll('.document-item');
+        documents.forEach(doc => {
+            if (filter === 'all' || doc.getAttribute('data-type') === filter) {
+                doc.style.display = 'flex';
+            } else {
+                doc.style.display = 'none';
+            }
         });
     }
 
-    switchTab(clickedTab) {
-        const tabContainer = clickedTab.parentNode;
-        
-        if (!tabContainer) return;
-        
-        // Remove active class from all tabs
-        tabContainer.querySelectorAll('.tab-btn').forEach(tab => {
-            tab.classList.remove('active');
-        });
+    filterConsultations(status) {
+        const consultations = document.querySelectorAll('.consultation-item');
+        consultations.forEach(consultation => {
+            const statusElement = consultation.querySelector('.status');
+            if (!statusElement) return;
 
-        // Add active class to clicked tab
-        clickedTab.classList.add('active');
-
-        // Hide all tab content
-        document.querySelectorAll('.tab-content').forEach(content => {
-            content.classList.remove('active');
-        });
-
-        // Show corresponding tab content
-        const tabType = clickedTab.dataset.tab;
-        if (tabType) {
-            const tabContent = document.getElementById(`${tabType}-tab`);
-            if (tabContent) {
-                tabContent.classList.add('active');
+            const consultationStatus = statusElement.textContent.toLowerCase();
+            if (status === 'all' || consultationStatus === status) {
+                consultation.style.display = 'flex';
+            } else {
+                consultation.style.display = 'none';
             }
-        }
+        });
+    }
+
+    filterConsultationsByDate(date) {
+        if (!date) return;
+
+        const consultations = document.querySelectorAll('.consultation-item');
+        const selectedDate = new Date(date);
+        
+        consultations.forEach(consultation => {
+            const dateElement = consultation.querySelector('.consultation-date .date');
+            if (!dateElement) return;
+
+            const consultationDate = new Date(dateElement.textContent);
+            if (consultationDate.toDateString() === selectedDate.toDateString()) {
+                consultation.style.display = 'flex';
+            } else {
+                consultation.style.display = 'none';
+            }
+        });
+    }
+
+    loadConsultationHistory() {
+        // In a real application, this would fetch consultation data from the backend
+        console.log('Loading consultation history...');
+    }
+
+    loadPatientDocuments() {
+        // In a real application, this would fetch document data from the backend
+        console.log('Loading patient documents...');
+    }
+
+    loadGeneralProfile() {
+        // In a real application, this would fetch profile data from the backend
+        console.log('Loading general profile...');
     }
 
     setupCalendar() {
@@ -588,57 +735,240 @@ class PatientPortal {
     }
 
     getActionType(element) {
-        const text = element.textContent.trim().toLowerCase();
-        
-        if (text.includes('book') || text.includes('schedule')) {
+        // Get the text from the button or its child span if it exists
+        const buttonText = (element.querySelector('span')?.textContent || element.textContent).trim().toLowerCase();
+        // Get the icon class if it exists
+        const iconClass = element.querySelector('i')?.className.toLowerCase() || '';
+
+
+        console.log('Button text:', buttonText);
+        console.log('Icon class:', iconClass);
+
+        // Check both button text and icon class
+        if (buttonText.includes('book appointment') || buttonText.includes('book follow-up')) {
             return 'book-appointment';
-        } else if (text.includes('video') || text.includes('join')) {
+        } else if (buttonText.includes('video consultation') || iconClass.includes('video')) {
             return 'join-video';
-        } else if (text.includes('reschedule')) {
-            return 'reschedule';
-        } else if (text.includes('download')) {
-            return 'download';
-        } else if (text.includes('upload')) {
-            return 'upload';
-        } else if (text.includes('edit')) {
-            return 'edit';
-        } else if (text.includes('view')) {
-            return 'view';
-        } else if (text.includes('refill')) {
+        } else if (buttonText.includes('refill prescription') || buttonText.includes('refill')) {
             return 'refill-prescription';
+        } else if (buttonText.includes('download records')) {
+            return 'download-records';
+        } else if (buttonText.includes('download') || iconClass.includes('download')) {
+            return 'download-document';
+        } else if (buttonText.includes('view report')) {
+            return 'view-report';
+        } else if (buttonText.includes('view') || iconClass.includes('eye')) {
+            return 'view-document';
         }
         
+        console.log('No action type matched');
         return 'unknown';
     }
 
     handleAction(actionType, element) {
+        console.log('Action triggered:', actionType);
+        
         switch (actionType) {
             case 'book-appointment':
-                this.showNotification('Opening appointment booking...');
+                console.log('Opening book appointment modal');
+                this.openModal('bookAppointmentModal');
                 break;
             case 'join-video':
-                this.showNotification('Joining video consultation...');
-                break;
-            case 'reschedule':
-                this.showNotification('Opening reschedule options...');
-                break;
-            case 'download':
-                this.showNotification('Starting download...');
-                break;
-            case 'upload':
-                this.showNotification('Opening file upload...');
-                break;
-            case 'edit':
-                this.showNotification('Opening edit form...');
-                break;
-            case 'view':
-                this.showNotification('Opening document viewer...');
+                console.log('Opening video consultation modal');
+                this.openModal('videoConsultationModal');
                 break;
             case 'refill-prescription':
-                this.showNotification('Processing prescription refill...');
+                console.log('Opening prescription refill modal');
+                this.openModal('prescriptionRefillModal');
                 break;
+            case 'download-records':
+                console.log('Opening download records modal');
+                this.openModal('downloadRecordsModal');
+                break;
+            case 'view-report': {
+                const reportTitle = element.closest('.consultation-item')?.querySelector('h4')?.textContent;
+                this.showNotification(`Opening report for ${reportTitle || 'consultation'}...`);
+                // In a real app, you would fetch and display the report
+                break;
+            }
+            case 'download-document': {
+                const docTitle = element.closest('.document-item')?.querySelector('h4')?.textContent;
+                this.showNotification(`Downloading ${docTitle || 'document'}...`);
+                // In a real app, you would initiate a file download
+                break;
+            }
+            case 'view-document': {
+                const docTitle = element.closest('.document-item')?.querySelector('h4')?.textContent;
+                this.showNotification(`Viewing ${docTitle || 'document'}...`);
+                // In a real app, you would open the document in a viewer or new tab
+                break;
+            }
             default:
+                console.log('Unknown action type:', actionType);
                 this.showNotification('Action not recognized');
+        }
+    }
+
+    setupModalHandlers() {
+        const modals = document.querySelectorAll('.modal');
+        modals.forEach(modal => {
+            console.log('Setting up handlers for modal:', modal.id);
+            
+            // Handle all close buttons (both X and Cancel)
+            const closeButtons = modal.querySelectorAll('[data-action="close"]');
+            closeButtons.forEach(button => {
+                button.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    console.log('Close button clicked');
+                    this.closeModal(modal);
+                });
+            });
+
+            // Click outside modal to close
+            modal.addEventListener('click', (e) => {
+                if (e.target === modal) {
+                    console.log('Clicked outside modal');
+                    this.closeModal(modal);
+                }
+            });
+
+            // Setup form submission handlers
+            switch (modal.id) {
+                case 'bookAppointmentModal':
+                    console.log('Setting up appointment form handlers');
+                    this.setupAppointmentForm(modal);
+                    break;
+                case 'videoConsultationModal':
+                    console.log('Setting up video consultation handlers');
+                    this.setupVideoConsultation(modal);
+                    break;
+                case 'prescriptionRefillModal':
+                    console.log('Setting up prescription refill handlers');
+                    this.setupPrescriptionRefill(modal);
+                    break;
+                case 'downloadRecordsModal':
+                    console.log('Setting up download records handlers');
+                    this.setupDownloadRecords(modal);
+                    break;
+            }
+        });
+    }
+
+    closeModal(modalElement) {
+        if (modalElement) {
+            modalElement.style.display = 'none';
+        }
+    }
+
+    openModal(modalId) {
+        const modal = document.getElementById(modalId);
+        if (modal) {
+            modal.style.display = 'flex';
+            // Setup form-specific logic if any
+            this.setupFormHandlersForModal(modal);
+        }
+    }
+
+    setupAppointmentForm(modal) {
+        const saveBtn = modal.querySelector('#saveAppointment');
+        const form = modal.querySelector('#appointmentForm');
+
+        if (saveBtn && form) {
+            saveBtn.onclick = async (e) => {
+                e.preventDefault();
+                if (form.checkValidity()) {
+                    this.showLoading('Booking appointment...');
+                    
+                    // Simulate API call
+                    await new Promise(resolve => setTimeout(resolve, 1500));
+                    
+                    this.hideLoading();
+                    this.showNotification('Appointment booked successfully!', 'success');
+                    this.closeModal(modal);
+                } else {
+                    this.showNotification('Please fill in all required fields', 'error');
+                }
+            };
+        }
+    }
+
+    setupVideoConsultation(modal) {
+        const startBtn = modal.querySelector('#startConsultation');
+        if (startBtn) {
+            startBtn.onclick = async () => {
+                this.showLoading('Joining consultation...');
+                
+                // Simulate API call
+                await new Promise(resolve => setTimeout(resolve, 1500));
+                
+                this.hideLoading();
+                this.showNotification('Joining video consultation...', 'success');
+                this.closeModal(modal);
+                
+                // Here you would typically redirect to the video consultation page
+                // window.location.href = '/video-consultation';
+            };
+        }
+    }
+
+    setupPrescriptionRefill(modal) {
+        const submitBtn = modal.querySelector('#submitRefill');
+        const form = modal.querySelector('#refillForm');
+
+        if (submitBtn && form) {
+            submitBtn.onclick = async (e) => {
+                e.preventDefault();
+                if (form.checkValidity()) {
+                    this.showLoading('Processing refill request...');
+                    
+                    // Simulate API call
+                    await new Promise(resolve => setTimeout(resolve, 1500));
+                    
+                    this.hideLoading();
+                    this.showNotification('Prescription refill request submitted!', 'success');
+                    this.closeModal(modal);
+                } else {
+                    this.showNotification('Please fill in all required fields', 'error');
+                }
+            };
+        }
+    }
+
+    setupDownloadRecords(modal) {
+        const downloadBtn = modal.querySelector('#startDownload');
+        if (downloadBtn) {
+            downloadBtn.onclick = async () => {
+                const checkboxes = modal.querySelectorAll('input[type="checkbox"]:checked');
+                if (checkboxes.length === 0) {
+                    this.showNotification('Please select at least one record', 'warning');
+                    return;
+                }
+
+                this.showLoading('Preparing download...');
+                
+                // Simulate API call
+                await new Promise(resolve => setTimeout(resolve, 1500));
+                
+                this.hideLoading();
+                this.showNotification('Records downloaded successfully!', 'success');
+                this.closeModal(modal);
+            };
+        }
+    }
+
+    handleUploadDocument() {
+        document.getElementById('documentUploadInput').click();
+    }
+
+    handleFileSelected(files) {
+        if (files.length > 0) {
+            const file = files[0];
+            console.log('Selected file:', file.name);
+            this.showNotification(`Uploading ${file.name}...`, 'info');
+            // Here you would typically handle the file upload process
+            setTimeout(() => {
+                this.showNotification(`${file.name} uploaded successfully!`, 'success');
+            }, 1500);
         }
     }
 
@@ -646,13 +976,12 @@ class PatientPortal {
         const btnId = element.id;
 
         if (btnId === 'editProfileBtn') {
-            this.openEditProfileModal();
+            this.openModal('editProfileModal');
         } else if (btnId === 'saveProfile') {
             this.saveProfile();
-        } else if (btnId === 'cancelEdit') {
-            this.closeEditProfileModal();
-        } else if (btnId === 'closeModal') {
-            this.closeEditProfileModal();
+        } else if (btnId === 'cancelEdit' || btnId === 'closeModal') {
+             const modal = element.closest('.modal');
+             if(modal) this.closeModal(modal);
         } else if (element.textContent.trim().toLowerCase().includes('change')) {
             this.showNotification('Password change functionality coming soon!');
         }
@@ -675,41 +1004,34 @@ class PatientPortal {
         }
     }
 
-    setupModalHandlers() {
-        const modal = document.getElementById('editProfileModal');
-        const closeBtn = document.getElementById('closeModal');
-        const cancelBtn = document.getElementById('cancelEdit');
-
-        if (closeBtn) {
-            closeBtn.addEventListener('click', () => this.closeEditProfileModal());
-        }
-
-        if (cancelBtn) {
-            cancelBtn.addEventListener('click', () => this.closeEditProfileModal());
-        }
-
-        if (modal) {
-            modal.addEventListener('click', (e) => {
-                if (e.target === modal) {
-                    this.closeEditProfileModal();
-                }
-            });
+    setupFormHandlersForModal(modal) {
+        switch (modal.id) {
+            case 'bookAppointmentModal':
+                this.setupAppointmentForm(modal);
+                break;
+            case 'videoConsultationModal':
+                this.setupVideoConsultation(modal);
+                break;
+            case 'prescriptionRefillModal':
+                this.setupPrescriptionRefill(modal);
+                break;
+            case 'downloadRecordsModal':
+                this.setupDownloadRecords(modal);
+                break;
         }
     }
 
     openEditProfileModal() {
-        const modal = document.getElementById('editProfileModal');
-                    if (modal) {
-                        this.populateEditForm();
-            modal.style.display = 'flex';
-        }
+        this.openModal('editProfileModal');
+        this.populateEditForm();
+        this.setupProfileValidation();
     }
 
     closeEditProfileModal() {
         const modal = document.getElementById('editProfileModal');
-                    if (modal) {
-                        modal.style.display = 'none';
-                    }
+        if (modal) {
+            this.closeModal(modal);
+        }
     }
 
     populateEditForm() {
@@ -734,24 +1056,276 @@ class PatientPortal {
         });
     }
 
-    saveProfile() {
+    setupProfileValidation() {
+        const form = document.getElementById('profileForm');
+        const saveBtn = document.getElementById('saveProfile');
+        const inputs = form.querySelectorAll('input, textarea');
+        
+        // Add validation classes and aria attributes
+        inputs.forEach(input => {
+            input.setAttribute('aria-required', 'true');
+            
+            // Add validation event listeners
+            input.addEventListener('input', () => {
+                this.validateInput(input);
+                this.updateSaveButtonState();
+            });
+
+            input.addEventListener('blur', () => {
+                this.validateInput(input);
+            });
+        });
+
+        // Phone number formatting
+        const phoneInput = document.getElementById('editPhoneNumber');
+        if (phoneInput) {
+            phoneInput.addEventListener('input', (e) => {
+                let value = e.target.value.replace(/\D/g, '');
+                if (value.length > 0) {
+                    if (value.length <= 3) {
+                        value = value;
+                    } else if (value.length <= 6) {
+                        value = value.slice(0, 3) + '-' + value.slice(3);
+                    } else {
+                        value = value.slice(0, 3) + '-' + value.slice(3, 6) + '-' + value.slice(6, 10);
+                    }
+                }
+                e.target.value = value;
+            });
+        }
+
+        // Date of birth validation and formatting
+        const dobInput = document.getElementById('editDateOfBirth');
+        if (dobInput) {
+            dobInput.setAttribute('max', this.getMaxDate());
+            dobInput.addEventListener('change', () => {
+                this.validateDateOfBirth(dobInput);
+            });
+        }
+
+        // Email validation
+        const emailInput = document.getElementById('editEmailAddress');
+        if (emailInput) {
+            emailInput.addEventListener('input', () => {
+                this.validateEmail(emailInput);
+            });
+        }
+
+        // Bio character count
+        const bioInput = document.getElementById('editBio');
+        if (bioInput) {
+            const maxLength = 500;
+            bioInput.setAttribute('maxlength', maxLength);
+            
+            const charCount = document.createElement('div');
+            charCount.className = 'char-count';
+            charCount.style.cssText = 'text-align: right; font-size: 0.8em; color: #666;';
+            bioInput.parentNode.appendChild(charCount);
+            
+            const updateCharCount = () => {
+                const remaining = maxLength - bioInput.value.length;
+                charCount.textContent = `${remaining} characters remaining`;
+                charCount.style.color = remaining < 50 ? '#dc2626' : '#666';
+            };
+            
+            bioInput.addEventListener('input', updateCharCount);
+            updateCharCount();
+        }
+    }
+
+    validateInput(input) {
+        const value = input.value.trim();
+        let isValid = true;
+        let errorMessage = '';
+
+        switch (input.id) {
+            case 'editFullName':
+                if (value.length < 2) {
+                    isValid = false;
+                    errorMessage = 'Name must be at least 2 characters long';
+                } else if (!/^[a-zA-Z\s-']+$/.test(value)) {
+                    isValid = false;
+                    errorMessage = 'Name can only contain letters, spaces, hyphens, and apostrophes';
+                }
+                break;
+            case 'editPhoneNumber':
+                if (!/^\d{3}-\d{3}-\d{4}$/.test(value)) {
+                    isValid = false;
+                    errorMessage = 'Please enter a valid phone number (e.g., 123-456-7890)';
+                }
+                break;
+            case 'editEmailAddress':
+                if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value)) {
+                    isValid = false;
+                    errorMessage = 'Please enter a valid email address';
+                }
+                break;
+            case 'editBio':
+                if (value.length > 500) {
+                    isValid = false;
+                    errorMessage = 'Bio must not exceed 500 characters';
+                }
+                break;
+        }
+
+        this.updateInputValidationUI(input, isValid, errorMessage);
+        return isValid;
+    }
+
+    updateInputValidationUI(input, isValid, errorMessage) {
+        const errorElement = this.getOrCreateErrorElement(input);
+        
+        if (!isValid) {
+            input.classList.add('invalid');
+            input.classList.remove('valid');
+            errorElement.textContent = errorMessage;
+            errorElement.style.display = 'block';
+        } else {
+            input.classList.remove('invalid');
+            input.classList.add('valid');
+            errorElement.style.display = 'none';
+        }
+    }
+
+    getOrCreateErrorElement(input) {
+        const errorId = `${input.id}-error`;
+        let errorElement = document.getElementById(errorId);
+        
+        if (!errorElement) {
+            errorElement = document.createElement('div');
+            errorElement.id = errorId;
+            errorElement.className = 'error-message';
+            errorElement.style.cssText = 'color: #dc2626; font-size: 0.8em; margin-top: 4px; display: none;';
+            input.parentNode.appendChild(errorElement);
+        }
+        
+        return errorElement;
+    }
+
+    validateDateOfBirth(input) {
+        const value = input.value;
+        const date = new Date(value);
+        const today = new Date();
+        const minDate = new Date();
+        minDate.setFullYear(today.getFullYear() - 120); // Maximum age 120 years
+        
+        let isValid = true;
+        let errorMessage = '';
+
+        if (!value) {
+            isValid = false;
+            errorMessage = 'Date of birth is required';
+        } else if (date > today) {
+            isValid = false;
+            errorMessage = 'Date of birth cannot be in the future';
+        } else if (date < minDate) {
+            isValid = false;
+            errorMessage = 'Please enter a valid date of birth';
+        }
+
+        this.updateInputValidationUI(input, isValid, errorMessage);
+        return isValid;
+    }
+
+    validateEmail(input) {
+        const value = input.value.trim();
+        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        const isValid = emailRegex.test(value);
+        
+        this.updateInputValidationUI(input, isValid, isValid ? '' : 'Please enter a valid email address');
+        return isValid;
+    }
+
+    getMaxDate() {
+        const today = new Date();
+        return today.toISOString().split('T')[0];
+    }
+
+    updateSaveButtonState() {
+        const form = document.getElementById('profileForm');
+        const saveBtn = document.getElementById('saveProfile');
+        const inputs = form.querySelectorAll('input, textarea');
+        
+        let isValid = true;
+        inputs.forEach(input => {
+            if (input.classList.contains('invalid') || !input.value.trim()) {
+                isValid = false;
+            }
+        });
+
+        saveBtn.disabled = !isValid;
+        saveBtn.style.opacity = isValid ? '1' : '0.5';
+    }
+
+    async saveProfile() {
         const form = document.getElementById('profileForm');
         if (!form) {
             this.showNotification('Form not found!', 'error');
             return;
         }
 
-        const formData = new FormData(form);
-        const data = Object.fromEntries(formData);
+        // Validate all inputs
+        const inputs = form.querySelectorAll('input, textarea');
+        let isValid = true;
+        inputs.forEach(input => {
+            if (!this.validateInput(input)) {
+                isValid = false;
+            }
+        });
 
-        this.updateProfileDisplay(data);
-        this.closeEditProfileModal();
-        this.showNotification('Profile updated successfully!', 'success');
+        if (!isValid) {
+            this.showNotification('Please fix the errors before saving', 'error');
+            return;
+        }
 
-        console.log('Profile data:', data);
+        try {
+            this.showLoading('Saving profile changes...');
+
+            const formData = new FormData(form);
+            const data = Object.fromEntries(formData);
+
+            // Prepare profile data
+            const profileData = {
+                personalInfo: {
+                    firstName: data.editFullName.split(' ')[0],
+                    lastName: data.editFullName.split(' ').slice(1).join(' '),
+                    fullName: data.editFullName,
+                    dateOfBirth: data.editDateOfBirth,
+                    phone: data.editPhoneNumber,
+                    email: data.editEmailAddress,
+                    bio: data.editBio
+                },
+                profileComplete: true,
+                lastUpdated: new Date().toISOString()
+            };
+
+            // In a real app, you would save to backend here
+            await new Promise(resolve => setTimeout(resolve, 1000)); // Simulate API call
+
+            // Update local state
+            this.patientData = {
+                ...this.patientData,
+                ...profileData
+            };
+
+            // Update UI
+            this.updateProfileDisplay(data);
+            this.closeEditProfileModal();
+            this.showNotification('Profile updated successfully!', 'success');
+
+            // Refresh profile section
+            this.loadTabContent('general');
+
+        } catch (error) {
+            console.error('Error saving profile:', error);
+            this.showNotification('Failed to save profile changes. Please try again.', 'error');
+        } finally {
+            this.hideLoading();
+        }
     }
 
     updateProfileDisplay(data) {
+        // Update basic profile information
         const elements = {
             fullName: data.editFullName || '',
             dateOfBirth: data.editDateOfBirth || '',
@@ -767,15 +1341,44 @@ class PatientPortal {
             }
         });
 
-        // Update name in header
+        // Update age if date of birth was changed
+        if (data.editDateOfBirth) {
+            const age = this.calculateAge(data.editDateOfBirth);
+            const ageElement = document.getElementById('age');
+            if (ageElement) {
+                ageElement.textContent = age;
+            }
+        }
+
+        // Update name in header and other locations
         if (data.editFullName) {
             const firstName = data.editFullName.split(' ')[0];
             
-            const patientName = document.getElementById('patientName');
-            const patientDisplayName = document.getElementById('patientDisplayName');
-            
-            if (patientName) patientName.textContent = firstName;
-            if (patientDisplayName) patientDisplayName.textContent = firstName;
+            // Update all instances of the user's name
+            const nameElements = {
+                patientName: firstName,
+                patientDisplayName: firstName,
+                'profile-name': `${data.editFullName} <span class="gender-tag">(Patient)</span>`
+            };
+
+            Object.entries(nameElements).forEach(([id, value]) => {
+                const element = document.getElementById(id) || document.querySelector(`.${id}`);
+                if (element) {
+                    element.innerHTML = value;
+                }
+            });
+
+            // Update avatar initials
+            const initials = this.getInitials(
+                data.editFullName.split(' ')[0],
+                data.editFullName.split(' ').slice(1).join(' '),
+                data.editFullName
+            );
+
+            document.querySelectorAll('.user-avatar span, .profile-avatar-placeholder span')
+                .forEach(element => {
+                    element.textContent = initials;
+                });
         }
     }
 

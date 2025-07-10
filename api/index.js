@@ -6,8 +6,7 @@ const { body, param, query, validationResult } = require('express-validator');
 const jwt = require('jsonwebtoken');
 const morgan = require('morgan');
 const { GoogleGenerativeAI } = require('@google/generative-ai');
-const { initializeApp } = require('firebase/app');
-const { getFirestore, doc, setDoc, getDoc, collection, getDocs, query: firestoreQuery, where, orderBy, addDoc, updateDoc } = require('firebase/firestore');
+const admin = require('firebase-admin');
 const { getAuth } = require('firebase-admin/auth');
 const mongoSanitize = require('express-mongo-sanitize');
 const xss = require('xss');
@@ -457,24 +456,45 @@ if (!firebaseConfig.apiKey || !firebaseConfig.projectId) {
   process.exit(1);
 }
 
-// Initialize Firebase
-const firebaseApp = initializeApp(firebaseConfig);
-const db = getFirestore(firebaseApp);
-
 // Initialize Firebase Admin (for server-side authentication)
 let adminAuth;
+let db;
 try {
-  const admin = require('firebase-admin');
   if (!admin.apps.length) {
-    admin.initializeApp({
-      credential: admin.credential.applicationDefault(),
-      projectId: firebaseConfig.projectId
-    });
+    const serviceAccount = process.env.FIREBASE_SERVICE_ACCOUNT ? JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT) : null;
+    
+    if (serviceAccount) {
+      admin.initializeApp({
+        credential: admin.credential.cert(serviceAccount),
+        projectId: firebaseConfig.projectId
+      });
+    } else if (process.env.GOOGLE_APPLICATION_CREDENTIALS) {
+      // For production environments like Google Cloud Run/Functions
+      admin.initializeApp({
+        credential: admin.credential.applicationDefault(),
+        projectId: firebaseConfig.projectId
+      });
+    } else {
+      console.warn('⚠️ Firebase Admin SDK not initialized. Missing FIREBASE_SERVICE_ACCOUNT or GOOGLE_APPLICATION_CREDENTIALS.');
+    }
   }
-  adminAuth = admin.auth();
+  
+  if (admin.apps.length > 0) {
+    adminAuth = admin.auth();
+    db = admin.firestore();
+    console.log('✅ Firebase Admin SDK initialized successfully.');
+  } else {
+    // Mocking auth/db for local development without credentials
+    console.warn('⚠️ Using mocked Firebase services for development.');
+    adminAuth = null;
+    db = null;
+  }
+
 } catch (error) {
-  console.warn('⚠️  Firebase Admin not configured. Some authentication features may not work.');
-  console.warn('For production, set up Firebase Admin SDK with service account credentials.');
+  console.error('❌ Firebase Admin initialization failed:', error);
+  // Fallback to mock objects to prevent crashes
+  adminAuth = null;
+  db = null;
 }
 
 // Initialize Gemini AI
@@ -1469,8 +1489,8 @@ app.post('/api/patient',
       };
       
       // In production, save to Firebase
-      const docRef = doc(db, 'patients', patientData.id || Date.now().toString());
-      await setDoc(docRef, sanitizedData);
+      const docRef = db.collection('patients').doc(patientData.id || Date.now().toString());
+      await docRef.set(sanitizedData);
       
       res.json({ 
         success: true, 

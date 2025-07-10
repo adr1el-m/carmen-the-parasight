@@ -37,24 +37,8 @@ import {
 // Import Firebase configuration
 import { firebaseConfig } from './config.js';
 import logger from '../utils/logger.js';
-
-// Import secure error handling with fallback
-let secureErrorHandler = {
-    handleAuthError: (error) => ({ message: 'Authentication failed. Please try again.' }),
-    handleSecureError: (error) => ({ message: 'An error occurred. Please try again.' })
-};
-
-// Initialize secure error handler asynchronously
-(async () => {
-    try {
-        const errorHandlerModule = await import('./secure-error-handler.js');
-        secureErrorHandler = errorHandlerModule.default || errorHandlerModule;
-        logger.info('✅ Secure error handler loaded successfully');
-    } catch (err) {
-        logger.warn('⚠️ Using fallback error handler:', err.message);
-        // Keep the fallback handlers above
-    }
-})();
+import * as secureErrorHandler from './secure-error-handler.js';
+import { handleAuthError } from './auth-error-handler.js';
 
 // Initialize Firebase (avoid duplicate initialization)
 let app;
@@ -158,6 +142,10 @@ class AuthService {
         this.authListeners = [];
         this.sessionListeners = [];
         this.authPopupWindow = null; // Track popup window
+        this.isInitialized = false;
+        this.initializationPromise = new Promise(resolve => {
+            this.resolveInitialization = resolve;
+        });
         
         // Initialize session management
         this.initializeSessionManagement();
@@ -209,7 +197,16 @@ class AuthService {
         }
     }
     
-
+    /**
+     * Waits for the auth service to complete its initial authentication check.
+     * @returns {Promise<void>}
+     */
+    async waitForInitialization() {
+        if (this.isInitialized) {
+            return Promise.resolve();
+        }
+        return this.initializationPromise;
+    }
 
     /**
      * Initialize secure session management
@@ -304,86 +301,52 @@ class AuthService {
      * Set up auth state listener
      */
     setupAuthStateListener() {
-        let processingStateChange = false;
-        
         onAuthStateChanged(auth, async (user) => {
-            // Prevent multiple simultaneous state changes
-            if (processingStateChange) {
-                logger.debug('Auth state change already in progress, skipping');
-                return;
-            }
+            logger.info('Auth state change detected.', { providedUser: !!user });
             
-            // Don't interfere with Google sign-up flow
-            if (window.isProcessingGoogleAuth) {
-                logger.debug('Google auth in progress, skipping auth state change');
-                return;
-            }
-            
-            // Prevent auth state listener from interfering during redirects
-            if (window.isRedirecting) {
-                logger.debug('Auth state changed during redirect, skipping processing');
-                return;
-            }
-            
-            processingStateChange = true;
-            
-            try {
-                if (user) {
-                    logger.info('Auth state changed: user authenticated', user.email);
-                    
-                    // Check if user is a Google user (Google users are auto-verified)
-                    const isGoogleUser = user.providerData.some(provider => provider.providerId === 'google.com');
-                    
-                    // Check email verification (skip for Google users)
-                    if (!isGoogleUser && !user.emailVerified && this.requireEmailVerification()) {
-                        logger.info(' Email not verified, requesting verification');
-                        await this.handleUnverifiedEmail(user);
-                        return;
-                    }
-                    
-                    // Load user data and role
-                    try {
-                        await this.loadUserData(user);
-                    } catch (error) {
-                        logger.error('⚠️ Error loading user data, proceeding with default role:', error);
-                        this.currentUser = user;
-                        this.userRole = USER_ROLES.PATIENT;
-                    }
-                    
-                    // Start secure session
-                    this.startSecureSession(user);
-                    
-                    // Update last login in patient document if user is a patient
-                    if (this.userRole === USER_ROLES.PATIENT) {
-                        try {
-                            await this.updatePatientLastLogin(user.uid);
-                        } catch (error) {
-                            logger.warn(' Could not update patient last login:', error);
-                        }
-                    }
-                    
-                    // Notify listeners with delay to prevent rapid-fire events
-                    setTimeout(() => {
-                        this.notifyAuthListeners(user, this.userRole);
-                    }, 100);
+            if (user) {
+                // User is signed in.
+                const userIsValid = await this.validateUserSession(user);
+                if (userIsValid) {
+                    await this.loadUserData(user);
                 } else {
-                    logger.info(' Auth state changed: user not authenticated');
-                    this.currentUser = null;
-                    this.userRole = null;
-                    this.clearSession();
-                    
-                    // Notify listeners with delay
-                    setTimeout(() => {
-                        this.notifyAuthListeners(null, null);
-                    }, 100);
+                    // If user session is invalid (e.g., banned), sign them out.
+                    await this.logout();
+                    return; // Stop processing
                 }
-            } finally {
-                // Reset processing flag after delay
-                setTimeout(() => {
-                    processingStateChange = false;
-                }, 200);
+            } else {
+                // User is signed out.
+                this.clearSession();
+            }
+
+            // Notify listeners about the auth state change
+            this.notifyAuthListeners(this.currentUser, this.userRole);
+
+            // Resolve the initialization promise now that the first check is complete
+            if (!this.isInitialized) {
+                this.isInitialized = true;
+                this.resolveInitialization();
+                logger.info('Auth Service has completed initial state check.');
             }
         });
+    }
+
+    /**
+     * Validate user session (check if user is not banned, etc.)
+     */
+    async validateUserSession(user) {
+        if (!user || !user.uid) {
+            return false;
+        }
+
+        try {
+            // For now, just return true as we don't have ban/restriction logic
+            // In the future, this could check for banned users, account restrictions, etc.
+            return true;
+        } catch (error) {
+            logger.error('Error validating user session:', error);
+            return false;
+        }
     }
 
     /**
@@ -434,83 +397,50 @@ class AuthService {
      * Load user data and role from Firestore
      */
     async loadUserData(user) {
+        if (!user) {
+            this.clearSession();
+            return null;
+        }
+
         try {
-            logger.info(' Loading user data for:', user.email);
-            
-            // First, try to get user from patients collection
-            const patientDoc = await getDoc(doc(db, 'patients', user.uid));
-            
-            if (patientDoc.exists()) {
-                const patientData = patientDoc.data();
-                this.currentUser = user;
-                this.userRole = USER_ROLES.PATIENT;
-                
-                // Store role securely in memory only
-                secureSession.setSensitiveData('userRole', this.userRole);
-                secureSession.setSensitiveData('userType', 'patient');
-                
-                logger.info(' User loaded as patient');
-                return;
-            }
-            
-            // Try to get user from organizations collection
-            const organizationQuery = query(
-                collection(db, 'organizations'),
-                where('members', 'array-contains', user.uid)
-            );
-            const orgSnapshot = await getDocs(organizationQuery);
-            
-            if (!orgSnapshot.empty) {
-                const orgDoc = orgSnapshot.docs[0];
-                const orgData = orgDoc.data();
-                
-                // Determine role based on organization structure
-                if (orgData.admins && orgData.admins.includes(user.uid)) {
-                    this.userRole = USER_ROLES.ORGANIZATION_ADMIN;
+            this.currentUser = user;
+            this.userRole = USER_ROLES.PATIENT; // Default role
+
+            try {
+                const userDocRef = doc(db, 'patients', user.uid);
+                const userDoc = await getDoc(userDocRef);
+
+                if (userDoc.exists()) {
+                    const userData = userDoc.data();
+                    this.userRole = userData.role || USER_ROLES.PATIENT;
+                    logger.info('User data loaded successfully from Firestore');
                 } else {
-                    this.userRole = USER_ROLES.ORGANIZATION_MEMBER;
+                    // Try to create user document, but don't fail if it doesn't work
+                    try {
+                        this.userRole = await this.createUserDocument(user);
+                        logger.info('New user document created successfully');
+                    } catch (createError) {
+                        logger.warn('Could not create user document, using default role:', createError.message);
+                        // Continue with default role
+                    }
                 }
-                
-                this.currentUser = user;
-                
-                // Store role securely in memory only
-                secureSession.setSensitiveData('userRole', this.userRole);
-                secureSession.setSensitiveData('userType', 'organization');
-                secureSession.setSensitiveData('organizationId', orgDoc.id);
-                
-                logger.info(' User loaded as organization member with role:', this.userRole);
-                return;
+            } catch (firestoreError) {
+                logger.warn('Firestore access error, continuing with default role:', firestoreError.message);
+                // Continue with default patient role even if Firestore access fails
             }
             
-            // Try to get user from staff collection
-            const staffDoc = await getDoc(doc(db, 'staff', user.uid));
-            
-            if (staffDoc.exists()) {
-                const staffData = staffDoc.data();
-                this.currentUser = user;
-                this.userRole = staffData.role || USER_ROLES.CLINIC_STAFF;
-                
-                // Store role securely in memory only
-                secureSession.setSensitiveData('userRole', this.userRole);
-                secureSession.setSensitiveData('userType', 'staff');
-                
-                logger.info(' User loaded as staff with role:', this.userRole);
-                return;
-            }
-            
-            // Default to patient role if no specific role found
+            this.startSecureSession(user);
+            this.notifyAuthListeners(user, this.userRole);
+            return this.userRole;
+
+        } catch (error) {
+            logger.error('Critical error in loadUserData:', error);
+            // Don't clear session completely for new users, just set defaults
             this.currentUser = user;
             this.userRole = USER_ROLES.PATIENT;
-            
-            // Store role securely in memory only
-            secureSession.setSensitiveData('userRole', this.userRole);
-            secureSession.setSensitiveData('userType', 'patient');
-            
-            logger.info(' User defaulted to patient role');
-            
-        } catch (error) {
-            logger.error('Error loading user data:', error);
-            throw error;
+            this.startSecureSession(user);
+            this.notifyAuthListeners(user, this.userRole);
+            return this.userRole;
         }
     }
 
@@ -518,22 +448,24 @@ class AuthService {
      * Create user document in Firestore
      */
     async createUserDocument(user) {
+        const userDocRef = doc(db, 'patients', user.uid);
+        const newUser = {
+            uid: user.uid,
+            email: user.email,
+            displayName: user.displayName || 'New Patient',
+            role: USER_ROLES.PATIENT,
+            createdAt: serverTimestamp(),
+            lastLoginAt: serverTimestamp(),
+        };
+        
         try {
-            const userData = {
-                email: user.email,
-                displayName: user.displayName || '',
-                createdAt: serverTimestamp(),
-                lastLoginAt: serverTimestamp(),
-                emailVerified: user.emailVerified,
-                provider: user.providerData[0]?.providerId || 'email'
-            };
-            
-            await setDoc(doc(db, 'patients', user.uid), userData);
-            logger.info(' User document created');
-            
+            await setDoc(userDocRef, newUser);
+            logger.info('New patient document created for:', user.email);
+            return newUser.role;
         } catch (error) {
-            logger.error('Error creating user document:', error);
-            throw error;
+            logger.warn('Could not create user document in Firestore:', error.message);
+            // Don't throw error, return default role so auth can continue
+            return USER_ROLES.PATIENT;
         }
     }
 
@@ -541,8 +473,9 @@ class AuthService {
      * Update patient last login
      */
     async updatePatientLastLogin(userId) {
+        const userDocRef = doc(db, 'patients', userId);
         try {
-            await updateDoc(doc(db, 'patients', userId), {
+            await updateDoc(userDocRef, {
                 lastLoginAt: serverTimestamp()
             });
         } catch (error) {
@@ -705,33 +638,32 @@ class AuthService {
      */
     async loginWithEmail(email, password) {
         try {
-            // Check if locked out
             if (this.isLockedOut()) {
-                const lockoutUntil = localStorage.getItem(SECURE_SESSION_KEYS.LOCKOUT_UNTIL);
-                const timeRemaining = Math.ceil((parseInt(lockoutUntil) - Date.now()) / 60000);
-                throw new Error(`Account locked. Try again in ${timeRemaining} minutes.`);
+                throw new Error('Account locked due to too many failed login attempts. Please wait 15 minutes.');
             }
-            
-            // Attempt login
+
             const userCredential = await signInWithEmailAndPassword(auth, email, password);
-            
-            // Track successful login
-            this.trackLoginAttempt(true);
-            
-            // Login successful
-            return userCredential.user;
-            
-        } catch (error) {
-            logger.error('Login error:', error);
-            
-            // Track failed login attempt
-            if (error.code === 'auth/invalid-credential' || 
-                error.code === 'auth/user-not-found' ||
-                error.code === 'auth/wrong-password') {
-                this.trackLoginAttempt(false);
+            const user = userCredential.user;
+
+            if (user) {
+                this.trackLoginAttempt(true);
+                await this.loadUserData(user);
+                return user;
             }
-            
-            throw error;
+        } catch (error) {
+            this.trackLoginAttempt(false);
+            throw handleAuthError(error);
+        }
+    }
+
+    async loginWithGooglePopup() {
+        try {
+            this.closeAuthPopup();
+            // The onAuthStateChanged listener will handle loading user data.
+            // This function's only job is to trigger the popup.
+            return await signInWithPopup(auth, googleProvider);
+        } catch (error) {
+            throw handleAuthError(error);
         }
     }
 
@@ -740,7 +672,6 @@ class AuthService {
      */
     async registerWithEmail(email, password, userData = {}) {
         try {
-            // Create user account
             const userCredential = await createUserWithEmailAndPassword(auth, email, password);
             const user = userCredential.user;
             
@@ -765,110 +696,8 @@ class AuthService {
             
         } catch (error) {
             logger.error('Registration error:', error);
-            throw error;
-        }
-    }
-
-    /**
-     * Login with Google
-     */
-    async loginWithGoogle() {
-        try {
-            logger.info(' Starting Google authentication');
-            
-            // Set flag to prevent auth state listener interference
-            window.isProcessingGoogleAuth = true;
-            
-            let result;
-            
-            // Check for redirect result first (in case popup was blocked and redirect was used)
-            try {
-                const redirectResult = await getRedirectResult(auth);
-                if (redirectResult) {
-                    logger.info(' Google login via redirect successful');
-                    return redirectResult.user;
-                }
-            } catch (redirectError) {
-                logger.debug('No redirect result found');
-            }
-            
-            // Try popup first
-            try {
-                logger.debug(' Attempting Google sign-in with popup');
-                
-                // Track popup window reference for cleanup
-                const popupPromise = signInWithPopup(auth, googleProvider);
-                
-                // Store popup reference if available (some browsers expose this)
-                if (auth._popupWindow) {
-                    this.authPopupWindow = auth._popupWindow;
-                    window.authPopup = auth._popupWindow;
-                }
-                
-                result = await popupPromise;
-                logger.info(' Google popup login successful');
-                
-                // Close popup explicitly after successful login
-                this.closeAuthPopup();
-                
-                // Set user role immediately for Google users
-                this.currentUser = result.user;
-                this.userRole = USER_ROLES.PATIENT;
-                
-                return result.user;
-                
-            } catch (popupError) {
-                logger.warn(' Popup error occurred:', popupError);
-                
-                // Handle specific popup errors
-                if (popupError.code === 'auth/popup-blocked') {
-                    logger.debug(' Popup blocked, trying redirect');
-                    await signInWithRedirect(auth, googleProvider);
-                    return null; // Redirect will reload the page
-                } else if (popupError.code === 'auth/popup-closed-by-user') {
-                    throw new Error('Sign-in was cancelled. Please try again.');
-                } else if (popupError.code === 'auth/unauthorized-domain') {
-                    throw new Error(`Domain "${window.location.hostname}" is not authorized. Please add it to Firebase Console > Authentication > Settings > Authorized Domains.`);
-                } else if (popupError.code === 'auth/operation-not-allowed') {
-                    throw new Error('Google sign-in is not enabled. Please enable it in Firebase Console > Authentication > Sign-in method.');
-                } else if (popupError.code === 'auth/cancelled-popup-request') {
-                    // Multiple popup requests, ignore
-                    return null;
-                } else {
-                    // For other errors, try redirect as fallback
-                    logger.debug(' Popup failed, trying redirect as fallback');
-                    try {
-                        await signInWithRedirect(auth, googleProvider);
-                        return null; // Redirect will reload the page
-                    } catch (redirectError) {
-                        logger.error('❌ Redirect also failed:', redirectError);
-                        throw popupError; // Throw original popup error
-                    }
-                }
-            }
-            
-        } catch (error) {
-            logger.error('❌ Google login error:', error);
-            
-            // Provide user-friendly error messages
-            if (error.message.includes('Domain')) {
-                throw error; // Already user-friendly
-            } else if (error.message.includes('not enabled')) {
-                throw error; // Already user-friendly
-            } else if (error.code === 'auth/network-request-failed') {
-                throw new Error('Network error. Please check your internet connection and try again.');
-            } else if (error.code === 'auth/too-many-requests') {
-                throw new Error('Too many attempts. Please wait a moment and try again.');
-            } else if (error.code === 'auth/user-disabled') {
-                throw new Error('This Google account has been disabled. Please contact support.');
-            } else {
-                throw new Error(`Google sign-in failed: ${error.message || 'Unknown error'}`);
-            }
-        } finally {
-            // Clear flag after a delay
-            setTimeout(() => {
-                window.isProcessingGoogleAuth = false;
-            }, 1000);
+            this.clearSession();
+            throw handleAuthError(error);
         }
     }
 
@@ -1114,20 +943,24 @@ class AuthService {
     /**
      * Redirect after login based on role
      */
-    redirectAfterLogin() {
-        logger.debug(' Redirecting after login with role:', this.userRole);
+    redirectAfterLogin(role) {
+        const userRole = role || this.userRole;
+        logger.debug('Redirecting after login with role:', userRole);
         
         // Ensure we have a valid user and role
-        if (!this.currentUser || !this.userRole) {
-            logger.warn(' No user or role found, defaulting to patient portal');
-            this.userRole = USER_ROLES.PATIENT;
+        if (!this.currentUser || !userRole) {
+            logger.warn('No user or role found, defaulting to patient portal');
+            // Fallback to patient role if needed
+            const finalRole = userRole || USER_ROLES.PATIENT;
+            this.redirectAfterLogin(finalRole);
+            return;
         }
         
         // Set redirect flag to prevent interference
         window.isRedirecting = true;
         
         let redirectUrl;
-        switch (this.userRole) {
+        switch (userRole) {
             case USER_ROLES.SYSTEM_ADMIN:
                 redirectUrl = '/admin/system-dashboard.html';
                 break;
@@ -1186,6 +1019,30 @@ class AuthService {
             timeSinceActivity,
             timeRemaining: SESSION_TIMEOUT - timeSinceActivity
         };
+    }
+
+    /**
+     * Sign in with Google using a redirect flow.
+     */
+    async signInWithGoogle() {
+        logger.info('Attempting Google sign-in with redirect');
+
+        if (this.isLockedOut()) {
+            logger.warn('Google sign-in blocked due to account lockout.');
+            const error = new Error('Your account is temporarily locked due to too many failed login attempts.');
+            error.code = 'auth/too-many-requests';
+            throw error;
+        }
+
+        try {
+            await signInWithRedirect(auth, googleProvider);
+            // No need to return anything here, as the page will redirect.
+            // The result is handled by getRedirectResult() on the destination page.
+        } catch (error) {
+            logger.error('Google sign-in redirect error:', error);
+            // Let the caller handle the UI feedback for the error.
+            throw handleAuthError(error);
+        }
     }
 }
 

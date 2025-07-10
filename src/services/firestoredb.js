@@ -49,6 +49,15 @@ import {
 // Import Firebase configuration from config.js
 import { firebaseConfig } from './config.js';
 
+// Import USER_ROLES constant
+const USER_ROLES = {
+    ADMIN: 'admin',
+    DOCTOR: 'doctor',
+    PATIENT: 'patient',
+    ORGANIZATION_ADMIN: 'organization_admin',
+    ORGANIZATION_MEMBER: 'organization_member'
+};
+
 // Import validation utilities
 import { 
     validateProfileUpdateData, 
@@ -154,94 +163,56 @@ export async function createPatientDocument(user, additionalData = {}) {
             throw new Error('User is required');
         }
 
-        const firstName = additionalData.personalInfo?.firstName || additionalData.firstName || user.displayName?.split(' ')[0] || '';
-        const lastName = additionalData.personalInfo?.lastName || additionalData.lastName || user.displayName?.split(' ').slice(1).join(' ') || '';
-        const fullName = additionalData.personalInfo?.fullName || additionalData.fullName || `${firstName} ${lastName}`.trim() || user.displayName || user.email.split('@')[0];
+        const emailUsername = user.email.split('@')[0];
         
-        // Calculate age from birth date
-        let age = null;
-        if (additionalData.birthDate) {
-            const birthDate = new Date(additionalData.birthDate);
-            const today = new Date();
-            age = today.getFullYear() - birthDate.getFullYear();
-            const monthDiff = today.getMonth() - birthDate.getMonth();
-            if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
-                age--;
+        // Detect auth provider from user object
+        let authProvider = 'email'; // default
+        if (user.providerData && user.providerData.length > 0) {
+            const providers = user.providerData.map(p => p.providerId);
+            if (providers.includes('google.com')) {
+                authProvider = 'google';
+            } else if (providers.includes('facebook.com')) {
+                authProvider = 'facebook';
+            } else if (providers.includes('apple.com')) {
+                authProvider = 'apple';
             }
         }
 
         const patientData = {
-            // Basic Information
             uid: user.uid,
             email: user.email,
-            displayName: fullName,
-            photoURL: user.photoURL || null,
-            userType: 'patient',
-            authProvider: additionalData.authProvider || 'email',
+            role: USER_ROLES.PATIENT, // Always assign 'patient' role on creation
             
-            // Personal Information
+            // Personal Information (mostly empty, to be filled out in the portal)
             personalInfo: {
-                firstName: firstName,
-                lastName: lastName,
-                fullName: fullName,
-                dateOfBirth: additionalData.birthDate || null,
-                age: age,
-                gender: additionalData.gender || null,
-                phone: additionalData.phone || '',
-                address: additionalData.address || '',
-                bio: additionalData.bio || '',
-                location: additionalData.location || ''
+                firstName: additionalData.firstName || '',
+                lastName: additionalData.lastName || '',
+                fullName: user.displayName || emailUsername,
+                dateOfBirth: '',
+                age: null,
+                gender: '',
+                phone: '',
+                address: '',
+                bio: 'Welcome to LingapLink!',
             },
+
+            // Set profile as incomplete
+            profileComplete: false,
             
-            // Medical Information
-            medicalInfo: {
-                conditions: {
-                    speech: additionalData.speechConditions || [],
-                    physical: additionalData.physicalConditions || [],
-                    mental: additionalData.mentalConditions || [],
-                    other: additionalData.otherConditions || []
-                },
-                allergies: additionalData.allergies || [],
-                medications: additionalData.medications || [],
-                emergencyContact: {
-                    name: additionalData.emergencyContactName || '',
-                    phone: additionalData.emergencyContactPhone || '',
-                    relationship: additionalData.emergencyContactRelationship || ''
-                }
-            },
-            
-            // Account Settings
-            settings: {
-                notifications: true,
-                language: 'en',
-                theme: 'light',
-                privacy: {
-                    shareData: false,
-                    allowResearch: false
-                }
-            },
-            
-            // Activity Tracking
-            activity: {
-                consultationHistory: [],
-                documents: [],
-                appointments: []
-            },
-            
-            // Timestamps
+            // Timestamps and status
             createdAt: serverTimestamp(),
             lastLoginAt: serverTimestamp(),
             updatedAt: serverTimestamp(),
-            
-            // Profile Status
-            profileComplete: Boolean(firstName && lastName && additionalData.phone),
             isActive: true,
-            emailVerified: user.emailVerified || false
+            emailVerified: user.emailVerified || false,
+            authProvider: additionalData.authProvider || authProvider,
         };
 
-        await setDoc(doc(db, 'patients', user.uid), patientData, { merge: true });
-        // Patient document created successfully
+        await setDoc(doc(db, 'patients', user.uid), patientData);
+        const logger = window.firestoreLogger || console;
+        logger.info('Minimal patient document created successfully for:', user.email, 'with provider:', authProvider);
         return patientData;
+
     } catch (error) {
         let errorMessage = 'Failed to create patient document';
         

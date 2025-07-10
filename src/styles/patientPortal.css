@@ -763,27 +763,25 @@ body {
 }
 
 .profile-location {
-    color: var(--text-muted);
+    color: var(--text-light);
     font-size: 0.9rem;
 }
 
 .edit-btn {
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
     padding: 0.75rem 1.5rem;
-    background: none;
-    border: 1px solid var(--border-light);
     border-radius: var(--border-radius);
-    color: var(--text-light);
+    background-color: var(--primary-blue);
+    color: white;
+    border: none;
     cursor: pointer;
     transition: all 0.3s ease;
     font-weight: 500;
 }
 
 .edit-btn:hover {
-    border-color: var(--primary-blue);
-    color: var(--primary-blue);
+    background-color: var(--secondary-blue);
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-medium);
 }
 
 .edit-btn.small {
@@ -796,29 +794,29 @@ body {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    margin-bottom: 2rem;
+    margin-bottom: 1.5rem;
+    padding-bottom: 0.75rem;
+    border-bottom: 1px solid var(--border-light);
 }
 
 .section-header h1,
 .section-header h2,
 .section-header h3 {
+    font-weight: 700;
     color: var(--text-dark);
-    margin: 0;
 }
 
 .section-header h1 {
-    font-size: 1.5rem;
-    font-weight: 600;
+    font-size: 2rem;
 }
 
 .section-header h3 {
     font-size: 1.25rem;
-    font-weight: 600;
 }
 
 .section-header p {
     color: var(--text-light);
-    margin: 0.5rem 0 0 0;
+    margin-top: 0.25rem;
 }
 
 /* Info Sections */
@@ -1357,55 +1355,50 @@ body {
 
 /* Profile Tabs */
 .profile-tabs {
-    background: white;
+    margin-bottom: 2rem;
     border-radius: var(--border-radius);
-    box-shadow: var(--shadow-light);
-    margin-bottom: 1.5rem;
-    overflow: hidden;
+    background-color: #eef2f7;
+    padding: 0.5rem;
+    
 }
 
 .tab-nav {
     display: flex;
-    border-bottom: 1px solid var(--border-light);
+    position: relative;
 }
 
 .tab-button {
     flex: 1;
-    padding: 1rem 2rem;
-    background: none;
+    padding: 0.75rem 1rem;
+    background: transparent;
     border: none;
-    font-size: 1rem;
-    font-weight: 500;
     color: var(--text-light);
+    font-weight: 600;
     cursor: pointer;
-    transition: all 0.3s ease;
-    border-bottom: 3px solid transparent;
+    transition: color 0.3s ease;
+    border-radius: var(--border-radius);
+    z-index: 1;
 }
 
 .tab-button.active {
+    background-color: white;
     color: var(--primary-blue);
-    border-bottom-color: var(--primary-blue);
-    background-color: #f8fafc;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.1);
 }
 
-.tab-button:hover {
-    background-color: #f8fafc;
+.tab-button:hover:not(.active) {
     color: var(--text-dark);
 }
 
-/* Tab Content */
 .tab-content {
     display: none;
-    opacity: 0;
-    animation: fadeIn 0.3s ease-in-out;
-    transform: translateY(10px);
-    transition: all 0.3s ease;
+    background: transparent;
+    border-radius: var(--border-radius);
+    padding: 0;
 }
 
 .tab-content.active {
     display: block;
-    opacity: 1;
-    transform: translateY(0);
 }
 
 /* Settings Section */
@@ -2492,4 +2485,190 @@ input:checked + .slider:before {
     .btn-outline {
         border: 2px solid currentColor;
     }
+}
+
+/* Action Modals */
+.modal {
+  display: none;
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-color: rgba(0, 0, 0, 0.5);
+  z-index: 1000;
+  justify-content: center;
+  align-items: center;
+}
+
+.modal-content {
+  background-color: white;
+  border-radius: 12px;
+  width: 90%;
+  max-width: 500px;
+  max-height: 90vh;
+  overflow-y: auto;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+}
+
+.modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 20px;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.modal-header h3 {
+  margin: 0;
+  font-size: 1.25rem;
+  color: #111827;
+}
+
+.modal-body {
+  padding: 20px;
+}
+
+.modal-footer {
+  padding: 20px;
+  border-top: 1px solid #e5e7eb;
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+}
+
+/* Form Styles */
+.form-group {
+  margin-bottom: 16px;
+}
+
+.form-group label {
+  display: block;
+  margin-bottom: 8px;
+  font-weight: 500;
+  color: #374151;
+}
+
+.form-group input,
+.form-group select,
+.form-group textarea {
+  width: 100%;
+  padding: 8px 12px;
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+  font-size: 0.875rem;
+}
+
+.form-group input:focus,
+.form-group select:focus,
+.form-group textarea:focus {
+  outline: none;
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.1);
+}
+
+/* Video Consultation Styles */
+.video-setup {
+  text-align: center;
+}
+
+.video-preview {
+  width: 100%;
+  height: 200px;
+  background-color: #f3f4f6;
+  border-radius: 8px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  margin-bottom: 20px;
+}
+
+.video-preview i {
+  font-size: 48px;
+  color: #9ca3af;
+  margin-bottom: 12px;
+}
+
+/* Records List Styles */
+.records-list {
+  margin-bottom: 20px;
+}
+
+.record-item {
+  display: flex;
+  align-items: center;
+  padding: 12px;
+  border: 1px solid #e5e7eb;
+  border-radius: 6px;
+  margin-bottom: 8px;
+}
+
+.record-item input[type="checkbox"] {
+  margin-right: 12px;
+}
+
+.record-item label {
+  margin: 0;
+  font-size: 0.875rem;
+  color: #374151;
+}
+
+/* Button Styles */
+.btn-primary {
+  background-color: #3b82f6;
+  color: white;
+  padding: 8px 16px;
+  border-radius: 6px;
+  border: none;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.btn-primary:hover {
+  background-color: #2563eb;
+}
+
+.btn-secondary {
+  background-color: #f3f4f6;
+  color: #374151;
+  padding: 8px 16px;
+  border-radius: 6px;
+  border: 1px solid #d1d5db;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.btn-secondary:hover {
+  background-color: #e5e7eb;
+}
+
+.close-btn {
+  background: none;
+  border: none;
+  font-size: 1.25rem;
+  color: #6b7280;
+  cursor: pointer;
+  padding: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.close-btn:hover {
+  color: #374151;
+}
+
+/* Responsive Styles */
+@media (max-width: 640px) {
+  .modal-content {
+    width: 95%;
+    margin: 10px;
+  }
+  
+  .video-preview {
+    height: 150px;
+  }
 }

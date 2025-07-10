@@ -14,16 +14,23 @@
 
 // Environment detection
 const isProduction = () => {
-    // Try multiple environment detection methods
-    if (typeof process !== 'undefined' && process.env) {
-        return process.env.NODE_ENV === 'production';
+    // Check for Node.js environment
+    if (typeof process !== 'undefined' && process.env && process.env.NODE_ENV === 'production') {
+        return true;
     }
     
-    if (typeof import !== 'undefined' && import.meta && import.meta.env) {
-        return import.meta.env.NODE_ENV === 'production' || import.meta.env.PROD;
+    // Check for Vite/modern frontend build environment
+    if (typeof import.meta.env !== 'undefined' && import.meta.env.PROD) {
+        return true;
     }
     
-    // Default to production for safety
+    // Fallback for browser environments if no specific variable is set
+    // Assumes production if not explicitly in development
+    if (typeof window !== 'undefined') {
+        return !['localhost', '127.0.0.1'].includes(window.location.hostname);
+    }
+
+    // Default to production for safety if environment cannot be determined
     return true;
 };
 

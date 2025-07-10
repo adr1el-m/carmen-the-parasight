@@ -42,53 +42,6 @@ export function handleSecureError(error, options = {}) {
 }
 
 /**
- * Handle Firebase/Auth specific errors with user-friendly messages
- * @param {Error} error - Firebase error object
- * @param {Object} options - Configuration options
- * @returns {Object} User-friendly error response
- */
-export function handleAuthError(error, options = {}) {
-    const {
-        context = 'authentication',
-        showDetails = false
-    } = options;
-    
-    // Map of Firebase error codes to user-friendly messages
-    const authErrorMessages = {
-        'auth/user-not-found': 'Invalid login credentials',
-        'auth/wrong-password': 'Invalid login credentials',
-        'auth/invalid-email': 'Please enter a valid email address',
-        'auth/user-disabled': 'Account access has been restricted',
-        'auth/too-many-requests': 'Too many attempts. Please try again later',
-        'auth/network-request-failed': 'Network error. Please check your connection',
-        'auth/email-already-in-use': 'Email address is already registered',
-        'auth/weak-password': 'Password does not meet security requirements',
-        'auth/operation-not-allowed': 'This operation is not available',
-        'auth/popup-closed-by-user': 'Sign-in was cancelled',
-        'auth/popup-blocked': 'Please allow popups and try again',
-        'auth/unauthorized-domain': 'This domain is not authorized for sign-in',
-        'auth/invalid-api-key': 'Configuration error. Please contact support',
-        'auth/app-not-authorized': 'Application not authorized. Please contact support'
-    };
-    
-    const errorCode = error?.code || 'unknown';
-    const userMessage = authErrorMessages[errorCode] || 'Authentication failed. Please try again.';
-    
-    // Log the error for debugging
-    errorSanitizer.secureErrorLog(context, error, { 
-        userMessage,
-        errorCode 
-    });
-    
-    return {
-        message: userMessage,
-        code: showDetails ? errorCode : undefined,
-        timestamp: new Date().toISOString(),
-        shouldDisplay: true
-    };
-}
-
-/**
  * Handle form validation errors securely
  * @param {Array} validationErrors - Array of validation errors
  * @param {Object} options - Configuration options
@@ -263,7 +216,6 @@ export function setupGlobalErrorHandling() {
 // Export all functions
 export default {
     handleSecureError,
-    handleAuthError,
     handleValidationErrors,
     handleNetworkError,
     displaySecureError,

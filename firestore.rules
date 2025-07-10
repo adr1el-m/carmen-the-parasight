@@ -79,7 +79,12 @@ service cloud.firestore {
     }
     
     function getUserRole(userId) {
-      return get(/databases/$(database)/documents/users/$(userId)).data.role;
+      // Try to get role from users collection first, then fallback to patients collection
+      return exists(/databases/$(database)/documents/users/$(userId)) 
+        ? get(/databases/$(database)/documents/users/$(userId)).data.role
+        : exists(/databases/$(database)/documents/patients/$(userId))
+          ? get(/databases/$(database)/documents/patients/$(userId)).data.role
+          : 'patient'; // Default role for new users
     }
     
     function isEmailVerified() {
@@ -197,11 +202,9 @@ service cloud.firestore {
     
     // Users collection - general user data with role-based access
     match /users/{userId} {
-      // Users can read their own data
-      allow read: if isAuthenticated() && isOwner(userId);
-      
-      // Admins can read all user data (but don't fail if admin check fails)
-      allow read: if isAuthenticated() && request.auth.uid == userId;
+      // Allow authenticated users to read the users collection. This is required
+      // for other security rules to check for user roles.
+      allow read: if isAuthenticated();
       
       // Create user document (allow initial creation for authenticated users)
       allow create: if isAuthenticated() 
@@ -225,25 +228,41 @@ service cloud.firestore {
       allow delete: if false; // Users cannot be deleted via client
     }
     
-    // Patients collection - detailed patient data with simplified permissions
+    // Patients collection - detailed patient data with comprehensive permissions
     match /patients/{patientId} {
-      // Patients can read their own data (authenticated users)
-      allow read: if isAuthenticated() 
-        && isOwner(patientId);
-      
-      // Create patient data (simplified for authenticated users)
+      // A user can read their own document (primary rule for individual patients)
+      allow read: if isAuthenticated() && 
+        (request.auth.uid == patientId || hasAnyRole(['admin', 'doctor', 'nurse']));
+
+      // A user can create their own document (for new signups)
       allow create: if isAuthenticated() 
-        && isOwner(patientId)
-        && isNotRateLimited()
+        && request.auth.uid == patientId 
+        && !exists(path())
         && request.resource.data.uid == patientId;
-      
-      // Patients can update their own data (simplified)
+
+      // A user can update their own document, preserving UID and role
       allow update: if isAuthenticated() 
-        && isOwner(patientId)
-        && isNotRateLimited()
-        && request.resource.data.uid == resource.data.uid;
-      
-      allow delete: if false; // Patients cannot be deleted via client
+        && request.auth.uid == patientId 
+        && request.resource.data.uid == resource.data.uid
+        && (resource.data.role == null || request.resource.data.role == resource.data.role);
+
+      // Organization members can read patients (with safe checks)
+      allow read: if isAuthenticated() 
+        && isEmailVerified()
+        && hasAnyRole(['organization_admin', 'organization_member', 'doctor', 'nurse', 'clinic_staff'])
+        && exists(/databases/$(database)/documents/users/$(request.auth.uid))
+        && resource.data.organizationId != null
+        && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.organizationId == resource.data.organizationId;
+        
+      // Organization admins can assign patients (with safe checks)
+      allow update: if isAuthenticated() 
+        && isEmailVerified()
+        && hasRole('organization_admin')
+        && exists(/databases/$(database)/documents/users/$(request.auth.uid))
+        && request.resource.data.organizationId == get(/databases/$(database)/documents/users/$(request.auth.uid)).data.organizationId;
+
+      // Nobody can delete a patient document from the client.
+      allow delete: if false;
     }
     
     // Medical conditions subcollection
@@ -377,20 +396,7 @@ service cloud.firestore {
         && hasRole('system_admin');
     }
     
-    // Organization-based patient access
-    match /patients/{patientId} {
-      // Organization members can read patients assigned to their organization
-      allow read: if isAuthenticated() 
-        && isEmailVerified()
-        && hasAnyRole(['organization_admin', 'organization_member', 'doctor', 'nurse', 'clinic_staff'])
-        && resource.data.organizationId == get(/databases/$(database)/documents/users/$(request.auth.uid)).data.organizationId;
-      
-      // Organization admins can assign patients to their organization
-      allow update: if isAuthenticated() 
-        && isEmailVerified()
-        && hasRole('organization_admin')
-        && request.resource.data.organizationId == get(/databases/$(database)/documents/users/$(request.auth.uid)).data.organizationId;
-    }
+
     
     // Organization statistics and reports
     match /organization_reports/{reportId} {

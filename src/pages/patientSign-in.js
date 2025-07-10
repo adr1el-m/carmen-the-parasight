@@ -41,96 +41,49 @@ const successMessage = document.getElementById('successMessage');
 const loadingSpinner = document.querySelector('.loading-spinner');
 const btnText = document.querySelector('.btn-text');
 
+// Handle redirection after successful login and data loading
+authService.onAuthStateChange((user, role, userData) => {
+    // Only redirect if the user is on the sign-in page
+    if (window.location.pathname.includes('patientSign-in.html')) {
+        // Check if the user is logged in, has a role, and we aren't already redirecting
+        if (user && role && !window.isRedirecting) {
+            // Prevent multiple redirects
+            window.isRedirecting = true;
+            logger.info(`Auth state confirmed for ${user.email} with role ${role}. Redirecting...`);
+            showSuccess('Sign-in successful! Redirecting to your portal...');
+            
+            // Small delay to allow success message to show
+            setTimeout(() => {
+                authService.redirectAfterLogin(role);
+            }, 1000);
+        }
+    }
+});
+
 // Check for authentication state and redirect messages
 window.addEventListener('load', async () => {
     try {
-        // Check for Google sign-in redirect result first
-        await checkGoogleRedirectResult();
-        
-        // Check for redirect message
+        // Check for redirect message from other pages (e.g., auth guard)
         const redirectMessage = sessionStorage.getItem('auth_redirect_message');
         if (redirectMessage) {
             showError(redirectMessage);
             sessionStorage.removeItem('auth_redirect_message');
         }
         
-        // Check if user is already authenticated
+        // Check if user is already authenticated and redirect if so
         if (authService.isAuthenticated()) {
             const user = authService.getCurrentUser();
-            
-            // Check if user is verified (email verification or Google user)
-            const isGoogleUser = user.providerData.some(provider => provider.providerId === 'google.com');
-            const isVerified = user.emailVerified || isGoogleUser;
-            
-            if (isVerified) {
-                logger.info('User is already authenticated and verified, redirecting to portal...');
-                // Redirect to appropriate dashboard
-                showSuccess('Already signed in! Redirecting...');
-                if (!window.isRedirecting) {
-                    window.isRedirecting = true;
-                    authService.redirectAfterLogin();
-                }
-                return;
-            } else {
-                logger.info('User is authenticated but not verified');
+            const role = authService.getUserRole();
+            if (user && role && !window.isRedirecting) {
+                window.isRedirecting = true;
+                logger.info('User already authenticated. Redirecting...');
+                authService.redirectAfterLogin(role);
             }
         }
     } catch (error) {
         logger.error('Page load error:', error);
     }
 });
-
-// Check for Google redirect result
-async function checkGoogleRedirectResult() {
-    try {
-        // Import Firebase auth functions for redirect result
-        const { getRedirectResult } = await import('https://www.gstatic.com/firebasejs/11.9.1/firebase-auth.js');
-        
-        // Get auth instance from auth service (using the same instance)
-        const { auth } = await import('../services/auth-service.js');
-        
-        const result = await getRedirectResult(auth);
-        if (result) {
-            logger.info('Google redirect result found:', result.user.email);
-            
-            // Try to ensure patient document exists, but don't block redirect if it fails
-            try {
-                await ensurePatientDocumentExists(result.user);
-                logger.info('Patient document created/verified successfully');
-            } catch (docError) {
-                logger.warn('Patient document creation failed, but continuing with sign-in:', docError.message);
-                // Store error for later resolution but don't block sign-in
-                sessionStorage.setItem('pending_patient_doc_error', docError.message);
-            }
-            
-            showSuccess('Google sign-in successful! Welcome!');
-            
-            // Always redirect, even if document creation failed
-            if (!window.isRedirecting) {
-                window.isRedirecting = true;
-                setTimeout(() => {
-                    authService.redirectAfterLogin();
-                }, 1000);
-            }
-            
-            return true;
-        }
-        return false;
-    } catch (error) {
-        logger.error('Error checking Google redirect result:', error);
-        
-        // Handle specific errors
-        if (error.code === 'auth/unauthorized-domain') {
-            showError(`Domain "${window.location.hostname}" is not authorized. Please add it to Firebase Console > Authentication > Settings > Authorized Domains.`);
-        } else if (error.code === 'auth/operation-not-allowed') {
-            showError('Google sign-in is not enabled in Firebase Console.');
-        } else if (error.message && !error.message.includes('No redirect operation')) {
-            showError(`Google sign-in error: ${error.message}`);
-        }
-        
-        return false;
-    }
-}
 
 // Form validation for sign-in
 function validateSignInForm(formData) {
@@ -231,9 +184,6 @@ async function handleEmailSignIn(formData) {
 
         if (user) {
             if (user.emailVerified) {
-                // Check if patient document exists, create if needed
-                await ensurePatientDocumentExists(user);
-                
                 showSuccess('Sign in successful! Welcome back!');
                 
                 // Redirect after a short delay
@@ -291,176 +241,79 @@ async function handleEmailSignIn(formData) {
     }
 }
 
-// Ensure patient document exists for the user
-async function ensurePatientDocumentExists(user) {
-    try {
-        logger.info('Checking/creating patient document for:', user.email);
-        
-        const { getPatientData } = await import('../services/firestoredb.js');
-        let patientData;
-        
-        try {
-            patientData = await getPatientData(user.uid);
-        } catch (getError) {
-            logger.warn('Could not retrieve patient data, will attempt to create:', getError.message);
-            patientData = null;
-        }
-        
-        if (!patientData) {
-            logger.info('Creating new patient document...');
-            
-            try {
-                // Determine auth provider
-                const isGoogleUser = user.providerData.some(provider => provider.providerId === 'google.com');
-                const authProvider = isGoogleUser ? 'google' : 'email';
-                
-                // Create patient document with Google user info
-                await createPatientDocument(user, {
-                    authProvider: authProvider,
-                    firstName: user.displayName?.split(' ')[0] || '',
-                    lastName: user.displayName?.split(' ').slice(1).join(' ') || '',
-                    phone: '', // Will be filled later
-                    emailVerified: user.emailVerified || isGoogleUser
-                });
-                logger.info('Patient document created successfully for:', user.email);
-            } catch (createError) {
-                logger.warn('Failed to create patient document:', createError.message);
-                if (createError.message.includes('permission') || createError.message.includes('rules')) {
-                    logger.warn('This is likely a Firestore rules issue. Please check FIRESTORE_RULES_FIX.md');
-                    // Store the error for later resolution
-                    sessionStorage.setItem('firestore_rules_error', 'Patient document creation failed due to Firestore rules. Please check FIRESTORE_RULES_FIX.md');
-                }
-                // Don't throw - allow user to proceed
-                return false;
-            }
-        } else {
-            logger.info('Patient document already exists for:', user.email);
-            
-            try {
-                // Update last login
-                const { updateLastLogin } = await import('../services/firestoredb.js');
-                await updateLastLogin(user.uid);
-            } catch (updateError) {
-                logger.warn('Failed to update last login (non-critical):', updateError.message);
-                // This is non-critical, continue
-            }
-        }
-        
-        return true;
-    } catch (error) {
-        logger.error('Error ensuring patient document exists:', error);
-        logger.info('User can still proceed to portal, document will be created later');
-        return false;
-    }
-}
-
 // Handle Google sign-in
 async function handleGoogleSignIn() {
     try {
         setLoading(true);
         hideMessages();
 
-        logger.info('Starting Google sign-in...');
+        logger.info('Starting Google Sign-In with popup...');
+        showSuccess('Please complete the sign-in in the popup window...');
         
-        // Use auth service for Google login
-        const user = await authService.loginWithGoogle();
+        // Perform Google sign-in
+        const result = await authService.loginWithGooglePopup();
         
-        if (user) {
-            logger.info('Google sign-in successful for:', user.email);
+        if (result && result.user) {
+            logger.info('Google sign-in successful:', result.user.email);
             
-            // Try to ensure patient document exists, but don't block redirect if it fails
-            try {
-                await ensurePatientDocumentExists(user);
-                logger.info('Patient document handling completed');
-            } catch (docError) {
-                logger.warn('Patient document creation failed, but continuing:', docError.message);
-                // Store error for later resolution
-                sessionStorage.setItem('pending_patient_doc_error', docError.message);
+            // Check if email is verified (Google users are automatically verified)
+            if (result.user.emailVerified) {
+                showSuccess('Google sign-in successful! Loading your account...');
+                // The onAuthStateChange listener will handle redirection
+            } else {
+                // This shouldn't happen with Google, but handle it just in case
+                showError('Email verification required. Please verify your email and try again.');
+                setLoading(false);
             }
-            
-            showSuccess('Google sign-in successful! Welcome!');
-            
-            // Always redirect, even if document creation failed
-            logger.info('Redirecting to patient portal...');
-            
-            if (!window.isRedirecting) {
-                window.isRedirecting = true;
-                setTimeout(() => {
-                    window.location.href = '/public/patientPortal.html';
-                }, 1000);
-            }
-        } else {
-            logger.info('Google sign-in returned null, likely using redirect method');
         }
 
     } catch (error) {
-        logger.error('Google sign-in error:', error);
-        handleGoogleAuthError(error);
-    } finally {
         setLoading(false);
+        logger.error('Google sign-in failed:', error);
+        handleGoogleAuthError(error);
     }
 }
 
 // Handle Google authentication errors
 function handleGoogleAuthError(error) {
     logger.error('Google authentication error:', error);
-    logger.log('Error code:', error.code);
-    logger.log('Error message:', error.message);
-    logger.log('Current domain:', window.location.hostname);
     
     let errorMsg = 'Google sign-in failed. Please try again.';
     
+    // Handle specific Google auth errors
     switch (error.code) {
-        case 'auth/unauthorized-domain':
-            errorMsg = `❌ Domain Not Authorized\n\nTo fix this:\n1. Go to Firebase Console\n2. Navigate to Authentication > Settings\n3. Add "${window.location.hostname}" to Authorized Domains\n4. Save and try again\n\nCurrent domain: ${window.location.hostname}`;
-            break;
-        case 'auth/operation-not-allowed':
-            errorMsg = '❌ Google Sign-In Not Enabled\n\nTo fix this:\n1. Go to Firebase Console\n2. Navigate to Authentication > Sign-in method\n3. Enable Google provider\n4. Configure OAuth consent screen\n5. Save and try again';
-            break;
-        case 'auth/account-exists-with-different-credential':
-            errorMsg = 'An account already exists with this email using a different sign-in method. Please try signing in with email and password.';
-            break;
         case 'auth/popup-closed-by-user':
             errorMsg = 'Sign-in was cancelled. Please try again.';
             break;
         case 'auth/popup-blocked':
-            errorMsg = 'Popup was blocked by your browser. Please allow popups for this site and try again, or the page will automatically redirect.';
+            errorMsg = 'Please allow popups for this site and try again.';
             break;
-        case 'auth/cancelled-popup-request':
-            // Don't show error for cancelled popup - user might have clicked multiple times
-            return;
+        case 'auth/unauthorized-domain':
+            errorMsg = 'This domain is not authorized for Google sign-in.';
+            break;
+        case 'auth/operation-not-allowed':
+            errorMsg = 'Google sign-in is not enabled. Please contact support.';
+            break;
         case 'auth/network-request-failed':
-            errorMsg = 'Network error. Please check your internet connection and try again.';
-            break;
-        case 'auth/internal-error':
-            errorMsg = 'Internal error occurred. Please check your Firebase configuration and try again.';
-            break;
-        case 'auth/invalid-api-key':
-            errorMsg = 'Invalid API key. Please check your Firebase configuration.';
-            break;
-        case 'auth/app-not-authorized':
-            errorMsg = 'App not authorized. Please check your Firebase project settings.';
+            errorMsg = 'Network error. Please check your connection and try again.';
             break;
         default:
-            // Check if it's a configuration-related error
             if (error.message.includes('not enabled')) {
-                errorMsg = 'Google sign-in is not properly configured. Please check Firebase Console settings.';
-            } else if (error.message.includes('Domain')) {
-                errorMsg = error.message; // Use the detailed message from auth service
-            } else {
-                errorMsg = `Google sign-in failed: ${error.message || 'Unknown error'}`;
+                errorMsg = 'Google Sign-In is not enabled for this application.';
+            } else if (error.message) {
+                errorMsg = error.message;
             }
     }
     
     showError(errorMsg);
     
     // Log helpful debugging information
-    logger.log('🔧 Debugging Information:');
-    logger.log('- Check Firebase Console > Authentication > Sign-in method');
-    logger.log('- Ensure Google provider is enabled');
-    logger.log('- Check Authorized Domains includes:', window.location.hostname);
-    logger.log('- Verify OAuth consent screen is configured');
-    logger.log('- Check browser console for additional errors');
+    logger.info('🔧 Google Sign-In Debugging Information:');
+    logger.info('- Error code:', error.code);
+    logger.info('- Error message:', error.message);
+    logger.info('- Check Firebase Console > Authentication > Sign-in method');
+    logger.info('- Ensure Google provider is enabled');
+    logger.info('- Check Authorized Domains includes:', window.location.hostname);
 }
 
 // Handle forgot password
@@ -531,6 +384,9 @@ async function handleForgotPassword() {
         
         showError(errorMsg);
     }
+
+    // Auto-focus first input for accessibility
+    document.getElementById('email').focus();
 }
 
 // Form submission handler
@@ -587,14 +443,6 @@ document.querySelectorAll('input[required]').forEach(field => {
             this.style.borderColor = '';
         }
     });
-});
-
-// Listen for auth state changes
-authService.onAuthStateChange(async (user, role) => {
-    if (user && user.emailVerified) {
-        logger.info('User signed in:', user.email, 'Role:', role);
-        // Redirect will be handled by the sign-in functions
-    }
 });
 
 // Console log for debugging

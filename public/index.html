@@ -3,7 +3,22 @@
   <head>
     <meta charset="UTF-8" />
     <link rel="icon" type="image/svg+xml" href="/vite.svg" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, user-scalable=yes, maximum-scale=5.0" />
+    
+    <!-- Mobile Optimization -->
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+    <meta name="apple-mobile-web-app-title" content="LingapLink" />
+    <meta name="theme-color" content="#4A90E2" />
+    <meta name="msapplication-TileColor" content="#4A90E2" />
+    <meta name="msapplication-navbutton-color" content="#4A90E2" />
+    
+    <!-- Touch Icons -->
+    <link rel="apple-touch-icon" sizes="180x180" href="/assets/apple-touch-icon.png" />
+    <link rel="icon" type="image/png" sizes="32x32" href="/assets/favicon-32x32.png" />
+    <link rel="icon" type="image/png" sizes="16x16" href="/assets/favicon-16x16.png" />
+    <link rel="manifest" href="/manifest.json" />
     
     <!-- SEO Meta Tags -->
     <meta name="description" content="LingapLink - Find the best healthcare facilities in the Philippines. Connect with hospitals, clinics, and healthcare providers. Book appointments online with 180+ verified healthcare facilities." />
@@ -44,7 +59,17 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" integrity="sha512-iecdLmaskl7CVkqkXNQ/ZH/XLlvWZOJyj7Yy7tcenmpD1ypASozpmT/E0iPtmFIB46ZmdtAc9eNBvH0H/ZpiBw==" crossorigin="anonymous" referrerpolicy="no-referrer" />
     
     <title>LingapLink - Healthcare Platform Philippines | Find Doctors & Book Appointments</title>
+    
+    <!-- Enhanced CSS Structure -->
     <link rel="stylesheet" href="/src/styles/index.css" />
+    <link rel="stylesheet" href="/src/styles/index-enhanced.css" />
+    <link rel="stylesheet" href="/src/styles/notifications.css" />
+    
+    <!-- Performance: Preload critical CSS -->
+    <link rel="preload" href="/src/styles/index-enhanced.css" as="style" />
+    
+    <!-- Security: Content Security Policy -->
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://fonts.googleapis.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://cdnjs.cloudflare.com; font-src 'self' https://fonts.gstatic.com https://cdnjs.cloudflare.com; img-src 'self' data: https://images.unsplash.com; connect-src 'self';" />
     
     <!-- Structured Data -->
     <script type="application/ld+json">
@@ -138,18 +163,43 @@
           
           <div class="hero-right">
             <div class="medical-team">
-              <img src="https://images.unsplash.com/photo-1559839734-2b71ea197ec2?w=400&h=500&fit=crop&auto=format" 
-                   alt="Primary healthcare professional in medical attire" 
-                   class="doctor-main"
-                   loading="lazy"
-                   width="400" 
-                   height="500" />
-              <img src="https://images.unsplash.com/photo-1612349317150-e413f6a5b16d?w=400&h=500&fit=crop&auto=format" 
-                   alt="Secondary healthcare professional in medical attire" 
-                   class="doctor-secondary"
-                   loading="lazy"
-                   width="400" 
-                   height="500" />
+              <picture class="doctor-main">
+                <source 
+                  media="(max-width: 768px)" 
+                  srcset="https://images.unsplash.com/photo-1559839734-2b71ea197ec2?w=240&h=320&fit=crop&auto=format&dpr=1 1x,
+                          https://images.unsplash.com/photo-1559839734-2b71ea197ec2?w=240&h=320&fit=crop&auto=format&dpr=2 2x" />
+                <source 
+                  media="(max-width: 1024px)" 
+                  srcset="https://images.unsplash.com/photo-1559839734-2b71ea197ec2?w=300&h=400&fit=crop&auto=format&dpr=1 1x,
+                          https://images.unsplash.com/photo-1559839734-2b71ea197ec2?w=300&h=400&fit=crop&auto=format&dpr=2 2x" />
+                <img src="https://images.unsplash.com/photo-1559839734-2b71ea197ec2?w=400&h=500&fit=crop&auto=format" 
+                     srcset="https://images.unsplash.com/photo-1559839734-2b71ea197ec2?w=400&h=500&fit=crop&auto=format&dpr=1 1x,
+                             https://images.unsplash.com/photo-1559839734-2b71ea197ec2?w=400&h=500&fit=crop&auto=format&dpr=2 2x"
+                     alt="Primary healthcare professional in medical attire" 
+                     loading="eager"
+                     fetchpriority="high"
+                     width="400" 
+                     height="500" 
+                     decoding="async" />
+              </picture>
+              <picture class="doctor-secondary">
+                <source 
+                  media="(max-width: 768px)" 
+                  srcset="https://images.unsplash.com/photo-1612349317150-e413f6a5b16d?w=200&h=280&fit=crop&auto=format&dpr=1 1x,
+                          https://images.unsplash.com/photo-1612349317150-e413f6a5b16d?w=200&h=280&fit=crop&auto=format&dpr=2 2x" />
+                <source 
+                  media="(max-width: 1024px)" 
+                  srcset="https://images.unsplash.com/photo-1612349317150-e413f6a5b16d?w=240&h=320&fit=crop&auto=format&dpr=1 1x,
+                          https://images.unsplash.com/photo-1612349317150-e413f6a5b16d?w=240&h=320&fit=crop&auto=format&dpr=2 2x" />
+                <img src="https://images.unsplash.com/photo-1612349317150-e413f6a5b16d?w=400&h=500&fit=crop&auto=format" 
+                     srcset="https://images.unsplash.com/photo-1612349317150-e413f6a5b16d?w=400&h=500&fit=crop&auto=format&dpr=1 1x,
+                             https://images.unsplash.com/photo-1612349317150-e413f6a5b16d?w=400&h=500&fit=crop&auto=format&dpr=2 2x"
+                     alt="Secondary healthcare professional in medical attire" 
+                     loading="lazy"
+                     width="400" 
+                     height="500" 
+                     decoding="async" />
+              </picture>
             </div>
           </div>
         </div>
@@ -517,425 +567,33 @@
       </div>
     </footer>
 
-    <!-- CSS for accessibility -->
-    <style>
-      .skip-link {
-        position: absolute;
-        top: -40px;
-        left: 6px;
-        background: #4A90E2;
-        color: white;
-        padding: 8px;
-        text-decoration: none;
-        border-radius: 4px;
-        z-index: 10000;
-        font-weight: 600;
-      }
-      
-      .skip-link:focus {
-        top: 6px;
-      }
-      
-      .sr-only {
-        position: absolute !important;
-        left: -10000px !important;
-        width: 1px !important;
-        height: 1px !important;
-        overflow: hidden !important;
-        clip: rect(1px, 1px, 1px, 1px) !important;
-        clip-path: inset(50%) !important;
-        white-space: nowrap !important;
-      }
-      
-      @media (prefers-reduced-motion: reduce) {
-        * {
-          animation-duration: 0.01ms !important;
-          animation-iteration-count: 1 !important;
-          transition-duration: 0.01ms !important;
-        }
-      }
-      
-      @media (prefers-contrast: high) {
-        .facility-card {
-          border: 2px solid #000;
-        }
-        
-        .search-button, .book-appointment {
-          border: 2px solid #000;
-        }
-      }
+    <!-- Toast Container for Notifications -->
+    <div id="toast-container" class="toast-container" aria-live="polite" aria-atomic="false"></div>
 
-
-
-      /* Modern Footer Styles */
-      .footer {
-        background: #f8f9fa;
-        border-top: 1px solid #e9ecef;
-        margin-top: 80px;
-      }
-
-      /* Footer CTA Section */
-      .footer-cta {
-        background: linear-gradient(135deg, #4A90E2 0%, #357ABD 100%);
-        border-radius: 16px;
-        padding: 40px;
-        margin-bottom: 50px;
-        color: white;
-        box-shadow: 0 10px 30px rgba(74, 144, 226, 0.2);
-      }
-
-      .footer-cta-content {
-        display: grid;
-        grid-template-columns: 2fr 1fr;
-        gap: 40px;
-        align-items: center;
-      }
-
-      .cta-text-section h3 {
-        font-size: 1.8rem;
-        margin-bottom: 12px;
-        font-weight: 700;
-        display: flex;
-        align-items: center;
-        gap: 12px;
-      }
-
-      .cta-text-section p {
-        font-size: 1.1rem;
-        opacity: 0.95;
-        line-height: 1.6;
-      }
-
-      .cta-actions-section {
-        display: flex;
-        flex-direction: column;
-        gap: 12px;
-      }
-
-      .cta-primary-btn, .cta-secondary-btn {
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        gap: 10px;
-        padding: 14px 24px;
-        border-radius: 12px;
-        text-decoration: none;
-        font-weight: 600;
-        font-size: 1rem;
-        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-        text-align: center;
-      }
-
-      .cta-primary-btn {
-        background: white;
-        color: #4A90E2;
-        border: 2px solid white;
-      }
-
-      .cta-primary-btn:hover {
-        background: #f8f9fa;
-        transform: translateY(-2px);
-        box-shadow: 0 8px 25px rgba(255, 255, 255, 0.3);
-      }
-
-      .cta-secondary-btn {
-        background: transparent;
-        color: white;
-        border: 2px solid rgba(255, 255, 255, 0.7);
-      }
-
-      .cta-secondary-btn:hover {
-        background: rgba(255, 255, 255, 0.1);
-        border-color: white;
-        transform: translateY(-1px);
-      }
-
-      /* Main Footer Content */
-      .footer-main {
-        padding: 60px 0 40px;
-      }
-
-      .footer-grid {
-        display: grid;
-        grid-template-columns: 2fr 1fr 1fr 1.2fr;
-        gap: 50px;
-        margin-bottom: 40px;
-      }
-
-      /* Footer Brand Section */
-      .footer-brand {
-        padding-right: 20px;
-      }
-
-      .footer-logo {
-        display: flex;
-        align-items: center;
-        gap: 12px;
-        margin-bottom: 20px;
-        font-size: 1.5rem;
-        font-weight: 700;
-        color: #2c3e50;
-      }
-
-      .footer-logo i {
-        color: #4A90E2;
-        font-size: 1.8rem;
-      }
-
-      .logo-badge {
-        background: #4A90E2;
-        color: white;
-        padding: 4px 8px;
-        border-radius: 6px;
-        font-size: 0.8rem;
-        font-weight: 600;
-      }
-
-      .footer-description {
-        color: #6c757d;
-        line-height: 1.6;
-        margin-bottom: 25px;
-        font-size: 1rem;
-      }
-
-      .footer-stats {
-        display: grid;
-        grid-template-columns: repeat(3, 1fr);
-        gap: 20px;
-        padding: 20px 0;
-        border-top: 2px solid #e9ecef;
-        border-bottom: 2px solid #e9ecef;
-      }
-
-      .footer-stats .stat-item {
-        text-align: center;
-      }
-
-      .stat-number {
-        display: block;
-        font-size: 1.5rem;
-        font-weight: 700;
-        color: #4A90E2;
-        margin-bottom: 4px;
-      }
-
-      .stat-label {
-        font-size: 0.85rem;
-        color: #6c757d;
-        font-weight: 500;
-      }
-
-      /* Footer Navigation */
-      .footer-nav h3 {
-        color: #2c3e50;
-        font-size: 1.1rem;
-        font-weight: 600;
-        margin-bottom: 20px;
-        display: flex;
-        align-items: center;
-        gap: 8px;
-      }
-
-      .nav-list {
-        list-style: none;
-        padding: 0;
-        margin: 0;
-      }
-
-      .nav-list li {
-        margin-bottom: 10px;
-      }
-
-      .nav-list a {
-        color: #6c757d;
-        text-decoration: none;
-        font-size: 0.95rem;
-        transition: all 0.3s ease;
-        display: block;
-        padding: 4px 0;
-      }
-
-      .nav-list a:hover {
-        color: #4A90E2;
-        transform: translateX(4px);
-      }
-
-      /* Provider Navigation Special Styling */
-      .provider-nav {
-        background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
-        padding: 25px 20px;
-        border-radius: 12px;
-        border: 2px solid rgba(74, 144, 226, 0.1);
-        position: relative;
-      }
-
-      .provider-nav h3 {
-        color: #4A90E2;
-        font-weight: 700;
-      }
-
-      .provider-nav .featured a {
-        background: linear-gradient(135deg, #4A90E2 0%, #357ABD 100%);
-        color: white;
-        padding: 12px 16px;
-        border-radius: 8px;
-        margin-bottom: 8px;
-        font-weight: 600;
-        display: flex;
-        align-items: center;
-        gap: 8px;
-        transform: translateX(0);
-      }
-
-      .provider-nav .featured a:hover {
-        transform: translateY(-2px) translateX(0);
-        box-shadow: 0 6px 20px rgba(74, 144, 226, 0.3);
-      }
-
-      /* Contact Section */
-      .footer-contact h3 {
-        color: #2c3e50;
-        font-size: 1.1rem;
-        font-weight: 600;
-        margin-bottom: 20px;
-      }
-
-      .contact-methods {
-        margin-bottom: 25px;
-      }
-
-      .contact-item {
-        display: flex;
-        align-items: center;
-        gap: 12px;
-        margin-bottom: 12px;
-        color: #6c757d;
-        text-decoration: none;
-        font-size: 0.95rem;
-        transition: all 0.3s ease;
-      }
-
-      .contact-item:hover {
-        color: #4A90E2;
-      }
-
-      .contact-item i {
-        width: 20px;
-        text-align: center;
-        color: #4A90E2;
-      }
-
-      .footer-links-section h4 {
-        color: #2c3e50;
-        font-size: 1rem;
-        font-weight: 600;
-        margin-bottom: 15px;
-        padding-top: 20px;
-        border-top: 1px solid #e9ecef;
-      }
-
-      .quick-links {
-        list-style: none;
-        padding: 0;
-        margin: 0;
-      }
-
-      .quick-links li {
-        margin-bottom: 8px;
-      }
-
-      .quick-links a {
-        color: #6c757d;
-        text-decoration: none;
-        font-size: 0.9rem;
-        transition: all 0.3s ease;
-      }
-
-      .quick-links a:hover {
-        color: #4A90E2;
-      }
-
-      /* Footer Bottom */
-      .footer-bottom {
-        border-top: 2px solid #e9ecef;
-        padding: 25px 0;
-        background: white;
-      }
-
-      .footer-bottom-content {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-      }
-
-      .copyright {
-        color: #6c757d;
-        font-size: 0.9rem;
-      }
-
-      .social-links {
-        display: flex;
-        gap: 15px;
-      }
-
-      .social-link {
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        width: 40px;
-        height: 40px;
-        border-radius: 50%;
-        background: #f8f9fa;
-        color: #6c757d;
-        text-decoration: none;
-        transition: all 0.3s ease;
-      }
-
-      .social-link:hover {
-        background: #4A90E2;
-        color: white;
-        transform: translateY(-2px);
-      }
-
-      /* Responsive Design */
-      @media (max-width: 1024px) {
-        .footer-grid {
-          grid-template-columns: 1fr 1fr;
-          gap: 40px;
-        }
-      }
-
-             @media (max-width: 768px) {
-         .footer-cta {
-           padding: 30px 20px;
-           margin-bottom: 30px;
-         }
-
-         .footer-cta-content {
-           grid-template-columns: 1fr;
-           gap: 25px;
-           text-align: center;
-         }
-
-         .footer-grid {
-           grid-template-columns: 1fr;
-           gap: 30px;
-         }
-
-         .footer-stats {
-           grid-template-columns: 1fr;
-           gap: 15px;
-         }
-
-         .footer-bottom-content {
-           flex-direction: column;
-           gap: 20px;
-           text-align: center;
-         }
-       }
-    </style>
-
-    <script src="/src/pages/index.js"></script>
+    <!-- Enhanced JavaScript with modern patterns -->
+    <script src="/src/utils/form-validation.js"></script>
+    <script src="/src/pages/index-enhanced.js"></script>
     <script src="/src/utils/year-updater.js"></script>
+    
+    <!-- Performance: Load scripts with proper attributes -->
+    <script>
+      // Basic error handling for missing scripts
+      window.addEventListener('error', function(e) {
+        if (e.target.tagName === 'SCRIPT') {
+          console.warn('Failed to load script:', e.target.src);
+          // Fallback to basic functionality
+          document.body.classList.add('js-fallback');
+        }
+      });
+      
+      // Preload critical resources
+      if ('serviceWorker' in navigator) {
+        window.addEventListener('load', function() {
+          navigator.serviceWorker.register('/sw.js').catch(function(err) {
+            console.log('ServiceWorker registration failed: ', err);
+          });
+        });
+      }
+    </script>
   </body>
 </html>

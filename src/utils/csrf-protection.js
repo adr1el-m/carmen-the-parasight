@@ -1,7 +1,7 @@
 /**
  * CSRF PROTECTION UTILITY
  * 
- * Provides Cross-Site Request Forgery (CSRF) protection for the Carmen Para-Sight application.
+ * Provides Cross-Site Request Forgery (CSRF) protection for the LingapLink application.
  * Implements secure token generation, validation, and session binding to prevent
  * unauthorized state-changing operations.
  * 

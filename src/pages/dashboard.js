@@ -1,5 +1,6 @@
 // Modern Healthcare Dashboard - LingapLink
 // Enhanced functionality for business dashboard
+import AuthService from '../services/auth-service.js';
 
 class HealthcareDashboard {
     constructor() {
@@ -10,6 +11,7 @@ class HealthcareDashboard {
             'January', 'February', 'March', 'April', 'May', 'June',
             'July', 'August', 'September', 'October', 'November', 'December'
         ];
+        this.authService = new AuthService();
         
         this.init();
     }
@@ -580,24 +582,19 @@ class HealthcareDashboard {
         localStorage.setItem(`dashboard_${setting}`, isEnabled);
     }
 
-    handleSaveSettings() {
-        this.showLoadingOverlay('Saving settings...');
-        
-        // Simulate API call
-        setTimeout(() => {
-            this.hideLoadingOverlay();
-            this.showMessage('success', 'Settings saved successfully!');
-        }, 1500);
-    }
-
-    handleLogout() {
+    async handleLogout() {
         this.showLoadingOverlay('Signing out...');
-        
-        // Simulate logout process
-        setTimeout(() => {
-            localStorage.removeItem('dashboard_user');
+        try {
+            await this.authService.signOut();
+            // Clear any session-related data from localStorage
+            localStorage.removeItem('user'); // Example: clear user data
+            localStorage.removeItem('authToken'); // Example: clear token
             window.location.href = '/public/businessSignIn.html';
-        }, 1500);
+        } catch (error) {
+            console.error('Logout failed:', error);
+            this.hideLoadingOverlay();
+            this.showMessage('error', `Logout failed: ${error.message}`);
+        }
     }
 
     initializeTooltips() {
@@ -691,7 +688,7 @@ class HealthcareDashboard {
         const menuItems = [
             { icon: 'fa-user', text: 'Edit Profile', action: this.editProfile },
             { icon: 'fa-cog', text: 'Settings', action: this.showSettings },
-            { icon: 'fa-sign-out-alt', text: 'Logout', action: this.handleLogout }
+            { icon: 'fa-sign-out-alt', text: 'Logout', action: this.handleLogout.bind(this) }
         ];
 
         menuItems.forEach(itemData => {

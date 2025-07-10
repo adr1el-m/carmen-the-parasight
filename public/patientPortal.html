@@ -474,249 +474,250 @@
 
             <!-- Consultation History Tab Content -->
             <div class="tab-content" id="consultation-history-tab">
-              <div class="consultation-history">
-                <div class="section-header">
-                  <h3>Consultation History</h3>
-                  <div class="filter-controls">
-                    <select id="consultationFilter" class="filter-select">
-                      <option value="all">All Consultations</option>
-                      <option value="completed">Completed</option>
-                      <option value="upcoming">Upcoming</option>
-                      <option value="cancelled">Cancelled</option>
+              <div class="history-container">
+                <div class="history-header">
+                  <h2>History</h2>
+                  <div class="history-controls">
+                    <select class="date-filter-dropdown">
+                      <option>May '23</option>
+                      <option>Apr '23</option>
+                      <option>Mar '23</option>
                     </select>
-                    <input type="date" id="dateFilter" class="date-filter">
+                    <button class="btn btn-primary" id="newAppointmentBtn"><i class="fas fa-plus"></i> New Appointment</button>
                   </div>
                 </div>
 
-                <div class="consultation-list">
-                  <div class="consultation-item">
-                    <div class="consultation-date">
-                      <span class="date">March 15, 2024</span>
-                      <span class="time">10:30 AM</span>
-                    </div>
-                    <div class="consultation-details">
-                      <h4>Dr. Sarah Johnson</h4>
-                      <p>Cardiology Consultation</p>
-                      <div class="consultation-info">
-                        <span class="consultation-type"><i class="fas fa-video"></i> Virtual</span>
-                        <span class="status completed">Completed</span>
+                <!-- Date Group: Yesterday -->
+                <div class="date-group">
+                  <h3 class="date-group-title">Yesterday</h3>
+                  <div class="appointments-row">
+                    <div class="appointment-card-h">
+                      <div class="appointment-main">
+                        <div class="appointment-info">
+                          <img src="../src/assets/img/Francheska.png" alt="Esther Howard" class="appointment-avatar">
+                          <span class="appointment-name">Esther Howard</span>
+                        </div>
+                        <button class="document-icon-btn"><i class="far fa-file-alt"></i></button>
                       </div>
-                      <div class="consultation-notes">
-                        <p>Regular checkup and medication review. Blood pressure: 120/80.</p>
+                      <div class="appointment-time-slot">7:00am - 8:00am</div>
+                    </div>
+                    <div class="appointment-card-h">
+                      <div class="appointment-main">
+                        <div class="appointment-info">
+                          <img src="../src/assets/img/juanito.png" alt="Cameron Williamson" class="appointment-avatar">
+                          <span class="appointment-name">Cameron Williamson</span>
+                        </div>
+                        <button class="document-icon-btn"><i class="far fa-file-alt"></i></button>
                       </div>
+                      <div class="appointment-time-slot">10:00am - 11:00am</div>
                     </div>
-                    <div class="consultation-actions">
-                      <button class="btn btn-outline">
-                        <i class="fas fa-file-medical"></i>
-                        View Report
-                      </button>
-                      <button class="btn btn-primary">
-                        <i class="fas fa-calendar-plus"></i>
-                        Book Follow-up
-                      </button>
-                    </div>
-                  </div>
-                  
-                  <div class="consultation-item">
-                    <div class="consultation-date">
-                      <span class="date">March 8, 2024</span>
-                      <span class="time">2:00 PM</span>
-                    </div>
-                    <div class="consultation-details">
-                      <h4>Dr. Lisa Wong</h4>
-                      <p>Speech Therapy Session</p>
-                      <div class="consultation-info">
-                        <span class="consultation-type"><i class="fas fa-hospital"></i> In-Person</span>
-                        <span class="status completed">Completed</span>
+                    <div class="appointment-card-h">
+                      <div class="appointment-main">
+                        <div class="appointment-info">
+                          <img src="../src/assets/img/max.png" alt="Guy Hawkins" class="appointment-avatar">
+                          <span class="appointment-name">Guy Hawkins</span>
+                        </div>
+                        <button class="document-icon-btn"><i class="far fa-file-alt"></i></button>
                       </div>
-                      <div class="consultation-notes">
-                        <p>Progress in articulation exercises. Recommended daily practice routine.</p>
+                      <div class="appointment-time-slot">12:00pm - 1:00pm</div>
+                    </div>
+                    <div class="appointment-card-h">
+                      <div class="appointment-main">
+                        <div class="appointment-info">
+                          <img src="../src/assets/img/Threshia.png" alt="Albert Flores" class="appointment-avatar">
+                          <span class="appointment-name">Albert Flores</span>
+                        </div>
+                        <button class="document-icon-btn"><i class="far fa-file-alt"></i></button>
                       </div>
-                    </div>
-                    <div class="consultation-actions">
-                      <button class="btn btn-outline">
-                        <i class="fas fa-file-medical"></i>
-                        View Report
-                      </button>
-                      <button class="btn btn-primary">
-                        <i class="fas fa-calendar-plus"></i>
-                        Book Follow-up
-                      </button>
-                    </div>
-                  </div>
-
-                  <div class="consultation-item">
-                    <div class="consultation-date">
-                      <span class="date">March 22, 2024</span>
-                      <span class="time">3:30 PM</span>
-                    </div>
-                    <div class="consultation-details">
-                      <h4>Dr. Michael Chen</h4>
-                      <p>Physical Therapy Consultation</p>
-                      <div class="consultation-info">
-                        <span class="consultation-type"><i class="fas fa-hospital"></i> In-Person</span>
-                        <span class="status upcoming">Upcoming</span>
-                      </div>
-                      <div class="consultation-notes">
-                        <p>Initial assessment for arthritis management.</p>
-                      </div>
-                    </div>
-                    <div class="consultation-actions">
-                      <button class="btn btn-outline">
-                        <i class="fas fa-edit"></i>
-                        Reschedule
-                      </button>
-                      <button class="btn btn-outline-danger">
-                        <i class="fas fa-times"></i>
-                        Cancel
-                      </button>
+                      <div class="appointment-time-slot">4:00pm - 5:00pm</div>
                     </div>
                   </div>
                 </div>
 
-                <div class="pagination">
-                  <button class="pagination-btn" disabled><i class="fas fa-chevron-left"></i></button>
-                  <span class="page-info">Page 1 of 1</span>
-                  <button class="pagination-btn" disabled><i class="fas fa-chevron-right"></i></button>
+                <!-- Date Group: Today -->
+                <div class="date-group">
+                  <h3 class="date-group-title">Today</h3>
+                  <div class="appointments-column">
+                    <div class="appointment-card-v">
+                      <div class="appointment-info">
+                        <img src="../src/assets/img/Adriel.png" alt="Jane Cooper" class="appointment-avatar">
+                        <span class="appointment-name">Jane Cooper</span>
+                      </div>
+                      <div class="appointment-time-display">7:00am - 8:00am</div>
+                      <button class="document-icon-btn"><i class="far fa-file-alt"></i></button>
+                    </div>
+                    <div class="appointment-card-v">
+                      <div class="appointment-info">
+                        <img src="../src/assets/img/Francheska.png" alt="Brooklyn Simmons" class="appointment-avatar">
+                        <span class="appointment-name">Brooklyn Simmons</span>
+                      </div>
+                      <div class="appointment-time-display">10:00am - 11:00am</div>
+                      <button class="document-icon-btn"><i class="far fa-file-alt"></i></button>
+                    </div>
+                  </div>
                 </div>
+
               </div>
             </div>
 
             <!-- Patient Documents Tab Content -->
             <div class="tab-content" id="patient-documents-tab">
-              <div class="patient-documents">
-                <div class="section-header">
-                  <h3>Patient Documents</h3>
-                  <div class="document-actions">
-                    <div class="search-box">
-                      <i class="fas fa-search"></i>
-                      <input type="text" placeholder="Search documents..." id="documentSearch">
+              <div class="documents-header">
+                <h2>Documents</h2>
+                <button class="btn btn-primary" id="newDocumentBtn">+ New Document</button>
+              </div>
+              <div class="documents-grid">
+                <!-- Document Card 1 -->
+                <div class="document-card">
+                  <div class="card-header">
+                    <i class="far fa-star"></i>
+                    <i class="fas fa-ellipsis-h"></i>
+                  </div>
+                  <div class="document-preview">
+                    <div class="mock-document">
+                      <div class="mock-line" style="width: 80%;"></div>
+                      <div class="mock-line" style="width: 90%;"></div>
+                      <div class="mock-line" style="width: 75%;"></div>
+                      <div class="mock-line" style="width: 85%;"></div>
                     </div>
-                    <button class="btn btn-primary" id="uploadDocumentBtn">
-                      <i class="fas fa-upload"></i>
-                      Upload Document
-                    </button>
+                  </div>
+                  <div class="card-footer">
+                    <p class="document-title">Blood report</p>
+                    <p class="document-date">May 14, 2023, 13:25 PM</p>
                   </div>
                 </div>
-
-                <div class="document-filters">
-                  <button class="filter-btn active" data-filter="all">All</button>
-                  <button class="filter-btn" data-filter="medical">Medical Reports</button>
-                  <button class="filter-btn" data-filter="lab">Lab Results</button>
-                  <button class="filter-btn" data-filter="prescription">Prescriptions</button>
-                  <button class="filter-btn" data-filter="imaging">Imaging</button>
-                </div>
-                
-                <div class="documents-grid">
-                  <div class="document-item" data-type="lab">
-                    <div class="document-icon">
-                      <i class="fas fa-file-medical-alt"></i>
-                    </div>
-                    <div class="document-details">
-                      <h4>Complete Blood Count</h4>
-                      <p>Lab Results - March 2024</p>
-                      <div class="document-meta">
-                        <span class="document-date"><i class="fas fa-calendar"></i> March 15, 2024</span>
-                        <span class="document-size"><i class="fas fa-file-alt"></i> 2.3 MB</span>
-                      </div>
-                      <span class="document-tag">Lab Results</span>
-                    </div>
-                    <div class="document-actions">
-                      <button class="btn btn-icon" title="Download">
-                        <i class="fas fa-download"></i>
-                      </button>
-                      <button class="btn btn-icon" title="View">
-                        <i class="fas fa-eye"></i>
-                      </button>
-                      <button class="btn btn-icon" title="Share">
-                        <i class="fas fa-share-alt"></i>
-                      </button>
+                <!-- Document Card 2 (Starred) -->
+                <div class="document-card">
+                  <div class="card-header">
+                    <i class="fas fa-star starred"></i>
+                    <i class="fas fa-ellipsis-h"></i>
+                  </div>
+                  <div class="document-preview">
+                    <div class="mock-document">
+                      <div class="mock-line" style="width: 80%;"></div>
+                      <div class="mock-line" style="width: 90%;"></div>
+                      <div class="mock-line" style="width: 75%;"></div>
+                      <div class="mock-line" style="width: 85%;"></div>
                     </div>
                   </div>
-                  
-                  <div class="document-item" data-type="prescription">
-                    <div class="document-icon">
-                      <i class="fas fa-file-prescription"></i>
-                    </div>
-                    <div class="document-details">
-                      <h4>Monthly Prescription</h4>
-                      <p>Medication List - March 2024</p>
-                      <div class="document-meta">
-                        <span class="document-date"><i class="fas fa-calendar"></i> March 10, 2024</span>
-                        <span class="document-size"><i class="fas fa-file-alt"></i> 1.1 MB</span>
-                      </div>
-                      <span class="document-tag">Prescription</span>
-                    </div>
-                    <div class="document-actions">
-                      <button class="btn btn-icon" title="Download">
-                        <i class="fas fa-download"></i>
-                      </button>
-                      <button class="btn btn-icon" title="View">
-                        <i class="fas fa-eye"></i>
-                      </button>
-                      <button class="btn btn-icon" title="Share">
-                        <i class="fas fa-share-alt"></i>
-                      </button>
-                    </div>
-                  </div>
-
-                  <div class="document-item" data-type="medical">
-                    <div class="document-icon">
-                      <i class="fas fa-file-medical"></i>
-                    </div>
-                    <div class="document-details">
-                      <h4>Speech Therapy Progress Report</h4>
-                      <p>Quarterly Assessment</p>
-                      <div class="document-meta">
-                        <span class="document-date"><i class="fas fa-calendar"></i> March 8, 2024</span>
-                        <span class="document-size"><i class="fas fa-file-alt"></i> 3.5 MB</span>
-                      </div>
-                      <span class="document-tag">Medical Report</span>
-                    </div>
-                    <div class="document-actions">
-                      <button class="btn btn-icon" title="Download">
-                        <i class="fas fa-download"></i>
-                      </button>
-                      <button class="btn btn-icon" title="View">
-                        <i class="fas fa-eye"></i>
-                      </button>
-                      <button class="btn btn-icon" title="Share">
-                        <i class="fas fa-share-alt"></i>
-                      </button>
-                    </div>
-                  </div>
-
-                  <div class="document-item" data-type="imaging">
-                    <div class="document-icon">
-                      <i class="fas fa-x-ray"></i>
-                    </div>
-                    <div class="document-details">
-                      <h4>Chest X-Ray Results</h4>
-                      <p>Diagnostic Imaging</p>
-                      <div class="document-meta">
-                        <span class="document-date"><i class="fas fa-calendar"></i> March 1, 2024</span>
-                        <span class="document-size"><i class="fas fa-file-alt"></i> 8.2 MB</span>
-                      </div>
-                      <span class="document-tag">Imaging</span>
-                    </div>
-                    <div class="document-actions">
-                      <button class="btn btn-icon" title="Download">
-                        <i class="fas fa-download"></i>
-                      </button>
-                      <button class="btn btn-icon" title="View">
-                        <i class="fas fa-eye"></i>
-                      </button>
-                      <button class="btn btn-icon" title="Share">
-                        <i class="fas fa-share-alt"></i>
-                      </button>
-                    </div>
+                  <div class="card-footer">
+                    <p class="document-title">Dr. Inglais Prescription</p>
+                    <p class="document-date">May 14, 2023, 13:25 PM</p>
                   </div>
                 </div>
-
-                <div class="upload-dropzone hidden" id="uploadDropzone">
-                  <i class="fas fa-cloud-upload-alt"></i>
-                  <p>Drag and drop files here or click to browse</p>
-                  <span class="upload-note">Supported formats: PDF, JPG, PNG (Max size: 10MB)</span>
+                <!-- Document Card 3 (Starred) -->
+                <div class="document-card">
+                    <div class="card-header">
+                        <i class="fas fa-star starred"></i>
+                        <i class="fas fa-ellipsis-h"></i>
+                    </div>
+                    <div class="document-preview">
+                        <div class="mock-document">
+                            <div class="mock-line" style="width: 80%;"></div>
+                            <div class="mock-line" style="width: 90%;"></div>
+                            <div class="mock-line" style="width: 75%;"></div>
+                            <div class="mock-line" style="width: 85%;"></div>
+                        </div>
+                    </div>
+                    <div class="card-footer">
+                        <p class="document-title">Blood report</p>
+                        <p class="document-date">May 14, 2023, 13:25 PM</p>
+                    </div>
+                </div>
+                <!-- Document Card 4 (Starred) -->
+                <div class="document-card">
+                    <div class="card-header">
+                        <i class="fas fa-star starred"></i>
+                        <i class="fas fa-ellipsis-h"></i>
+                    </div>
+                    <div class="document-preview">
+                        <div class="mock-document">
+                            <div class="mock-line" style="width: 80%;"></div>
+                            <div class="mock-line" style="width: 90%;"></div>
+                            <div class="mock-line" style="width: 75%;"></div>
+                            <div class="mock-line" style="width: 85%;"></div>
+                        </div>
+                    </div>
+                    <div class="card-footer">
+                        <p class="document-title">Blood report</p>
+                        <p class="document-date">May 14, 2023, 13:25 PM</p>
+                    </div>
+                </div>
+                <!-- Document Card 5 (Starred) -->
+                <div class="document-card">
+                    <div class="card-header">
+                        <i class="fas fa-star starred"></i>
+                        <i class="fas fa-ellipsis-h"></i>
+                    </div>
+                    <div class="document-preview">
+                        <div class="mock-document">
+                            <div class="mock-line" style="width: 80%;"></div>
+                            <div class="mock-line" style="width: 90%;"></div>
+                            <div class="mock-line" style="width: 75%;"></div>
+                            <div class="mock-line" style="width: 85%;"></div>
+                        </div>
+                    </div>
+                    <div class="card-footer">
+                        <p class="document-title">Blood report</p>
+                        <p class="document-date">May 14, 2023, 13:25 PM</p>
+                    </div>
+                </div>
+                <!-- Document Card 6 -->
+                <div class="document-card">
+                    <div class="card-header">
+                        <i class="far fa-star"></i>
+                        <i class="fas fa-ellipsis-h"></i>
+                    </div>
+                    <div class="document-preview">
+                        <div class="mock-document">
+                            <div class="mock-line" style="width: 80%;"></div>
+                            <div class="mock-line" style="width: 90%;"></div>
+                            <div class="mock-line" style="width: 75%;"></div>
+                            <div class="mock-line" style="width: 85%;"></div>
+                        </div>
+                    </div>
+                    <div class="card-footer">
+                        <p class="document-title">Blood report</p>
+                        <p class="document-date">May 14, 2023, 13:25 PM</p>
+                    </div>
+                </div>
+                <!-- Document Card 7 -->
+                <div class="document-card">
+                    <div class="card-header">
+                        <i class="far fa-star"></i>
+                        <i class="fas fa-ellipsis-h"></i>
+                    </div>
+                    <div class="document-preview">
+                        <div class="mock-document">
+                            <div class="mock-line" style="width: 80%;"></div>
+                            <div class="mock-line" style="width: 90%;"></div>
+                            <div class="mock-line" style="width: 75%;"></div>
+                            <div class="mock-line" style="width: 85%;"></div>
+                        </div>
+                    </div>
+                    <div class="card-footer">
+                        <p class="document-title">Blood report</p>
+                        <p class="document-date">May 14, 2023, 13:25 PM</p>
+                    </div>
+                </div>
+                <!-- Document Card 8 -->
+                <div class="document-card">
+                    <div class="card-header">
+                        <i class="far fa-star"></i>
+                        <i class="fas fa-ellipsis-h"></i>
+                    </div>
+                    <div class="document-preview">
+                        <div class="mock-document">
+                            <div class="mock-line" style="width: 80%;"></div>
+                            <div class="mock-line" style="width: 90%;"></div>
+                            <div class="mock-line" style="width: 75%;"></div>
+                            <div class="mock-line" style="width: 85%;"></div>
+                        </div>
+                    </div>
+                    <div class="card-footer">
+                        <p class="document-title">Blood report</p>
+                        <p class="document-date">May 14, 2023, 13:25 PM</p>
+                    </div>
                 </div>
               </div>
             </div>

@@ -1,7 +1,7 @@
 /* Patient Portal CSS - Complete Styles */
 
 :root {
-    --primary-blue: #4A90E2;
+    --primary-blue: #0040e7;
     --secondary-blue: #7BB3F0;
     --accent-teal: #5DADE2;
     --background-light: #F8FAFC;
@@ -70,7 +70,7 @@ body {
 
 .sidebar-nav {
     flex: 1;
-    padding: 1.5rem 0;
+    padding: 1.5rem 1rem;
 }
 
 .nav-items {
@@ -89,13 +89,26 @@ body {
     text-decoration: none;
     color: var(--text-light);
     transition: all 0.3s ease;
-    border-radius: 0 25px 25px 0;
-    margin-right: 1rem;
+    border-radius: 7px;
+    position: relative;
+}
+
+.nav-link::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    bottom: 0;
+    width: 4px;
+    background: #E93536;
+    transform: scaleY(1);
+    transition: transform 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+    transform-origin: bottom;
 }
 
 .nav-link:hover,
 .nav-item.active .nav-link {
-    background-color: var(--primary-blue);
+    background-color: #a60e0d;
     color: white;
 }
 
@@ -485,6 +498,206 @@ body {
 .btn-sm {
     padding: 0.5rem 1rem;
     font-size: 0.8rem;
+}
+
+/* New Patient Records Styles */
+.section-header-flex {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1.5rem;
+}
+
+.section-title .greeting-text {
+    font-size: 1rem;
+    color: var(--text-light);
+    font-weight: 500;
+}
+
+.section-title .section-main-title {
+    font-size: 2rem;
+    font-weight: 700;
+    color: var(--text-dark);
+}
+
+.date-dropdown {
+    padding: 0.5rem 1rem;
+    border: 1px solid var(--border-light);
+    border-radius: var(--border-radius);
+    background-color: white;
+}
+
+.content-tabs {
+    margin-bottom: 1.5rem;
+    border-bottom: 1px solid var(--border-light);
+}
+
+.tab-link {
+    padding: 0.75rem 1.25rem;
+    background: transparent;
+    border: none;
+    color: var(--text-light);
+    font-weight: 500;
+    cursor: pointer;
+    border-bottom: 2px solid transparent;
+    transition: all 0.3s ease;
+}
+
+.tab-link.active, .tab-link:hover {
+    color: var(--primary-blue);
+    border-bottom-color: var(--primary-blue);
+}
+
+.records-list {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+}
+
+.record-item-card {
+    display: flex;
+    align-items: center;
+    background-color: white;
+    padding: 1rem 1.5rem;
+    border-radius: var(--border-radius);
+    box-shadow: var(--shadow-light);
+    gap: 1.5rem;
+}
+
+.date-box {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    background-color: var(--background-light);
+    padding: 0.75rem;
+    border-radius: 8px;
+    min-width: 60px;
+}
+
+.date-box .day {
+    font-size: 0.9rem;
+    color: var(--text-light);
+}
+
+.date-box .date-num {
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: var(--text-dark);
+}
+
+.record-divider-v {
+    width: 1px;
+    background-color: var(--border-light);
+    align-self: stretch;
+}
+
+.record-details-grid {
+    flex: 1;
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 0.5rem 1rem;
+}
+
+.detail-item-flex {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    color: var(--text-dark);
+}
+
+.detail-item-flex i {
+    color: var(--text-light);
+}
+
+.detail-item-flex a {
+    color: var(--primary-blue);
+    text-decoration: none;
+    font-weight: 500;
+}
+
+.record-actions-dropdown select {
+    padding: 0.5rem;
+    border: 1px solid var(--border-light);
+    border-radius: 8px;
+    background-color: var(--background-light);
+}
+
+.records-group-title {
+    font-size: 1.1rem;
+    font-weight: 600;
+    color: var(--text-dark);
+    margin-top: 2rem;
+    margin-bottom: 1rem;
+}
+
+/* Online Consult Styles */
+.form-container-card {
+    background-color: white;
+    padding: 2rem;
+    border-radius: var(--border-radius);
+    box-shadow: var(--shadow-light);
+}
+
+.form-header {
+    margin-bottom: 1.5rem;
+    padding-bottom: 1.5rem;
+    border-bottom: 1px solid var(--border-light);
+}
+
+.form-header h3 {
+    font-size: 1.25rem;
+    font-weight: 600;
+    margin-bottom: 0.5rem;
+}
+
+.form-header p {
+    color: var(--text-light);
+    max-width: 80ch;
+}
+
+.consult-form .form-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 2rem;
+    margin-bottom: 1.5rem;
+}
+
+.form-group-flex {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+}
+
+.form-group-flex label {
+    font-weight: 500;
+}
+
+.radio-group, .checkbox-group-row {
+    display: flex;
+    gap: 1.5rem;
+}
+
+.radio-label, .checkbox-label {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    cursor: pointer;
+}
+
+.form-control {
+    width: 100%;
+    padding: 0.75rem 1rem;
+    border: 1px solid var(--border-light);
+    border-radius: 8px;
+    background-color: white;
+}
+
+.form-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 1rem;
+    margin-top: 2rem;
 }
 
 /* Calendar Styles */
@@ -1970,4 +2183,141 @@ input:checked + .slider:before {
   .video-preview {
     height: 150px;
   }
+} 
+
+/* My Availability Styles */
+.availability-grid {
+    display: grid;
+    grid-template-columns: 2fr 1fr;
+    gap: 2rem;
+}
+
+.availability-calendar-container {
+    background-color: white;
+    padding: 1.5rem;
+    border-radius: var(--border-radius);
+    box-shadow: var(--shadow-light);
+}
+
+.calendar-controls {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1.5rem;
+}
+
+.calendar-controls h3 {
+    font-size: 1.25rem;
+    font-weight: 600;
+}
+
+.calendar-nav-arrows .arrow-btn {
+    background: none;
+    border: 1px solid var(--border-light);
+    border-radius: 8px;
+    width: 36px;
+    height: 36px;
+    cursor: pointer;
+    margin-left: 0.5rem;
+}
+
+.calendar-grid-view {
+    border: 1px solid var(--border-light);
+    border-radius: 8px;
+    overflow: hidden;
+}
+
+.calendar-header-days {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    background-color: var(--background-light);
+    text-align: center;
+    padding: 0.75rem 0;
+    font-weight: 500;
+}
+
+.calendar-header-days span {
+    border-right: 1px solid var(--border-light);
+}
+.calendar-header-days span:last-child {
+    border-right: none;
+}
+
+.calendar-body-days {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+}
+
+.day-cell-avail {
+    padding: 0.75rem;
+    min-height: 80px;
+    border-right: 1px solid var(--border-light);
+    border-top: 1px solid var(--border-light);
+    font-weight: 500;
+}
+.day-cell-avail:nth-child(7n) {
+    border-right: none;
+}
+.day-cell-avail.other-month {
+    color: var(--text-muted);
+}
+
+.tags-wrapper {
+    margin-top: 0.5rem;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.25rem;
+}
+
+.avail-tag {
+    background-color: #FFD700;
+    color: var(--text-dark);
+    padding: 0.25rem 0.5rem;
+    border-radius: 4px;
+    font-size: 0.75rem;
+    font-weight: 600;
+}
+.avail-tag.faded {
+    opacity: 0.5;
+}
+
+.upcoming-appointments-list h3 {
+    font-size: 1.25rem;
+    font-weight: 600;
+    margin-bottom: 1rem;
+}
+
+.upcoming-group {
+    margin-bottom: 1.5rem;
+}
+
+.group-title {
+    font-weight: 500;
+    color: var(--text-light);
+    margin-bottom: 0.75rem;
+}
+
+.appointment-info-card {
+    background-color: white;
+    padding: 1rem;
+    border-radius: var(--border-radius);
+    box-shadow: var(--shadow-light);
+    margin-bottom: 0.75rem;
+    position: relative;
+}
+
+.appointment-info-card p {
+    font-weight: 600;
+    margin-bottom: 0.25rem;
+}
+
+.appointment-info-card span {
+    color: var(--text-light);
+}
+
+.appointment-info-card .date-text {
+    position: absolute;
+    top: 1rem;
+    right: 1rem;
+    font-size: 0.8rem;
 } 

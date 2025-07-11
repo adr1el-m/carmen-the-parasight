@@ -1,3 +1,13 @@
+# LingapLink: Bridging Patients and Healthcare Providers
+
+## 📝 Project Overview
+
+LingapLink is a modern, web-based platform designed to bridge the gap between patients and healthcare providers, creating a seamless and efficient healthcare experience. Our mission is to simplify healthcare access by providing an intuitive interface where patients can easily find and connect with medical facilities, manage their health records, and schedule consultations.
+
+For healthcare providers, LingapLink offers a powerful dashboard to manage patient records, streamline appointment scheduling, and organize virtual care services. By leveraging modern web technologies, we aim to deliver a reliable, secure, and user-friendly solution that enhances the quality of care and improves patient outcomes.
+
+This repository contains the full source code for the LingapLink platform, from the frontend user interface to the backend services and database configuration.
+
 <h2>🏗️ System Architecture</h2>
 
 <p align="center">
@@ -10,8 +20,8 @@ This section highlights the core technologies and tools used to build LingapLink
 
 | # | Tool / Technology | Category | Description |
 |---|---|---|---|
-| 1 | <img src="https://img.shields.io/badge/HTML5-E34F26?style=flat&logo=html5&logoColor=white" alt="HTML5" height="20"/> HTML5 | Frontend | Structures the content and layout of all web pages. |
-| 2 | <img src="https://img.shields.io/badge/CSS3-1572B6?style=flat&logo=css3&logoColor=white" alt="CSS3" height="20"/> CSS3 | Frontend | Styles the visual presentation of the application for a modern UI/UX. |
+| 1 | <img src="https://img.shields.io/badge/HTML5-E34F26?style=flat&logo=html5&logoColor=white" height="20"/> HTML5 | Frontend | Structures the content and layout of all web pages. |
+| 2 | <img src="https://img.shields.io/badge/CSS3-1572B6?style=flat&logo=css3&logoColor=white" alt="" height="20"/> CSS3 | Frontend | Styles the visual presentation of the application for a modern UI/UX. |
 | 3 | <img src="https://img.shields.io/badge/JavaScript-F7DF1E?style=flat&logo=javascript&logoColor=black" alt="JavaScript" height="20"/> JavaScript | Frontend/Backend | Powers the dynamic and interactive features on the client-side and server-side logic with Node.js. |
 | 4 | <img src="https://img.shields.io/badge/TypeScript-3178C6?style=flat&logo=typescript&logoColor=white" alt="TypeScript" height="20"/> TypeScript | Core Language | Enhances JavaScript with static types for improved code quality, maintainability, and developer experience. |
 | 5 | <img src="https://img.shields.io/badge/React-61DAFB?style=flat&logo=react&logoColor=black" alt="React" height="20"/> React | Frontend | A JavaScript library for building user interfaces and interactive components. |

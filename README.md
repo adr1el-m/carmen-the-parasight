@@ -1,5 +1,7 @@
 # LingapLink: Bridging Patients and Healthcare Providers
-
+<p align="center">
+  <img src="src/assets/img/logo.png" alt="logo" />
+</p>
 ## 📝 Project Overview
 
 LingapLink is a modern, web-based platform designed to bridge the gap between patients and healthcare providers, creating a seamless and efficient healthcare experience. Our mission is to simplify healthcare access by providing an intuitive interface where patients can easily find and connect with medical facilities, manage their health records, and schedule consultations.

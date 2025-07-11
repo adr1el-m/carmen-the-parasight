@@ -46,7 +46,6 @@
     <li><a href="#api-documentation">API Documentation</a></li>
     <li><a href="#contributing">Contributing</a></li>
     <li><a href="#meet-the-team">Meet the Team</a></li>
-    <li><a href="#license">License</a></li>
   </ol>
 </details>
 
@@ -91,9 +90,6 @@ We welcome contributions to help us achieve these goals!
 
 Here's a glimpse into the patient portal, showcasing the key features available to users.
 
-<details>
-<summary>Click to expand</summary>
-<br>
 <table width="100%">
   <tr>
     <td align="center" valign="top">
@@ -126,15 +122,11 @@ Here's a glimpse into the patient portal, showcasing the key features available 
     </td>
   </tr>
 </table>
-</details>
 
 ### Provider Dashboard Screenshots
 
 Here's a look at the provider dashboard, designed for healthcare professionals to manage their workflow efficiently.
 
-<details>
-<summary>Click to expand</summary>
-<br>
 <table width="100%">
   <tr>
     <td align="center" valign="top">
@@ -167,7 +159,6 @@ Here's a look at the provider dashboard, designed for healthcare professionals t
     </td>
   </tr>
 </table>
-</details>
 
 ## 🎨 Figma Prototype
 
@@ -393,8 +384,4 @@ Don't forget to give the project a star! Thanks again!
     </td>
   </tr>
 </table>
-
-## 📜 License
-
-Distributed under the MIT License. See [`LICENSE`](LICENSE) for more information.
 

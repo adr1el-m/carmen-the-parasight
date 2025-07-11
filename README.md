@@ -3,51 +3,6 @@
 </div>
 <h1 align="center">LingapLink: Bridging Patients and Healthcare Providers</h1>
 
-<p align="center">
-  <a href="https://github.com/adr1el-m/carmen-para-sight/blob/main/LICENSE">
-    <img src="https://img.shields.io/badge/License-MIT-blue.svg" alt="License">
-  </a>
-  <a href="https://github.com/adr1el-m/carmen-para-sight/issues">
-    <img src="https://img.shields.io/github/issues/adr1el-m/carmen-para-sight" alt="issues">
-  </a>
-  <a href="https://github.com/adr1el-m/carmen-para-sight/pulls">
-    <img src="https://img.shields.io/github/issues-pr/adr1el-m/carmen-para-sight" alt="pulls">
-  </a>
-</p>
-
-<p align="center">
-  <!-- Make sure to update this with your live deployment URL -->
-  <a href="https://lingap-link.vercel.app/">
-    <img src="https://img.shields.io/badge/Live_Demo-Vercel-black?style=for-the-badge&logo=vercel" alt="Live Demo">
-  </a>
-</p>
-
-<details>
-  <summary><strong>📚 Table of Contents</strong></summary>
-  <br>
-  <ol>
-    <li><a href="#project-overview">Project Overview</a></li>
-    <li><a href="#key-features">Key Features</a></li>
-    <li><a href="#project-status-roadmap">Project Status & Roadmap</a></li>
-    <li><a href="#screenshots">Screenshots</a></li>
-    <li><a href="#figma-prototype">Figma Prototype</a></li>
-    <li><a href="#system-architecture">System Architecture</a></li>
-    <li><a href="#tech-stack">Tech Stack</a></li>
-    <li><a href="#security">Security</a></li>
-    <li>
-      <a href="#getting-started">Getting Started</a>
-      <ul>
-        <li><a href="#prerequisites">Prerequisites</a></li>
-        <li><a href="#installation">Installation</a></li>
-      </ul>
-    </li>
-    <li><a href="#testing">Testing</a></li>
-    <li><a href="#repository-structure">Repository Structure</a></li>
-    <li><a href="#api-documentation">API Documentation</a></li>
-    <li><a href="#contributing">Contributing</a></li>
-    <li><a href="#meet-the-team">Meet the Team</a></li>
-  </ol>
-</details>
 
 ## 📝 Project Overview
 

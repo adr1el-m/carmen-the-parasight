@@ -4,14 +4,14 @@
 <h1 align="center">LingapLink: Bridging Patients and Healthcare Providers</h1>
 
 <p align="center">
-  <a href="https://github.com/adr1el-m/carmen-para-sight/blob/main/LICENSE">
+  <a href="https://github.com/adr1el-m/carmen-the-parasight/blob/main/LICENSE">
     <img src="https://img.shields.io/badge/License-MIT-blue.svg" alt="License">
   </a>
-  <a href="https://github.com/adr1el-m/carmen-para-sight/issues">
-    <img src="https://img.shields.io/github/issues/adr1el-m/carmen-para-sight" alt="issues">
+  <a href="https://github.com/adr1el-m/carmen-the-parasight/issues">
+    <img src="https://img.shields.io/github/issues/adr1el-m/carmen-the-parasight" alt="issues">
   </a>
-  <a href="https://github.com/adr1el-m/carmen-para-sight/pulls">
-    <img src="https://img.shields.io/github/issues-pr/adr1el-m/carmen-para-sight" alt="pulls">
+  <a href="https://github.com/adr1el-m/carmen-the-parasight/pulls">
+    <img src="https://img.shields.io/github/issues-pr/adr1el-m/carmen-the-parasight" alt="pulls">
   </a>
 </p>
 
@@ -28,6 +28,19 @@ For healthcare providers, LingapLink offers a powerful dashboard to manage patie
 - **Appointment Scheduling**: An intuitive system for booking, rescheduling, and canceling appointments.
 - **Secure Messaging**: HIPAA-compliant messaging for direct communication between patients and providers.
 - **AI-Powered Insights**: Integration with Google Gemini for intelligent health analytics and support.
+
+## 📸 Screenshots
+
+<p align="center">
+  <img src="src/assets/img/landingPage.jpeg" alt="LingapLink Landing Page" />
+</p>
+
+<p align="center">
+  A brief walkthrough of the hospital dashboard.
+</p>
+<p align="center">
+  <video src="src/assets/img/hospitalDashboard.mp4" autoplay loop muted playsinline width="100%"></video>
+</p>
 
 ## 🎨 Figma Prototype
 
@@ -168,11 +181,7 @@ Don't forget to give the project a star! Thanks again!
 4. Push to the Branch (`git push origin feature/AmazingFeature`)
 5. Open a Pull Request
 
-## 📄 License
-
-Distributed under the MIT License. See `LICENSE` for more information.
-
-## 👨‍💻 Meet the Team
+## ��‍💻 Meet the Team
 
 <table align="center" border="0" cellpadding="0" cellspacing="0" width="100%">
   <tr>

@@ -11,7 +11,7 @@ class HealthcareDashboard {
             'January', 'February', 'March', 'April', 'May', 'June',
             'July', 'August', 'September', 'October', 'November', 'December'
         ];
-        this.authService = new AuthService();
+        this.authService = AuthService;
         
         this.init();
     }
@@ -797,14 +797,15 @@ class HealthcareDashboard {
     }
 
     globalSearch(query) {
-        // Global search across all sections
-        this.showMessage('info', `Searching for "${query}" across all sections...`);
+        // This is a placeholder for a global search functionality
+        console.log(`Searching globally for: ${query}`);
+        // You would typically aggregate results from different sections here
     }
 }
 
-// Initialize dashboard when DOM is loaded
+// Initialize the dashboard functionality when the DOM is ready
 document.addEventListener('DOMContentLoaded', () => {
-    window.dashboard = new HealthcareDashboard();
+    new HealthcareDashboard();
 });
 
 // Export for global access

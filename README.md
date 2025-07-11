@@ -1,48 +1,31 @@
+<h2>🏗️ System Architecture</h2>
+
+<p align="center">
+  <img src="src/assets/img/sysArch.png" alt="LingapLink System Architecture Diagram" />
+</p>
+
 <h2>🛠️ Tech Stack</h2>
 
-<table>
-  <tr>
-    <td align="center"><strong>Frontend</strong></td>
-    <td>
-      <img src="https://img.shields.io/badge/HTML5-E34F26?style=for-the-badge&logo=html5&logoColor=white" alt="HTML5" />
-      <img src="https://img.shields.io/badge/CSS3-1572B6?style=for-the-badge&logo=css3&logoColor=white" alt="CSS3" />
-      <img src="https://img.shields.io/badge/JavaScript-F7DF1E?style=for-the-badge&logo=javascript&logoColor=black" alt="JavaScript" />
-      <img src="https://img.shields.io/badge/TypeScript-3178C6?style=for-the-badge&logo=typescript&logoColor=white" alt="TypeScript" />
-      <img src="https://img.shields.io/badge/React-61DAFB?style=for-the-badge&logo=react&logoColor=black" alt="React" />
-      <img src="https://img.shields.io/badge/Tailwind_CSS-38B2AC?style=for-the-badge&logo=tailwind-css&logoColor=white" alt="Tailwind CSS" />
-    </td>
-  </tr>
-  <tr>
-    <td align="center"><strong>Backend</strong></td>
-    <td>
-      <img src="https://img.shields.io/badge/Node.js-339933?style=for-the-badge&logo=node.js&logoColor=white" alt="Node.js" />
-      <img src="https://img.shields.io/badge/Express-000000?style=for-the-badge&logo=express&logoColor=white" alt="Express" />
-    </td>
-  </tr>
-  <tr>
-    <td align="center"><strong>Database & Auth</strong></td>
-    <td>
-      <img src="https://img.shields.io/badge/Firebase-FFCA28?style=for-the-badge&logo=firebase&logoColor=black" alt="Firebase" />
-      <img src="https://img.shields.io/badge/Firestore-FFCA28?style=for-the-badge&logo=firebase&logoColor=black" alt="Firestore" />
-    </td>
-  </tr>
-  <tr>
-    <td align="center"><strong>AI & Machine Learning</strong></td>
-    <td>
-      <img src="https://img.shields.io/badge/Google_Gemini-4285F4?style=for-the-badge&logo=google-gemini&logoColor=white" alt="Google Gemini" />
-      <img src="https://img.shields.io/badge/Ollama-000000?style=for-the-badge&logo=ollama&logoColor=white" alt="Ollama" />
-    </td>
-  </tr>
-  <tr>
-    <td align="center"><strong>Tooling & Deployment</strong></td>
-    <td>
-      <img src="https://img.shields.io/badge/Vite-646CFF?style=for-the-badge&logo=vite&logoColor=white" alt="Vite" />
-      <img src="https://img.shields.io/badge/ESLint-4B32C3?style=for-the-badge&logo=eslint&logoColor=white" alt="ESLint" />
-      <img src="https://img.shields.io/badge/Prettier-F7B93E?style=for-the-badge&logo=prettier&logoColor=black" alt="Prettier" />
-      <img src="https://img.shields.io/badge/Vercel-000000?style=for-the-badge&logo=vercel&logoColor=white" alt="Vercel" />
-    </td>
-  </tr>
-</table>
+This section highlights the core technologies and tools used to build LingapLink. It covers everything from the backend services that power the application to the frontend interface and deployment infrastructure. Each layer of the stack plays a vital role in ensuring a seamless, responsive, and personalized experience for users.
+
+| # | Tool / Technology | Category | Description |
+|---|---|---|---|
+| 1 | <img src="https://img.shields.io/badge/HTML5-E34F26?style=flat&logo=html5&logoColor=white" alt="HTML5" height="20"/> HTML5 | Frontend | Structures the content and layout of all web pages. |
+| 2 | <img src="https://img.shields.io/badge/CSS3-1572B6?style=flat&logo=css3&logoColor=white" alt="CSS3" height="20"/> CSS3 | Frontend | Styles the visual presentation of the application for a modern UI/UX. |
+| 3 | <img src="https://img.shields.io/badge/JavaScript-F7DF1E?style=flat&logo=javascript&logoColor=black" alt="JavaScript" height="20"/> JavaScript | Frontend/Backend | Powers the dynamic and interactive features on the client-side and server-side logic with Node.js. |
+| 4 | <img src="https://img.shields.io/badge/TypeScript-3178C6?style=flat&logo=typescript&logoColor=white" alt="TypeScript" height="20"/> TypeScript | Core Language | Enhances JavaScript with static types for improved code quality, maintainability, and developer experience. |
+| 5 | <img src="https://img.shields.io/badge/React-61DAFB?style=flat&logo=react&logoColor=black" alt="React" height="20"/> React | Frontend | A JavaScript library for building user interfaces and interactive components. |
+| 6 | <img src="https://img.shields.io/badge/Tailwind_CSS-38B2AC?style=flat&logo=tailwind-css&logoColor=white" alt="Tailwind CSS" height="20"/> Tailwind CSS | Frontend | A utility-first CSS framework for rapidly building custom user interfaces. |
+| 7 | <img src="https://img.shields.io/badge/Node.js-339933?style=flat&logo=node.js&logoColor=white" alt="Node.js" height="20"/> Node.js | Backend | Provides the JavaScript runtime environment for the server-side API. |
+| 8 | <img src="https://img.shields.io/badge/Express-000000?style=flat&logo=express&logoColor=white" alt="Express" height="20"/> Express.js | Backend | A minimal and flexible Node.js web application framework used to build the application's API. |
+| 9 | <img src="https://img.shields.io/badge/Firebase-FFCA28?style=flat&logo=firebase&logoColor=black" alt="Firebase" height="20"/> Firebase | Database & Auth | Provides core backend services including Authentication and the Firestore database. |
+| 10 | <img src="https://img.shields.io/badge/Firestore-FFCA28?style=flat&logo=firebase&logoColor=black" alt="Firestore" height="20"/> Firestore | Database | A NoSQL, document-oriented database used for storing all application data. |
+| 11 | <img src="https://img.shields.io/badge/Google_Gemini-4285F4?style=flat&logo=google-gemini&logoColor=white" alt="Google Gemini" height="20"/> Google Gemini | AI & ML | Powers intelligent, AI-driven features and insights within the platform. |
+| 12 | <img src="https://img.shields.io/badge/Ollama-000000?style=flat&logo=ollama&logoColor=white" alt="Ollama" height="20"/> Ollama | AI & ML | Used for running and integrating large language models locally. |
+| 13 | <img src="https://img.shields.io/badge/Vite-646CFF?style=flat&logo=vite&logoColor=white" alt="Vite" height="20"/> Vite | Tooling | A next-generation frontend build tool that provides a faster and leaner development experience. |
+| 14 | <img src="https://img.shields.io/badge/ESLint-4B32C3?style=flat&logo=eslint&logoColor=white" alt="ESLint" height="20"/> ESLint | Tooling | Statically analyzes code to quickly find and fix problems, ensuring code quality. |
+| 15 | <img src="https://img.shields.io/badge/Prettier-F7B93E?style=flat&logo=prettier&logoColor=black" alt="Prettier" height="20"/> Prettier | Tooling | An opinionated code formatter that enforces a consistent style across the entire codebase. |
+| 16 | <img src="https://img.shields.io/badge/Vercel-000000?style=flat&logo=vercel&logoColor=white" alt="Vercel" height="20"/> Deployment | A cloud platform for deploying the frontend application and serverless functions. |
 
 <h2>🚀 How to View LingapLink on Your Browser</h2>
 

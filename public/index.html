@@ -62,11 +62,7 @@
     
     <!-- Enhanced CSS Structure -->
     <link rel="stylesheet" href="/src/styles/index.css" />
-    <link rel="stylesheet" href="/src/styles/index-enhanced.css" />
     <link rel="stylesheet" href="/src/styles/notifications.css" />
-    
-    <!-- Performance: Preload critical CSS -->
-    <link rel="preload" href="/src/styles/index-enhanced.css" as="style" />
     
     <!-- Security: Content Security Policy -->
     <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://fonts.googleapis.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://cdnjs.cloudflare.com; font-src 'self' https://fonts.gstatic.com https://cdnjs.cloudflare.com; img-src 'self' data: https://images.unsplash.com; connect-src 'self';" />
@@ -164,18 +160,8 @@
           <div class="hero-right">
             <div class="medical-team">
               <picture class="doctor-main">
-                <source 
-                  media="(max-width: 768px)" 
-                  srcset="https://images.unsplash.com/photo-1559839734-2b71ea197ec2?w=240&h=320&fit=crop&auto=format&dpr=1 1x,
-                          https://images.unsplash.com/photo-1559839734-2b71ea197ec2?w=240&h=320&fit=crop&auto=format&dpr=2 2x" />
-                <source 
-                  media="(max-width: 1024px)" 
-                  srcset="https://images.unsplash.com/photo-1559839734-2b71ea197ec2?w=300&h=400&fit=crop&auto=format&dpr=1 1x,
-                          https://images.unsplash.com/photo-1559839734-2b71ea197ec2?w=300&h=400&fit=crop&auto=format&dpr=2 2x" />
-                <img src="https://images.unsplash.com/photo-1559839734-2b71ea197ec2?w=400&h=500&fit=crop&auto=format" 
-                     srcset="https://images.unsplash.com/photo-1559839734-2b71ea197ec2?w=400&h=500&fit=crop&auto=format&dpr=1 1x,
-                             https://images.unsplash.com/photo-1559839734-2b71ea197ec2?w=400&h=500&fit=crop&auto=format&dpr=2 2x"
-                     alt="Primary healthcare professional in medical attire" 
+                <img src="/src/assets/img/Dr. Willie Ong.jpg" 
+                     alt="Photo of Dr. Willie Ong" 
                      loading="eager"
                      fetchpriority="high"
                      width="400" 
@@ -183,18 +169,8 @@
                      decoding="async" />
               </picture>
               <picture class="doctor-secondary">
-                <source 
-                  media="(max-width: 768px)" 
-                  srcset="https://images.unsplash.com/photo-1612349317150-e413f6a5b16d?w=200&h=280&fit=crop&auto=format&dpr=1 1x,
-                          https://images.unsplash.com/photo-1612349317150-e413f6a5b16d?w=200&h=280&fit=crop&auto=format&dpr=2 2x" />
-                <source 
-                  media="(max-width: 1024px)" 
-                  srcset="https://images.unsplash.com/photo-1612349317150-e413f6a5b16d?w=240&h=320&fit=crop&auto=format&dpr=1 1x,
-                          https://images.unsplash.com/photo-1612349317150-e413f6a5b16d?w=240&h=320&fit=crop&auto=format&dpr=2 2x" />
-                <img src="https://images.unsplash.com/photo-1612349317150-e413f6a5b16d?w=400&h=500&fit=crop&auto=format" 
-                     srcset="https://images.unsplash.com/photo-1612349317150-e413f6a5b16d?w=400&h=500&fit=crop&auto=format&dpr=1 1x,
-                             https://images.unsplash.com/photo-1612349317150-e413f6a5b16d?w=400&h=500&fit=crop&auto=format&dpr=2 2x"
-                     alt="Secondary healthcare professional in medical attire" 
+                <img src="/src/assets/img/Dr. Alvin Francisco.jpg" 
+                     alt="Photo of Dr. Alvin Francisco" 
                      loading="lazy"
                      width="400" 
                      height="500" 
@@ -572,7 +548,7 @@
 
     <!-- Enhanced JavaScript with modern patterns -->
     <script src="/src/utils/form-validation.js"></script>
-    <script src="/src/pages/index-enhanced.js"></script>
+    <script src="/src/pages/index-main.js"></script>
     <script src="/src/utils/year-updater.js"></script>
     
     <!-- Performance: Load scripts with proper attributes -->

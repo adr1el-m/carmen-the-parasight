@@ -4,16 +4,51 @@
 <h1 align="center">LingapLink: Bridging Patients and Healthcare Providers</h1>
 
 <p align="center">
-  <a href="https://github.com/adr1el-m/carmen-the-parasight/blob/main/LICENSE">
+  <a href="https://github.com/adr1el-m/carmen-para-sight/blob/main/LICENSE">
     <img src="https://img.shields.io/badge/License-MIT-blue.svg" alt="License">
   </a>
-  <a href="https://github.com/adr1el-m/carmen-the-parasight/issues">
-    <img src="https://img.shields.io/github/issues/adr1el-m/carmen-the-parasight" alt="issues">
+  <a href="https://github.com/adr1el-m/carmen-para-sight/issues">
+    <img src="https://img.shields.io/github/issues/adr1el-m/carmen-para-sight" alt="issues">
   </a>
-  <a href="https://github.com/adr1el-m/carmen-the-parasight/pulls">
-    <img src="https://img.shields.io/github/issues-pr/adr1el-m/carmen-the-parasight" alt="pulls">
+  <a href="https://github.com/adr1el-m/carmen-para-sight/pulls">
+    <img src="https://img.shields.io/github/issues-pr/adr1el-m/carmen-para-sight" alt="pulls">
   </a>
 </p>
+
+<p align="center">
+  <!-- Make sure to update this with your live deployment URL -->
+  <a href="https://lingap-link.vercel.app/">
+    <img src="https://img.shields.io/badge/Live_Demo-Vercel-black?style=for-the-badge&logo=vercel" alt="Live Demo">
+  </a>
+</p>
+
+<details>
+  <summary><strong>📚 Table of Contents</strong></summary>
+  <br>
+  <ol>
+    <li><a href="#project-overview">Project Overview</a></li>
+    <li><a href="#key-features">Key Features</a></li>
+    <li><a href="#project-status-roadmap">Project Status & Roadmap</a></li>
+    <li><a href="#screenshots">Screenshots</a></li>
+    <li><a href="#figma-prototype">Figma Prototype</a></li>
+    <li><a href="#system-architecture">System Architecture</a></li>
+    <li><a href="#tech-stack">Tech Stack</a></li>
+    <li><a href="#security">Security</a></li>
+    <li>
+      <a href="#getting-started">Getting Started</a>
+      <ul>
+        <li><a href="#prerequisites">Prerequisites</a></li>
+        <li><a href="#installation">Installation</a></li>
+      </ul>
+    </li>
+    <li><a href="#testing">Testing</a></li>
+    <li><a href="#repository-structure">Repository Structure</a></li>
+    <li><a href="#api-documentation">API Documentation</a></li>
+    <li><a href="#contributing">Contributing</a></li>
+    <li><a href="#meet-the-team">Meet the Team</a></li>
+    <li><a href="#license">License</a></li>
+  </ol>
+</details>
 
 ## 📝 Project Overview
 
@@ -29,18 +64,110 @@ For healthcare providers, LingapLink offers a powerful dashboard to manage patie
 - **Secure Messaging**: HIPAA-compliant messaging for direct communication between patients and providers.
 - **AI-Powered Insights**: Integration with Google Gemini for intelligent health analytics and support.
 
+## 📈 Project Status & Roadmap
+
+![Project Status: In Development](https://img.shields.io/badge/status-in%20development-blueviolet.svg)
+
+Our project is currently in active development. We are working hard to bring more features and improvements. Below is our roadmap, outlining the key features we plan to implement next.
+
+### Roadmap
+
+-   [ ] **Provider Analytics Dashboard**: Visualizing patient data and clinic performance.
+-   [ ] **Telemedicine Integration**: Secure video consultations directly within the platform.
+-   [ ] **Real-time Notifications**: SMS and email alerts for appointments and updates.
+-   [ ] **Payment Gateway Integration**: For handling consultation fees and other services.
+-   [ ] **Dedicated Mobile App**: A native mobile experience for patients and providers.
+-   [ ] **Advanced AI Insights**: Deeper integration with AI for predictive health analytics.
+
+We welcome contributions to help us achieve these goals!
+
 ## 📸 Screenshots
 
 <p align="center">
   <img src="src/assets/img/landingPage.jpeg" alt="LingapLink Landing Page" />
 </p>
 
-<p align="center">
-  A brief walkthrough of the hospital dashboard.
-</p>
-<p align="center">
-  <video src="src/assets/img/hospitalDashboard.mp4" autoplay loop muted playsinline width="100%"></video>
-</p>
+### Patient Portal Screenshots
+
+Here's a glimpse into the patient portal, showcasing the key features available to users.
+
+<details>
+<summary>Click to expand</summary>
+<br>
+<table width="100%">
+  <tr>
+    <td align="center" valign="top">
+      <strong>Patient Dashboard</strong><br><br>
+      <img src="src/assets/img/patientPortal/patientDasboard.png" alt="Patient Dashboard" width="400"/>
+    </td>
+    <td align="center" valign="top">
+      <strong>Appointment Calendar</strong><br><br>
+      <img src="src/assets/img/patientPortal/patientCalendar.png" alt="Patient Calendar" width="400"/>
+    </td>
+  </tr>
+  <tr>
+    <td align="center" valign="top">
+      <strong>Profile - General Information</strong><br><br>
+      <img src="src/assets/img/patientPortal/patientProfileGeneral.png" alt="Patient Profile - General" width="400"/>
+    </td>
+    <td align="center" valign="top">
+      <strong>Profile - Consultation History</strong><br><br>
+      <img src="src/assets/img/patientPortal/patientProfileConsulationHistory.png" alt="Patient Profile - Consultation History" width="400"/>
+    </td>
+  </tr>
+    <tr>
+    <td align="center" valign="top">
+      <strong>Profile - Patient Documents</strong><br><br>
+      <img src="src/assets/img/patientPortal/patientProfilePatientDocuments.png" alt="Patient Profile - Documents" width="400"/>
+    </td>
+    <td align="center" valign="top">
+      <strong>Help & Support</strong><br><br>
+      <img src="src/assets/img/patientPortal/patientHelp.png" alt="Help & Support" width="400"/>
+    </td>
+  </tr>
+</table>
+</details>
+
+### Provider Dashboard Screenshots
+
+Here's a look at the provider dashboard, designed for healthcare professionals to manage their workflow efficiently.
+
+<details>
+<summary>Click to expand</summary>
+<br>
+<table width="100%">
+  <tr>
+    <td align="center" valign="top">
+      <strong>Provider Dashboard</strong><br><br>
+      <img src="src/assets/img/hospitalDashboard/hospitalDashboard.png" alt="Provider Dashboard" width="400"/>
+    </td>
+    <td align="center" valign="top">
+      <strong>Patient Records</strong><br><br>
+      <img src="src/assets/img/hospitalDashboard/hospitalPatientRecords.png" alt="Patient Records" width="400"/>
+    </td>
+  </tr>
+  <tr>
+    <td align="center" valign="top">
+      <strong>My Availability</strong><br><br>
+      <img src="src/assets/img/hospitalDashboard/hospitalMyAvailability.png" alt="My Availability" width="400"/>
+    </td>
+    <td align="center" valign="top">
+      <strong>My Consultations</strong><br><br>
+      <img src="src/assets/img/hospitalDashboard/hospitalMyConsults.png" alt="My Consultations" width="400"/>
+    </td>
+  </tr>
+    <tr>
+    <td align="center" valign="top">
+      <strong>Online Consultations</strong><br><br>
+      <img src="src/assets/img/hospitalDashboard/hospitalOnlineConsults.png" alt="Online Consultations" width="400"/>
+    </td>
+    <td align="center" valign="top">
+      <strong>Help & Support</strong><br><br>
+      <img src="src/assets/img/hospitalDashboard/hospitalHelp.png" alt="Help & Support" width="400"/>
+    </td>
+  </tr>
+</table>
+</details>
 
 ## 🎨 Figma Prototype
 
@@ -87,6 +214,17 @@ This project is built with a modern technology stack, ensuring a high-quality an
 | 15 | <img src="https://img.shields.io/badge/Prettier-F7B93E?style=flat&logo=prettier&logoColor=black" alt="Prettier" height="20"/>  | Tooling | An opinionated code formatter that enforces a consistent style across the entire codebase. |
 | 16 | <img src="https://img.shields.io/badge/Vercel-000000?style=flat&logo=vercel&logoColor=white" alt="Vercel" height="20"/> | Deployment | A cloud platform for deploying the frontend application and serverless functions. |
 
+## 🔒 Security
+
+Security is a top priority for LingapLink, especially given the sensitive nature of health data. We have implemented several measures to protect user information:
+
+-   **Data Encryption**: All data is encrypted in transit using HTTPS/TLS and encrypted at rest in Google Cloud's infrastructure, which is used by Firestore.
+-   **HIPAA Compliance**: We are mindful of HIPAA requirements and have designed features like secure messaging to align with its privacy and security standards.
+-   **Firebase Security Rules**: We leverage Firestore's powerful security rules to ensure that users can only access their own data, preventing unauthorized access at the database level.
+-   **Secure Authentication**: User authentication is handled securely through Firebase Authentication, which provides a robust and reliable system for managing user identities.
+-   **CSRF Protection**: We have implemented measures to protect against Cross-Site Request Forgery attacks, ensuring that state-changing requests are legitimate.
+-   **Vulnerability Scanning**: We regularly scan our dependencies for known vulnerabilities to keep the platform secure.
+
 ## 🚀 Getting Started
 
 To get a local copy up and running, follow these simple steps.
@@ -100,7 +238,7 @@ Make sure you have Node.js and npm installed on your machine.
 
 1. Clone the repository:
    ```bash
-   git clone https://github.com/adr1el-m/carmen-the-parasight.git
+   git clone https://github.com/adr1el-m/carmen-para-sight.git
    ```
 2. Navigate to the project directory:
    ```bash
@@ -119,6 +257,24 @@ Make sure you have Node.js and npm installed on your machine.
    npm run dev
    ```
 This will launch the application in development mode. Open [http://localhost:5173](http://localhost:5173) to view it in your browser.
+
+## 🧪 Testing
+
+To ensure the quality and reliability of our application, we are in the process of setting up a comprehensive testing suite. Contributions in this area are highly welcome!
+
+### Running Tests
+
+You can run all tests using:
+```bash
+npm test
+```
+*Note: Please update the `package.json` with your testing scripts.*
+
+### Our Testing Approach
+
+-   **Unit Tests**: We aim to use [Jest/Vitest] for testing individual components and utility functions in isolation.
+-   **Integration Tests**: To ensure seamless interaction between different services, like our authentication flow and database services.
+-   **End-to-End (E2E) Tests**: We plan to use [Cypress/Playwright] to test critical user journeys across the application.
 
 ## 🗂️ Repository Structure
 
@@ -168,6 +324,17 @@ LingapLink/
 └── README.md             # You are here
 ```
 
+## 📄 API Documentation
+
+Our API is built with Node.js and Express, providing the backend services for LingapLink. We are currently working on formalizing our API documentation.
+
+The API handles core functionalities such as:
+-   User Authentication (Sign-up, Sign-in)
+-   Patient and Provider Data Management
+-   Appointment Scheduling and Management
+
+For more detailed information, you can explore the code in the `/api` directory. We plan to provide a full [Swagger/Postman](https://swagger.io/) documentation in the future.
+
 ## 🤝 Contributing
 
 Contributions are what make the open-source community such an amazing place to learn, inspire, and create. Any contributions you make are **greatly appreciated**.
@@ -181,7 +348,7 @@ Don't forget to give the project a star! Thanks again!
 4. Push to the Branch (`git push origin feature/AmazingFeature`)
 5. Open a Pull Request
 
-## ��‍💻 Meet the Team
+## 🤔‍💻 Meet the Team
 
 <table align="center" border="0" cellpadding="0" cellspacing="0" width="100%">
   <tr>
@@ -226,4 +393,8 @@ Don't forget to give the project a star! Thanks again!
     </td>
   </tr>
 </table>
+
+## 📜 License
+
+Distributed under the MIT License. See [`LICENSE`](LICENSE) for more information.
 

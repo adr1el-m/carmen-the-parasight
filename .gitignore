@@ -1,15 +1,13 @@
-# Logs
-logs
-*.log
-npm-debug.log*
-yarn-debug.log*
-yarn-error.log*
-pnpm-debug.log*
-lerna-debug.log*
+# HealthSync PH / LingapLink .gitignore
 
-node_modules
-dist
-dist-ssr
+# Node modules
+node_modules/
+
+# Build artifacts
+dist/
+dist-ssr/
+build/
+.vite/
 *.local
 
 # Environment variables
@@ -19,16 +17,30 @@ dist-ssr
 .env.test.local
 .env.production.local
 
+# Firebase Admin SDK service account key
+# Ensure this path is correct relative to your project root
+api/config/serviceAccountKey.json
+
+# Logs
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+pnpm-debug.log*
+lerna-debug.log*
+
 # Editor directories and files
-.vscode/*
-!.vscode/extensions.json
-.idea
+.vscode/
+!.vscode/extensions.json # Keep extensions.json if you want to share recommended extensions
+.idea/
 .DS_Store
+Thumbs.db
 *.suo
 *.ntvs*
 *.njsproj
 *.sln
 *.sw?
+src/config/servicesAccountKey.json
 
-# Configuration files
-src/services/config.js
+# Configuration files (if they contain sensitive or local-only data)
+# src/services/config.js # Uncomment if this file is generated or contains local-only config

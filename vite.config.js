@@ -2,35 +2,33 @@ import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 import { resolve } from 'path'
 
-// https://vitejs.dev/config/
 export default defineConfig({
   plugins: [react()],
-  
-  // Configure build for multiple HTML entry points
+
   build: {
     rollupOptions: {
       input: {
+
         main: resolve(__dirname, 'index.html'),
-        patientSignIn: resolve(__dirname, 'public/patientSign-in.html'),
-        patientSignUp: resolve(__dirname, 'public/patientSign-up.html'),
+
+        emailVerification: resolve(__dirname, 'email-verification.html'),
+
+        businessRegistration: resolve(__dirname, 'public/businessRegistration.html'),
+        businessSignIn: resolve(__dirname, 'public/businessSignIn.html'),
         dashboard: resolve(__dirname, 'public/dashboard.html'),
         patientPortal: resolve(__dirname, 'public/patientPortal.html'),
-        analytics: resolve(__dirname, 'public/analytics.html'),
-        debugAuth: resolve(__dirname, 'public/debug-auth.html'),
-        testGoogleAuth: resolve(__dirname, 'public/test-google-auth.html'),
-        aiAssistant: resolve(__dirname, 'public/ai-assistant.html'),
-        emailVerification: resolve(__dirname, 'email-verification.html')
+        patientSignIn: resolve(__dirname, 'public/patientSign-in.html'),
+        patientSignUp: resolve(__dirname, 'public/patientSign-up.html'),
+
       }
     }
   },
-  
-  // Configure development server
+
   server: {
     port: 5173,
     open: true
   },
-  
-  // Configure path resolution
+
   resolve: {
     alias: {
       '@': resolve(__dirname, 'src'),
@@ -42,4 +40,4 @@ export default defineConfig({
       '@config': resolve(__dirname, 'src/config')
     }
   }
-}) 
+})

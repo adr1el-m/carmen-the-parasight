@@ -690,7 +690,7 @@ async function handleFormSubmission(e) {
     hideMessages();
 
     // Rate limit check
-    if (rateLimiter('registration', 5, 60)) {
+    if (!rateLimiter.isAllowed('registration', 5, 60000)) {
         showError('Too many attempts. Please try again in a minute.');
         setLoading(false);
         return;

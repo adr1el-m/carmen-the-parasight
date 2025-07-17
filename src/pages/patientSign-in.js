@@ -344,8 +344,7 @@ async function handleForgotPassword() {
         // Import Firebase auth functions for password reset
         const { sendPasswordResetEmail } = await import('https://www.gstatic.com/firebasejs/11.9.1/firebase-auth.js');
         
-        // Get auth instance from auth service
-        const auth = authService.getCurrentUser()?.auth || (await import('./auth-service.js')).auth;
+        const auth = authService.getCurrentUser()?.auth || (await import('../services/auth-service.js')).auth;
         
         if (!auth) {
             // If we can't get auth instance, use direct Firebase

@@ -1,6 +1,5 @@
-// backend/api/middleware/auth.js
-const jwt = require('jsonwebtoken'); // Only if you need a non-Firebase JWT fallback
-const { getFirebaseAuth } = require('../config/firebase'); // Import the getter
+const jwt = require('jsonwebtoken'); 
+const { getFirebaseAuth } = require('../config/firebase'); 
 
 const authenticateUser = async (req, res, next) => {
     try {
@@ -14,30 +13,27 @@ const authenticateUser = async (req, res, next) => {
         }
 
         const token = authHeader.split(' ')[1];
-        const adminAuth = getFirebaseAuth(); // Get the initialized Firebase Auth instance
+        const adminAuth = getFirebaseAuth(); 
 
         if (adminAuth) {
             const decodedToken = await adminAuth.verifyIdToken(token);
-            req.user = decodedToken; // Firebase token payload
-            // For custom claims (roles), they are often in decodedToken.custom_claims
+            req.user = decodedToken; 
             if (decodedToken.custom_claims) {
                 req.user.role = decodedToken.custom_claims.role;
             }
         } else {
-            // Fallback JWT verification for development/testing if Firebase Admin is not set up
-            // WARNING: process.env.JWT_SECRET must be a strong, unique secret in production!
             const decoded = jwt.verify(token, process.env.JWT_SECRET || 'super-insecure-fallback-jwt-secret');
-            req.user = decoded; // Mocked or fallback JWT payload
+            req.user = decoded; 
             console.warn('⚠️ Using fallback JWT verification. Ensure Firebase Admin SDK is configured in production.');
         }
 
         next();
     } catch (error) {
-        console.error('Authentication error:', error.message); // Log specific error message
+        console.error('Authentication error:', error.message); 
         res.status(401).json({
             error: 'Unauthorized',
             message: 'Invalid or expired token',
-            details: process.env.NODE_ENV === 'development' ? error.message : undefined // Show details in dev
+            details: process.env.NODE_ENV === 'development' ? error.message : undefined 
         });
     }
 };
@@ -61,9 +57,8 @@ const optionalAuth = async (req, res, next) => {
                 req.user = decoded;
             }
         }
-        next(); // Always call next, even if authentication fails
+        next(); 
     } catch (error) {
-        // If optional auth fails, just continue without req.user
         console.warn('Optional authentication failed, proceeding without user context:', error.message);
         next();
     }
@@ -78,7 +73,6 @@ const requireRole = (roles) => {
             });
         }
 
-        // Check req.user.role (standard or custom claim)
         const userRole = req.user.role || req.user.custom_claims?.role;
         if (!roles.includes(userRole)) {
             return res.status(403).json({

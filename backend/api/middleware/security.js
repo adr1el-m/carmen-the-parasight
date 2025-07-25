@@ -1,4 +1,3 @@
-// backend/api/middleware/security.js
 const helmet = require('helmet');
 
 const applyHelmetMiddleware = (app) => {
@@ -64,8 +63,7 @@ const applyCustomSecurityHeaders = (app) => {
 const applyRequestValidation = (app) => {
     app.use((req, res, next) => {
         const contentLength = req.headers['content-length'];
-        // Limit request body size to 10MB
-        if (contentLength && parseInt(contentLength) > 10485760) { // 10MB
+        if (contentLength && parseInt(contentLength) > 10485760) { 
             console.warn(`🚨 Request Entity Too Large: IP=${req.ip}, Size=${contentLength}`);
             return res.status(413).json({
                 error: 'Request Entity Too Large',
@@ -73,12 +71,11 @@ const applyRequestValidation = (app) => {
             });
         }
 
-        // Validate content-type for POST/PUT/PATCH requests
         if (['POST', 'PUT', 'PATCH'].includes(req.method)) {
             const contentType = req.headers['content-type'];
             if (contentType && !contentType.includes('application/json') &&
                 !contentType.includes('application/x-www-form-urlencoded') &&
-                !contentType.includes('multipart/form-data')) { // Allow multipart for file uploads
+                !contentType.includes('multipart/form-data')) {
                 console.warn(`🚨 Unsupported Media Type: IP=${req.ip}, Content-Type=${contentType}`);
                 return res.status(415).json({
                     error: 'Unsupported Media Type',
@@ -87,11 +84,10 @@ const applyRequestValidation = (app) => {
             }
         }
 
-        // Block suspicious user agents (basic check)
         const userAgent = req.headers['user-agent'];
         const suspiciousAgents = [
             /sqlmap/i, /nikto/i, /nessus/i, /masscan/i, /nmap/i,
-            /scanner/i, /burpsuite/i, /zap/i, /acunetix/i, /w3af/i // Added more common scanners
+            /scanner/i, /burpsuite/i, /zap/i, /acunetix/i, /w3af/i 
         ];
         if (userAgent && suspiciousAgents.some(pattern => pattern.test(userAgent))) {
             console.warn(`🚨 Blocked suspicious user agent: ${userAgent} from IP: ${req.ip}`);
@@ -101,10 +97,8 @@ const applyRequestValidation = (app) => {
             });
         }
 
-        // Check for suspicious header discrepancies (e.g., host header manipulation)
         const suspiciousHeaders = ['x-forwarded-host', 'x-real-ip'];
         for (const header of suspiciousHeaders) {
-            // Check if the header exists and if its value is different from the standard 'Host' header
             if (req.headers[header] && req.headers[header] !== req.headers.host) {
                 console.warn(`🚨 Blocked request with suspicious header: ${header}=${req.headers[header]} from IP: ${req.ip}`);
                 return res.status(403).json({

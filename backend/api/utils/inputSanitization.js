@@ -1,17 +1,16 @@
-// backend/api/utils/inputSanitization.js
 const xss = require('xss');
 const validator = require('validator');
 
 const sanitizeString = (str, maxLength = 1000) => {
     if (!str || typeof str !== 'string') return '';
     let sanitized = str
-        .replace(/[\x00-\x1F\x7F]/g, '') // Remove control characters
-        .replace(/[<>]/g, '') // Remove angle brackets
-        .replace(/javascript:/gi, '') // Remove javascript: protocol
-        .replace(/on\w+\s*=/gi, '') // Remove event handlers
-        .replace(/data:/gi, '') // Remove data: protocol
-        .replace(/vbscript:/gi, '') // Remove vbscript: protocol
-        .replace(/file:/gi, '') // Remove file: protocol
+        .replace(/[\x00-\x1F\x7F]/g, '') 
+        .replace(/[<>]/g, '') 
+        .replace(/javascript:/gi, '')
+        .replace(/on\w+\s*=/gi, '')
+        .replace(/data:/gi, '') 
+        .replace(/vbscript:/gi, '') 
+        .replace(/file:/gi, '') 
         .trim()
         .substring(0, maxLength);
     return xss(validator.escape(sanitized));

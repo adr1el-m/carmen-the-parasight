@@ -1,4 +1,3 @@
-// backend/api/utils/csrfProtection.js
 const csrf = require('csrf');
 const Tokens = new csrf();
 const errorSanitizer = require('./errorSanitizer'); // Import your error sanitizer

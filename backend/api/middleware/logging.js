@@ -1,9 +1,6 @@
-// backend/api/middleware/logging.js
 const morgan = require('morgan');
 
 const applyRequestLogging = (app) => {
-    // 'combined' for standard Apache combined log output (common in production)
-    // 'dev' for concise, color-coded output (good for development)
     app.use(morgan(process.env.NODE_ENV === 'production' ? 'combined' : 'dev'));
 };
 
@@ -40,15 +37,12 @@ const applySuspiciousActivityLogging = (app) => {
             return false;
         };
 
-        // Check query parameters
         if (Object.keys(req.query).length > 0 && checkForSuspiciousContent(req.query, 'query')) {
-            // Logged inside checkForSuspiciousContent
         }
-        // Check request body (if parsed)
+
         if (req.body && Object.keys(req.body).length > 0 && checkForSuspiciousContent(req.body, 'body')) {
-            // Logged inside checkForSuspiciousContent
         }
-        // Check headers
+        
         const suspiciousHeaderValue = Object.entries(req.headers).find(([key, value]) => {
             return typeof value === 'string' && suspiciousPatterns.some(pattern => pattern.test(value));
         });

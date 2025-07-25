@@ -1,19 +1,14 @@
-// backend/api/middleware/cors.js
 const cors = require('cors');
-require('dotenv').config({ path: '../.env' }); // Ensure .env is loaded
-
+require('dotenv').config({ path: '../.env' }); 
 const corsMiddleware = cors({
     origin: function (origin, callback) {
-        // Allow requests with no origin (like mobile apps or curl requests)
         if (!origin) return callback(null, true);
 
-        // Define allowed origins dynamically based on environment
         const allowedOrigins = process.env.NODE_ENV === 'production'
             ? [
-                process.env.CORS_ORIGIN || 'https://your-vercel-domain.vercel.app', // Primary production domain
+                process.env.CORS_ORIGIN || 'https://your-vercel-domain.vercel.app', 
                 'https://lingaplink.vercel.app',
                 'https://carmen-para-sight.vercel.app',
-                // Add any other production domains here
             ]
             : [
                 'http://localhost:5173', // Frontend dev server (Vite/React default)

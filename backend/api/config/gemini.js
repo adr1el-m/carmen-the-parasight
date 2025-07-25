@@ -1,6 +1,5 @@
-// backend/api/config/gemini.js
 const { GoogleGenerativeAI } = require('@google/generative-ai');
-require('dotenv').config({ path: '../.env' }); // Adjust path as necessary
+require('dotenv').config({ path: '../.env' }); 
 
 let genAI;
 let model;

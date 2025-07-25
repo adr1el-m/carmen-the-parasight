@@ -1,11 +1,6 @@
-// backend/api/utils/errorSanitizer.js
-
 const sanitizeError = (error, context = {}) => {
-    // In a production environment, you would log the full error stack to a secure logging service (e.g., Cloud Logging, ELK Stack)
-    // and only expose a generic error message to the client.
     console.error(`[Sanitized Error] Context: ${context.context || 'unknown'}, Message: ${error.message}, Stack: ${error.stack}`);
 
-    // Determine if we should show more details (e.g., in development)
     const isDev = process.env.NODE_ENV === 'development';
     const errorMessage = isDev ? error.message : 'An internal server error occurred. Please try again later.';
     const errorDetails = isDev ? { stack: error.stack, code: error.code } : undefined;

@@ -1,5 +1,5 @@
 <div align="center">
-  <img src="src/assets/img/logo.png" alt="logo" width="400"/>
+  <img src="frontend/src/assets/img/logo.png" alt="logo" width="400"/>
 </div>
 <h1 align="center">LingapLink: Bridging Patients and Healthcare Providers</h1>
 
@@ -38,7 +38,7 @@ We welcome contributions to help us achieve these goals!
 ## 📸 Screenshots
 
 <p align="center">
-  <img src="src/assets/img/landingPage.jpeg" alt="LingapLink Landing Page" />
+  <img src="frontend/src/assets/img/landingPage.jpeg" alt="LingapLink Landing Page" />
 </p>
 
 ### Patient Portal Screenshots
@@ -49,31 +49,31 @@ Here's a glimpse into the patient portal, showcasing the key features available 
   <tr>
     <td align="center" valign="top">
       <strong>Patient Dashboard</strong><br><br>
-      <img src="src/assets/img/patientPortal/patientDasboard.png" alt="Patient Dashboard" width="400"/>
+      <img src="frontend/src/assets/img/patientPortal/patientDasboard.png" alt="Patient Dashboard" width="400"/>
     </td>
     <td align="center" valign="top">
       <strong>Appointment Calendar</strong><br><br>
-      <img src="src/assets/img/patientPortal/patientCalendar.png" alt="Patient Calendar" width="400"/>
+      <img src="frontend/src/assets/img/patientPortal/patientCalendar.png" alt="Patient Calendar" width="400"/>
     </td>
   </tr>
   <tr>
     <td align="center" valign="top">
       <strong>Profile - General Information</strong><br><br>
-      <img src="src/assets/img/patientPortal/patientProfileGeneral.png" alt="Patient Profile - General" width="400"/>
+      <img src="frontend/src/assets/img/patientPortal/patientProfileGeneral.png" alt="Patient Profile - General" width="400"/>
     </td>
     <td align="center" valign="top">
       <strong>Profile - Consultation History</strong><br><br>
-      <img src="src/assets/img/patientPortal/patientProfileConsulationHistory.png" alt="Patient Profile - Consultation History" width="400"/>
+      <img src="frontend/src/assets/img/patientPortal/patientProfileConsulationHistory.png" alt="Patient Profile - Consultation History" width="400"/>
     </td>
   </tr>
     <tr>
     <td align="center" valign="top">
       <strong>Profile - Patient Documents</strong><br><br>
-      <img src="src/assets/img/patientPortal/patientProfilePatientDocuments.png" alt="Patient Profile - Documents" width="400"/>
+      <img src="frontend/src/assets/img/patientPortal/patientProfilePatientDocuments.png" alt="Patient Profile - Documents" width="400"/>
     </td>
     <td align="center" valign="top">
       <strong>Help & Support</strong><br><br>
-      <img src="src/assets/img/patientPortal/patientHelp.png" alt="Help & Support" width="400"/>
+      <img src="frontend/src/assets/img/patientPortal/patientHelp.png" alt="Help & Support" width="400"/>
     </td>
   </tr>
 </table>
@@ -86,31 +86,31 @@ Here's a look at the provider dashboard, designed for healthcare professionals t
   <tr>
     <td align="center" valign="top">
       <strong>Provider Dashboard</strong><br><br>
-      <img src="src/assets/img/hospitalDashboard/hospitalDashboard.png" alt="Provider Dashboard" width="400"/>
+      <img src="frontend/src/assets/img/hospitalDashboard/hospitalDashboard.png" alt="Provider Dashboard" width="400"/>
     </td>
     <td align="center" valign="top">
       <strong>Patient Records</strong><br><br>
-      <img src="src/assets/img/hospitalDashboard/hospitalPatientRecords.png" alt="Patient Records" width="400"/>
+      <img src="frontend/src/assets/img/hospitalDashboard/hospitalPatientRecords.png" alt="Patient Records" width="400"/>
     </td>
   </tr>
   <tr>
     <td align="center" valign="top">
       <strong>My Availability</strong><br><br>
-      <img src="src/assets/img/hospitalDashboard/hospitalMyAvailability.png" alt="My Availability" width="400"/>
+      <img src="frontend/src/assets/img/hospitalDashboard/hospitalMyAvailability.png" alt="My Availability" width="400"/>
     </td>
     <td align="center" valign="top">
       <strong>My Consultations</strong><br><br>
-      <img src="src/assets/img/hospitalDashboard/hospitalMyConsults.png" alt="My Consultations" width="400"/>
+      <img src="frontend/src/assets/img/hospitalDashboard/hospitalMyConsults.png" alt="My Consultations" width="400"/>
     </td>
   </tr>
     <tr>
     <td align="center" valign="top">
       <strong>Online Consultations</strong><br><br>
-      <img src="src/assets/img/hospitalDashboard/hospitalOnlineConsults.png" alt="Online Consultations" width="400"/>
+      <img src="frontend/src/assets/img/hospitalDashboard/hospitalOnlineConsults.png" alt="Online Consultations" width="400"/>
     </td>
     <td align="center" valign="top">
       <strong>Help & Support</strong><br><br>
-      <img src="src/assets/img/hospitalDashboard/hospitalHelp.png" alt="Help & Support" width="400"/>
+      <img src="frontend/src/assets/img/hospitalDashboard/hospitalHelp.png" alt="Help & Support" width="400"/>
     </td>
   </tr>
 </table>
@@ -126,7 +126,7 @@ Explore our high-fidelity prototype to see the user interface and experience our
 </p>
 
 <p align="center">
-  <img src="src/assets/img/figma.png" alt="Figma Prototype Snapshot" />
+  <img src="frontend/src/assets/img/figma.png" alt="Figma Prototype Snapshot" />
 </p>
 
 ## 🏗️ System Architecture
@@ -134,7 +134,7 @@ Explore our high-fidelity prototype to see the user interface and experience our
 Our platform is built on a robust and scalable architecture to ensure reliability and performance.
 
 <p align="center">
-  <img src="src/assets/img/sysArch.png" alt="LingapLink System Architecture Diagram" />
+  <img src="frontend/src/assets/img/sysArch.png" alt="LingapLink System Architecture Diagram" />
 </p>
 
 ## 🛠️ Tech Stack
@@ -299,21 +299,21 @@ Don't forget to give the project a star! Thanks again!
 <table align="center" border="0" cellpadding="0" cellspacing="0" width="100%">
   <tr>
     <td align="center" width="33.33%">
-      <img src="src/assets/img/Threshia.png" alt="Threshia Andre Saut" style="border-radius: 50%; width: 120px; height: 120px;"><br>
+      <img src="frontend/src/assets/img/Threshia.png" alt="Threshia Andre Saut" style="border-radius: 50%; width: 120px; height: 120px;"><br>
       <strong>Threshia Andre Saut</strong><br>
       <a href="https://www.linkedin.com/in/threshia-saut-b74055316/">
         <img src="https://img.shields.io/badge/LinkedIn-0077B5?style=for-the-badge&logo=linkedin&logoColor=white" alt="LinkedIn">
       </a>
     </td>
     <td align="center" width="33.33%">
-      <img src="src/assets/img/Francheska.png" alt="Franchezca Natividad Z. Banayad" style="border-radius: 50%; width: 120px; height: 120px;"><br>
+      <img src="frontend/src/assets/img/Francheska.png" alt="Franchezca Natividad Z. Banayad" style="border-radius: 50%; width: 120px; height: 120px;"><br>
       <strong>Franchezca Natividad Z. Banayad</strong><br>
       <a href="https://www.linkedin.com/in/franchezca-natividad-banayad-25b278261">
         <img src="https://img.shields.io/badge/LinkedIn-0077B5?style=for-the-badge&logo=linkedin&logoColor=white" alt="LinkedIn">
       </a>
     </td>
     <td align="center" width="33.33%">
-      <img src="src/assets/img/juanito.png" alt="Juanito Masam Ramos II" style="border-radius: 50%; width: 120px; height: 120px;"><br>
+      <img src="frontend/src/assets/img/juanito.png" alt="Juanito Masam Ramos II" style="border-radius: 50%; width: 120px; height: 120px;"><br>
       <strong>Juanito Masam Ramos II</strong><br>
       <a href="https://www.linkedin.com/in/juanito-ramos/">
         <img src="https://img.shields.io/badge/LinkedIn-0077B5?style=for-the-badge&logo=linkedin&logoColor=white" alt="LinkedIn">
@@ -324,14 +324,14 @@ Don't forget to give the project a star! Thanks again!
 <table align="center" border="0" cellpadding="0" cellspacing="0" width="66.66%">
   <tr>
     <td align="center" width="50%" style="padding-top: 20px;">
-      <img src="src/assets/img/max.png" alt="Maxxinne Lorin M. Fernandez" style="border-radius: 50%; width: 120px; height: 120px;"><br>
+      <img src="frontend/src/assets/img/max.png" alt="Maxxinne Lorin M. Fernandez" style="border-radius: 50%; width: 120px; height: 120px;"><br>
       <strong>Maxxinne Lorin M. Fernandez</strong><br>
       <a href="https://www.linkedin.com/in/maxxinne-fernandez-364776336/">
         <img src="https://img.shields.io/badge/LinkedIn-0077B5?style=for-the-badge&logo=linkedin&logoColor=white" alt="LinkedIn">
       </a>
     </td>
     <td align="center" width="50%" style="padding-top: 20px;">
-      <img src="src/assets/img/Adriel.png" alt="Adriel Magsipoc Magalona" style="border-radius: 50%; width: 120px; height: 120px;"><br>
+      <img src="frontend/src/assets/img/Adriel.png" alt="Adriel Magsipoc Magalona" style="border-radius: 50%; width: 120px; height: 120px;"><br>
       <strong>Adriel Magsipoc Magalona</strong><br>
       <a href="https://www.linkedin.com/in/adriel-magalona/">
         <img src="https://img.shields.io/badge/LinkedIn-0077B5?style=for-the-badge&logo=linkedin&logoColor=white" alt="LinkedIn">

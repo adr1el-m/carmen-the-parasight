@@ -1,11 +1,10 @@
-// backend/api/routes/aiConsultationRoutes.js
 const express = require('express');
 const router = express.Router();
 const { body } = require('express-validator');
 const { authenticateUser, requireRole } = require('../middleware/auth');
 const { strictLimiter } = require('../middleware/rateLimiters');
 const { validateInput } = require('../middleware/validation');
-const { model: geminiModel } = require('../config/gemini'); // Renamed to avoid conflict
+const { model: geminiModel } = require('../config/gemini'); 
 const { sanitizeString } = require('../utils/inputSanitization');
 const errorSanitizer = require('../utils/errorSanitizer');
 
@@ -116,7 +115,7 @@ router.post('/consultation',
             res.status(500).json({
                 error: 'Failed to generate AI consultation. Please try again later.',
                 ...sanitized,
-                details: process.env.NODE_ENV === 'development' ? error.message : undefined // Only expose full error in dev
+                details: process.env.NODE_ENV === 'development' ? error.message : undefined 
             });
         }
     }

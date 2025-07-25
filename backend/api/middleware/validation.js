@@ -1,4 +1,3 @@
-// backend/api/middleware/validation.js
 const { validationResult } = require('express-validator');
 const errorSanitizer = require('../utils/errorSanitizer');
 

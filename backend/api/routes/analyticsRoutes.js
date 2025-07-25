@@ -1,4 +1,3 @@
-// backend/api/routes/analyticsRoutes.js
 const express = require('express');
 const router = express.Router();
 const { query } = require('express-validator');
@@ -6,7 +5,7 @@ const { authenticateUser, requireRole } = require('../middleware/auth');
 const { mediumLimiter } = require('../middleware/rateLimiters');
 const { validateInput } = require('../middleware/validation');
 const errorSanitizer = require('../utils/errorSanitizer');
-// const { getFirestoreDb } = require('../config/firebase'); // Uncomment if using Firebase
+// const { getFirestoreDb } = require('../config/firebase'); 
 
 /**
  * @route GET /api/analytics/wait-times

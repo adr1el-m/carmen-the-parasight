@@ -1,4 +1,3 @@
-// backend/api/app.js
 const express = require('express');
 const corsMiddleware = require('./middleware/cors');
 const { applyHelmetMiddleware, applyCustomSecurityHeaders, applyRequestValidation } = require('./middleware/security');
@@ -8,13 +7,11 @@ const { applyBodyParser } = require('./middleware/bodyParser');
 const { applyMongoSanitization } = require('./middleware/mongoSanitization');
 const { applyHttpsRedirect } = require('./middleware/httpsRedirect');
 const cookieParser = require('cookie-parser');
-const csrfProtection = require('./utils/csrfProtection'); // Your CSRF utility
-const errorSanitizer = require('./utils/errorSanitizer'); // Your error sanitizer utility
+const csrfProtection = require('./utils/csrfProtection'); 
+const errorSanitizer = require('./utils/errorSanitizer'); 
 
-// Ensure environment variables are loaded for configuration files
 require('dotenv').config({ path: './.env' }); // Adjusted path to backend/.env
 
-// Import Route Modules
 const authRoutes = require('./routes/authRoutes');
 const dashboardRoutes = require('./routes/dashboardRoutes');
 const orOptimizationRoutes = require('./routes/orOptimizationRoutes');

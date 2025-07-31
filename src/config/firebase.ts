@@ -17,7 +17,7 @@ try {
   console.log(`📁 Project: ${firebaseConfig.projectId}`);
   
 } catch (error) {
-  console.error('❌ Firebase configuration error:', error.message);
+  console.error('❌ Firebase configuration error:', error instanceof Error ? error.message : String(error));
   
   if (configValidator.isProduction) {
     throw new Error('Firebase configuration is required in production. Please check your environment variables.');

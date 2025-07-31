@@ -512,28 +512,147 @@ export async function getPatientDocuments(userId) {
 // ============= APPOINTMENT MANAGEMENT =============
 
 /**
- * Add appointment to patient records
+ * Add appointment to patient records and notify facility
  */
 export async function addAppointment(userId, appointment) {
     try {
         const appointmentData = {
             id: `appointment_${Date.now()}`,
+            patientId: userId,
+            patientName: appointment.patientName || '',
+            patientEmail: appointment.patientEmail || '',
             date: appointment.date || '',
             time: appointment.time || '',
             doctor: appointment.doctor || '',
             type: appointment.type || '',
             status: appointment.status || 'scheduled',
             notes: appointment.notes || '',
-            createdAt: serverTimestamp()
+            facilityId: appointment.facilityId || '',
+            facilityName: appointment.facilityName || '',
+            createdAt: new Date().toISOString()
         };
         
-        const updates = {
-            'activity.appointments': arrayUnion(appointmentData),
-            updatedAt: serverTimestamp()
-        };
+        // Check if patient document exists, create it if it doesn't
+        const patientDocRef = doc(db, 'patients', userId);
+        const patientDocSnap = await getDoc(patientDocRef);
         
-        await updateDoc(doc(db, 'patients', userId), updates);
-        console.log('Appointment added successfully');
+        if (!patientDocSnap.exists()) {
+            console.log('Patient document does not exist, creating it...');
+            // Create a basic patient document
+            const basicPatientData = {
+                uid: userId,
+                email: appointment.patientEmail || '',
+                role: 'patient',
+                personalInfo: {
+                    fullName: appointment.patientName || 'Patient',
+                    firstName: '',
+                    lastName: '',
+                    dateOfBirth: '',
+                    age: null,
+                    gender: '',
+                    phone: '',
+                    address: '',
+                    bio: 'Welcome to LingapLink!'
+                },
+                profileComplete: false,
+                activity: {
+                    appointments: [appointmentData]
+                },
+                createdAt: serverTimestamp(),
+                lastLoginAt: serverTimestamp(),
+                updatedAt: serverTimestamp(),
+                isActive: true,
+                emailVerified: false,
+                authProvider: 'email'
+            };
+            
+            await setDoc(patientDocRef, basicPatientData);
+            console.log('Patient document created successfully');
+        } else {
+            // Patient document exists, update it with new appointment
+            const patientUpdates = {
+                'activity.appointments': arrayUnion(appointmentData),
+                updatedAt: serverTimestamp()
+            };
+            
+            await updateDoc(patientDocRef, patientUpdates);
+        }
+        
+        // Add to facility's appointments (if facilityId is provided)
+        if (appointment.facilityId) {
+            const facilityAppointmentData = {
+                ...appointmentData,
+                patientId: userId,
+                patientName: appointment.patientName || '',
+                patientEmail: appointment.patientEmail || ''
+            };
+            
+            // Check if facility document exists, create it if it doesn't
+            const facilityDocRef = doc(db, 'facilities', appointment.facilityId);
+            const facilityDocSnap = await getDoc(facilityDocRef);
+            
+            if (!facilityDocSnap.exists()) {
+                console.log('Facility document does not exist, creating it...');
+                // Create a basic facility document
+                const basicFacilityData = {
+                    uid: appointment.facilityId,
+                    name: appointment.facilityName || 'Healthcare Facility',
+                    type: 'Medical Clinic',
+                    email: '',
+                    phone: '',
+                    address: '',
+                    city: '',
+                    province: '',
+                    postalCode: '',
+                    country: 'Philippines',
+                    website: '',
+                    specialties: ['General Medicine'],
+                    services: ['Consultation'],
+                    operatingHours: {
+                        monday: { open: '08:00', close: '18:00', closed: false },
+                        tuesday: { open: '08:00', close: '18:00', closed: false },
+                        wednesday: { open: '08:00', close: '18:00', closed: false },
+                        thursday: { open: '08:00', close: '18:00', closed: false },
+                        friday: { open: '08:00', close: '18:00', closed: false },
+                        saturday: { open: '08:00', close: '12:00', closed: false },
+                        sunday: { open: '08:00', close: '12:00', closed: true }
+                    },
+                    staff: {
+                        total: 10,
+                        doctors: 3,
+                        nurses: 5,
+                        supportStaff: 2
+                    },
+                    capacity: {
+                        beds: 0,
+                        consultationRooms: 2
+                    },
+                    languages: ['English', 'Filipino'],
+                    accreditation: ['Department of Health'],
+                    insuranceAccepted: ['PhilHealth'],
+                    licenseNumber: 'CLINIC-2024-001',
+                    description: 'A healthcare facility providing medical services.',
+                    isActive: true,
+                    isSearchable: true,
+                    appointments: [facilityAppointmentData],
+                    createdAt: serverTimestamp(),
+                    updatedAt: serverTimestamp()
+                };
+                
+                await setDoc(facilityDocRef, basicFacilityData);
+                console.log('Facility document created successfully');
+            } else {
+                // Facility document exists, update it with new appointment
+                const facilityUpdates = {
+                    'appointments': arrayUnion(facilityAppointmentData),
+                    updatedAt: serverTimestamp()
+                };
+                
+                await updateDoc(facilityDocRef, facilityUpdates);
+            }
+        }
+        
+        console.log('Appointment added successfully to both patient and facility');
         return appointmentData;
     } catch (error) {
         console.error('Error adding appointment:', error);
@@ -542,22 +661,61 @@ export async function addAppointment(userId, appointment) {
 }
 
 /**
- * Update appointment status
+ * Get facility appointments
  */
-export async function updateAppointmentStatus(userId, appointmentId, status) {
+export async function getFacilityAppointments(facilityId) {
     try {
-        const patientData = await getPatientData(userId);
-        const appointments = patientData?.activity?.appointments || [];
-        const updatedAppointments = appointments.map(apt => 
-            apt.id === appointmentId ? { ...apt, status, updatedAt: new Date().toISOString() } : apt
-        );
+        const facilityDoc = await getDoc(doc(db, 'facilities', facilityId));
+        if (facilityDoc.exists()) {
+            return facilityDoc.data().appointments || [];
+        } else {
+            return [];
+        }
+    } catch (error) {
+        console.error('Error fetching facility appointments:', error);
+        throw error;
+    }
+}
+
+/**
+ * Update appointment status (for both patient and facility)
+ */
+export async function updateAppointmentStatus(appointmentId, status, patientId, facilityId) {
+    try {
+        // Update in patient's appointments
+        if (patientId) {
+            const patientData = await getPatientData(patientId);
+            const appointments = patientData?.activity?.appointments || [];
+            const updatedAppointments = appointments.map(apt => 
+                apt.id === appointmentId ? { ...apt, status, updatedAt: new Date().toISOString() } : apt
+            );
+            
+            const patientUpdates = {
+                'activity.appointments': updatedAppointments,
+                updatedAt: serverTimestamp()
+            };
+            
+            await updateDoc(doc(db, 'patients', patientId), patientUpdates);
+        }
         
-        const updates = {
-            'activity.appointments': updatedAppointments,
-            updatedAt: serverTimestamp()
-        };
+        // Update in facility's appointments
+        if (facilityId) {
+            const facilityDoc = await getDoc(doc(db, 'facilities', facilityId));
+            if (facilityDoc.exists()) {
+                const appointments = facilityDoc.data().appointments || [];
+                const updatedAppointments = appointments.map(apt => 
+                    apt.id === appointmentId ? { ...apt, status, updatedAt: new Date().toISOString() } : apt
+                );
+                
+                const facilityUpdates = {
+                    'appointments': updatedAppointments,
+                    updatedAt: serverTimestamp()
+                };
+                
+                await updateDoc(doc(db, 'facilities', facilityId), facilityUpdates);
+            }
+        }
         
-        await updateDoc(doc(db, 'patients', userId), updates);
         console.log('Appointment status updated successfully');
         return true;
     } catch (error) {
@@ -565,6 +723,8 @@ export async function updateAppointmentStatus(userId, appointmentId, status) {
         throw error;
     }
 }
+
+
 
 /**
  * Get patient appointments
@@ -590,6 +750,23 @@ export function listenToPatientData(userId, callback) {
             callback(doc.data());
         } else {
             callback(null);
+        }
+    });
+    
+    return unsubscribe;
+}
+
+/**
+ * Listen to facility appointments changes
+ */
+export function listenToFacilityAppointments(facilityId, callback) {
+    const unsubscribe = onSnapshot(doc(db, 'facilities', facilityId), (doc) => {
+        if (doc.exists()) {
+            const data = doc.data();
+            const appointments = data.appointments || [];
+            callback(appointments);
+        } else {
+            callback([]);
         }
     });
     

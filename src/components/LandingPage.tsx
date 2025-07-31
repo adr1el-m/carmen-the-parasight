@@ -90,7 +90,7 @@ const LandingPage: React.FC = () => {
     }
     
     navigator.geolocation.getCurrentPosition(
-      (position) => {
+      () => {
         // Simulate reverse geocoding (replace with actual geocoding service)
         setTimeout(() => {
           const mockLocation = 'Makati City, Metro Manila'
@@ -311,7 +311,6 @@ const LandingPage: React.FC = () => {
                   <img src="/src/assets/img/Dr. Willie Ong.jpg" 
                        alt="Photo of Dr. Willie Ong" 
                        loading="eager"
-                       fetchPriority="high"
                        width="400" 
                        height="500" 
                        decoding="async" />
@@ -567,7 +566,7 @@ const LandingPage: React.FC = () => {
             </div>
                           <div className="cta-action">
                 <button 
-                  onClick={() => navigate('/business-registration')}
+                  onClick={() => navigate('/partner-signup')}
                   className="partner-btn"
                   aria-label="Register your healthcare practice with LingapLink"
                 >
@@ -595,7 +594,7 @@ const LandingPage: React.FC = () => {
               </div>
               <div className="cta-actions-section">
                                     <button 
-                      onClick={() => navigate('/business-registration')}
+                      onClick={() => navigate('/partner-signup')}
                       className="cta-primary-btn"
                       aria-label="Register your healthcare facility"
                     >
@@ -603,7 +602,7 @@ const LandingPage: React.FC = () => {
                       Register Your Practice
                     </button>
                     <button 
-                      onClick={() => navigate('/business-sign-in')}
+                      onClick={() => navigate('/partner-signin')}
                       className="cta-secondary-btn"
                       aria-label="Sign in to provider portal"
                     >
@@ -664,12 +663,12 @@ const LandingPage: React.FC = () => {
                 </h3>
                 <ul className="nav-list">
                   <li className="featured">
-                    <button onClick={() => navigate('/business-registration')}>
+                    <button onClick={() => navigate('/partner-signup')}>
                       <i className="fas fa-star" aria-hidden="true"></i>
                       Join LingapLink
                     </button>
                   </li>
-                  <li><button onClick={() => navigate('/business-sign-in')}>Provider Portal</button></li>
+                  <li><button onClick={() => navigate('/partner-signin')}>Provider Portal</button></li>
                   <li><button onClick={() => navigate('/business-portal')}>Practice Tools</button></li>
                   <li><button onClick={() => navigate('/business-portal')}>Patient Management</button></li>
                   <li><button onClick={() => navigate('/business-portal')}>Analytics</button></li>

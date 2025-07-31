@@ -18,10 +18,7 @@ interface ValidationErrors {
   general?: string
 }
 
-interface AuthError {
-  code: string
-  message: string
-}
+// Removed unused AuthError interface
 
 const PatientSignIn: React.FC = React.memo(() => {
   const navigate = useNavigate()
@@ -37,7 +34,7 @@ const PatientSignIn: React.FC = React.memo(() => {
   const [isGoogleSignInInProgress, setIsGoogleSignInInProgress] = useState(false)
   const [validationErrors, setValidationErrors] = useState<ValidationErrors>({})
   const [isFormValid, setIsFormValid] = useState(false)
-  const [lastActivity, setLastActivity] = useState<Date>(new Date())
+  // Removed unused lastActivity state
 
   const emailInputRef = useRef<HTMLInputElement>(null)
   const passwordInputRef = useRef<HTMLInputElement>(null)

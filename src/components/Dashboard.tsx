@@ -81,8 +81,18 @@ const Dashboard: React.FC = React.memo(() => {
   })
   const [consultationDuration, setConsultationDuration] = useState('30')
   const [consultationFees, setConsultationFees] = useState('500')
-  const [lastActivity, setLastActivity] = useState<Date>(new Date())
+  // Removed unused lastActivity state
   const [isRefreshing, setIsRefreshing] = useState(false)
+  const [facilityAppointments, setFacilityAppointments] = useState<any[]>([])
+  const [isLoadingAppointments, setIsLoadingAppointments] = useState(false)
+  const [appointmentListener, setAppointmentListener] = useState<(() => void) | null>(null)
+  const [showAppointmentModal, setShowAppointmentModal] = useState(false)
+  const [selectedAppointment, setSelectedAppointment] = useState<any>(null)
+  const [selectedPatientData, setSelectedPatientData] = useState<any>(null)
+  const [isLoadingPatientData, setIsLoadingPatientData] = useState(false)
+  const [appointmentModalTab, setAppointmentModalTab] = useState<'details' | 'personal' | 'conditions' | 'history' | 'documents'>('details')
+  const [facilityData, setFacilityData] = useState<any>(null)
+  const [isLoadingFacilityData, setIsLoadingFacilityData] = useState(true)
   
   const sidebarRef = useRef<HTMLElement>(null)
   const sidebarOverlayRef = useRef<HTMLDivElement>(null)
@@ -202,9 +212,9 @@ const Dashboard: React.FC = React.memo(() => {
   const dashboardStats: DashboardStats = useMemo(() => ({
     totalPatients: 2547,
     staffMembers: 45,
-    todayAppointments: 128,
-    virtualConsultations: 34
-  }), [])
+    todayAppointments: facilityAppointments.length,
+    virtualConsultations: facilityAppointments.filter(apt => apt.type === 'virtual' || apt.type === 'consultation').length
+  }), [facilityAppointments])
 
   // Quick actions configuration
   const quickActions: QuickAction[] = useMemo(() => [
@@ -240,26 +250,98 @@ const Dashboard: React.FC = React.memo(() => {
 
   useEffect(() => {
     // Check authentication
-    const unsubscribe = auth.onAuthStateChanged((user) => {
+    const unsubscribe = auth.onAuthStateChanged(async (user) => {
       if (user) {
         setUser(user)
         setIsLoading(false)
+        
+        // Load facility data
+        await loadFacilityData(user.uid)
+        
+        // Load facility appointments
+        loadFacilityAppointments('g9dIxoSXbLM0Q95uUVNsLDddPJA2')
       } else {
-        navigate('/business-sign-in')
+        navigate('/')
       }
     })
 
-    return () => unsubscribe()
+    return () => {
+      unsubscribe()
+    }
   }, [navigate])
 
-  // Auto-refresh user activity
-  useEffect(() => {
-    const interval = setInterval(() => {
-      setLastActivity(new Date())
-    }, 60000) // Update every minute
+  // Commented out real-time listener for now to prevent rapid refreshes
+  // useEffect(() => {
+  //   if (!user) return
+  //   // Real-time listener setup would go here
+  // }, [user])
 
-    return () => clearInterval(interval)
+  const loadFacilityData = useCallback(async (userId: string) => {
+    console.log('🔍 Loading facility data for userId:', userId)
+    setIsLoadingFacilityData(true)
+    try {
+      // Import the function dynamically to avoid TypeScript issues
+      const { getPatientData } = await import('../services/firestoredb.js')
+      const data = await getPatientData(userId)
+      console.log('📋 Found facility data:', data)
+      setFacilityData(data)
+    } catch (error) {
+      console.error('❌ Error loading facility data:', error)
+      setFacilityData(null)
+    } finally {
+      setIsLoadingFacilityData(false)
+    }
   }, [])
+
+  const loadFacilityAppointments = useCallback(async (facilityId: string) => {
+    console.log('🔍 Loading facility appointments for facilityId:', facilityId)
+    setIsLoadingAppointments(true)
+    try {
+      // Import the function dynamically to avoid TypeScript issues
+      const { getFacilityAppointments } = await import('../services/firestoredb.js')
+      const appointments = await getFacilityAppointments(facilityId)
+      console.log('📋 Found appointments:', appointments)
+      setFacilityAppointments(appointments)
+    } catch (error) {
+      console.error('❌ Error loading facility appointments:', error)
+      // If no appointments found or error, set empty array
+      setFacilityAppointments([])
+    } finally {
+      setIsLoadingAppointments(false)
+    }
+  }, [])
+
+  const openAppointmentModal = useCallback(async (appointment: any) => {
+    console.log('🔍 Opening appointment modal for:', appointment)
+    setSelectedAppointment(appointment)
+    setShowAppointmentModal(true)
+    setAppointmentModalTab('details')
+    
+    // Load patient data
+    if (appointment.patientId) {
+      setIsLoadingPatientData(true)
+      try {
+        const { getPatientData } = await import('../services/firestoredb.js')
+        const patientData = await getPatientData(appointment.patientId)
+        console.log('📋 Patient data loaded:', patientData)
+        setSelectedPatientData(patientData)
+      } catch (error) {
+        console.error('❌ Error loading patient data:', error)
+        setSelectedPatientData(null)
+      } finally {
+        setIsLoadingPatientData(false)
+      }
+    }
+  }, [])
+
+  const closeAppointmentModal = useCallback(() => {
+    setShowAppointmentModal(false)
+    setSelectedAppointment(null)
+    setSelectedPatientData(null)
+    setAppointmentModalTab('details')
+  }, [])
+
+  // Removed unused auto-refresh effect
 
   const handleLogout = useCallback(async () => {
     try {
@@ -308,7 +390,7 @@ const Dashboard: React.FC = React.memo(() => {
         // In production, this would navigate to reports section
         break
       default:
-        showNotification('Action not implemented yet', 'warning')
+        showNotification('Action not implemented yet', 'info')
         break
     }
   }, [])
@@ -330,15 +412,25 @@ const Dashboard: React.FC = React.memo(() => {
   }, [])
 
   const getUserInitials = useCallback(() => {
-    if (!user?.displayName) return 'MMC'
+    if (!user?.displayName) return 'HF'
     return user.displayName.split(' ').map(n => n[0]).join('').toUpperCase()
   }, [user?.displayName])
 
   const getUserDisplayName = useCallback(() => {
-    return user?.displayName || 'Manila Medical Center'
-  }, [user?.displayName])
+    // Get the facility name from Firestore data
+    if (facilityData?.personalInfo?.fullName) {
+      return facilityData.personalInfo.fullName
+    }
+    if (facilityData?.facilityName) {
+      return facilityData.facilityName
+    }
+    if (user?.displayName) {
+      return user.displayName
+    }
+    return 'Healthcare Facility'
+  }, [facilityData, user?.displayName])
 
-  const showNotification = useCallback((message: string, type: string = 'info') => {
+  const showNotification = useCallback((message: string, type: 'success' | 'error' | 'info' = 'info') => {
     // Remove existing notifications
     const existingNotifications = document.querySelectorAll('.notification')
     existingNotifications.forEach(notification => notification.remove())
@@ -388,24 +480,46 @@ const Dashboard: React.FC = React.memo(() => {
   }, [])
 
   const getNotificationIcon = useCallback((type: string) => {
-    const icons: { [key: string]: string } = {
-      success: 'check-circle',
-      error: 'exclamation-circle',
-      warning: 'exclamation-triangle',
-      info: 'info-circle'
+    switch (type) {
+      case 'success': return 'check-circle'
+      case 'error': return 'exclamation-circle'
+      case 'warning': return 'exclamation-triangle'
+      case 'info': return 'info-circle'
+      default: return 'info-circle'
     }
-    return icons[type] || icons.info
   }, [])
 
   const getNotificationColor = useCallback((type: string) => {
-    const colors: { [key: string]: string } = {
-      success: '#22c55e',
-      error: '#ef4444',
-      warning: '#f59e0b',
-      info: '#3b82f6'
+    switch (type) {
+      case 'success': return '#22c55e'
+      case 'error': return '#ef4444'
+      case 'warning': return '#f59e0b'
+      case 'info': return '#3b82f6'
+      default: return '#3b82f6'
     }
-    return colors[type] || colors.info
   }, [])
+
+  // Removed unused handleNotificationToggle function
+
+  // Removed unused updateLastActivity function
+
+  const handleRefresh = useCallback(() => {
+    setIsRefreshing(true)
+    showNotification('Refreshing dashboard data...', 'info')
+    
+    // Simulate data refresh
+    setTimeout(() => {
+      setIsRefreshing(false)
+      showNotification('Dashboard refreshed successfully!', 'success')
+    }, 1500)
+  }, [showNotification])
+
+  useEffect(() => {
+    handleNavClick('dashboard')
+    handleRefresh()
+  }, [handleNavClick, handleRefresh])
+
+  // Removed unused handleAction function
 
   // Keyboard navigation support
   useEffect(() => {
@@ -429,20 +543,9 @@ const Dashboard: React.FC = React.memo(() => {
 
     document.addEventListener('keydown', handleKeyDown)
     return () => document.removeEventListener('keydown', handleKeyDown)
-  }, [closeSidebar, toggleSidebar])
+  }, [closeSidebar, toggleSidebar, handleNavClick, handleRefresh])
 
-  const handleRefresh = useCallback(() => {
-    setIsRefreshing(true)
-    showNotification('Refreshing dashboard data...', 'info')
-    
-    // Simulate data refresh
-    setTimeout(() => {
-      setIsRefreshing(false)
-      showNotification('Dashboard refreshed successfully!', 'success')
-    }, 1500)
-  }, [])
-
-  if (isLoading) {
+  if (isLoading || isLoadingFacilityData) {
     return (
       <div className="loading-overlay">
         <div className="loading-content">
@@ -590,8 +693,8 @@ const Dashboard: React.FC = React.memo(() => {
           {activeSection === 'dashboard' && (
             <section className="content-section active">
               <div className="section-header">
-                <h1>Hi, <span>{getUserDisplayName()}!</span></h1>
-                <p>Welcome to your healthcare facility management dashboard</p>
+                <h1>Welcome to <span>{getUserDisplayName()}</span></h1>
+                <p>Healthcare facility management dashboard</p>
               </div>
             
               <div className="stats-grid" ref={statsRef} role="region" aria-label="Dashboard statistics">
@@ -714,7 +817,6 @@ const Dashboard: React.FC = React.memo(() => {
             <section className="content-section active">
               <div className="section-header-flex">
                 <div className="section-title">
-                  <p className="greeting-text">Hi, Doctor!</p>
                   <h1 className="section-main-title">Patient Records</h1>
                 </div>
                 <div className="section-controls">
@@ -791,7 +893,6 @@ const Dashboard: React.FC = React.memo(() => {
             <section className="content-section active">
               <div className="section-header-flex">
                 <div className="section-title">
-                  <p className="greeting-text">Hi, Doctor!</p>
                   <h1 className="section-main-title">My Availability</h1>
                 </div>
               </div>
@@ -880,13 +981,24 @@ const Dashboard: React.FC = React.memo(() => {
             <section className="content-section active">
               <div className="section-header-flex">
                 <div className="section-title">
-                  <p className="greeting-text">Hi, Doctor!</p>
                   <h1 className="section-main-title">Appointments</h1>
+                  <p className="facility-info" style={{ fontSize: '14px', color: '#666', marginTop: '4px' }}>
+                    <i className="fas fa-hospital"></i> Carmen Medical Clinic
+                  </p>
                 </div>
                 <div className="section-controls">
                   <select className="date-dropdown">
                     <option>May'23</option>
                   </select>
+                  <button 
+                    className="btn btn-outline" 
+                    onClick={() => loadFacilityAppointments('g9dIxoSXbLM0Q95uUVNsLDddPJA2')}
+                    disabled={isLoadingAppointments}
+                    title="Refresh appointments list"
+                  >
+                    <i className={`fas ${isLoadingAppointments ? 'fa-spinner fa-spin' : 'fa-sync-alt'}`}></i>
+                    {isLoadingAppointments ? ' Refreshing...' : ' Refresh Appointments'}
+                  </button>
                   <button className="btn btn-primary">
                     <i className="fas fa-plus"></i> New Appointment
                   </button>
@@ -900,76 +1012,88 @@ const Dashboard: React.FC = React.memo(() => {
               </div>
               
               <div className="records-list">
-                {patientRecords.map((record) => (
-                  <div key={record.id} className="record-item-card">
-                    <div className="date-box">
-                      <span className="day">{record.day}</span>
-                      <span className="date-num">{record.date}</span>
+                {isLoadingAppointments ? (
+                  <div className="empty-state">
+                    <div className="empty-state-icon">
+                      <i className="fas fa-spinner fa-spin"></i>
                     </div>
-                    <div className="record-divider-v"></div>
-                    <div className="record-details-grid">
-                      <div className="detail-item-flex">
-                        <i className="far fa-clock"></i>
-                        <span>{record.time}</span>
+                    <h3>Loading Appointments...</h3>
+                    <p>Please wait while we fetch your appointments.</p>
+                  </div>
+                ) : facilityAppointments.length === 0 ? (
+                  <div className="empty-state">
+                    <div className="empty-state-icon">
+                      <i className="fas fa-calendar-times"></i>
+                    </div>
+                    <h3>No Appointments Found</h3>
+                    <p>You don't have any appointments scheduled yet.</p>
+                    <p style={{ fontSize: '14px', color: '#666', marginTop: '8px' }}>
+                      <i className="fas fa-info-circle"></i> 
+                      Patients can book appointments through the PatientPortal. Use the refresh button above to check for new appointments.
+                    </p>
+                    <button className="btn btn-primary">
+                      <i className="fas fa-plus"></i> Schedule New Appointment
+                    </button>
+                  </div>
+                ) : (
+                  facilityAppointments.map((appointment) => (
+                    <div key={appointment.id} className="record-item-card">
+                      <div className="date-box">
+                        <span className="day">{new Date(appointment.date).toLocaleDateString('en-US', { weekday: 'short' })}</span>
+                        <span className="date-num">{new Date(appointment.date).getDate()}</span>
                       </div>
-                      <div className="detail-item-flex">
-                        <span>Issue: {record.issue}</span>
-                      </div>
-                      <div className="detail-item-flex">
-                        <i className="far fa-user"></i>
-                        <span>{record.patientName}</span>
-                      </div>
-                      <div className="detail-item-flex">
-                        {record.hasDocuments ? (
-                          <a href="#">View Documents</a>
-                        ) : (
-                          <span>-</span>
+                      <div className="record-divider-v"></div>
+                      <div className="record-details-grid">
+                        <div className="detail-item-flex">
+                          <i className="far fa-clock"></i>
+                          <span>{appointment.time}</span>
+                        </div>
+                        <div className="detail-item-flex">
+                          <span>Type: {appointment.type}</span>
+                        </div>
+                        <div className="detail-item-flex">
+                          <i className="far fa-user"></i>
+                          <span>{appointment.patientName}</span>
+                        </div>
+                        <div className="detail-item-flex">
+                          <span>Status: {appointment.status}</span>
+                        </div>
+                        {appointment.doctor && (
+                          <div className="detail-item-flex">
+                            <i className="fas fa-user-md"></i>
+                            <span>{appointment.doctor}</span>
+                          </div>
+                        )}
+                        {appointment.notes && (
+                          <div className="detail-item-flex">
+                            <span>Notes: {appointment.notes}</span>
+                          </div>
                         )}
                       </div>
-                    </div>
-                    <div className="record-actions-dropdown">
-                      <select>
-                        <option>Edit</option>
-                      </select>
-                    </div>
-                  </div>
-                ))}
-
-                <h3 className="records-group-title">June'23</h3>
-                {patientRecords.slice(0, 3).map((record, index) => (
-                  <div key={`june-${index}`} className="record-item-card">
-                    <div className="date-box">
-                      <span className="day">{['Mon', 'Tue', 'Wed'][index]}</span>
-                      <span className="date-num">{['02', '03', '04'][index]}</span>
-                    </div>
-                    <div className="record-divider-v"></div>
-                    <div className="record-details-grid">
-                      <div className="detail-item-flex">
-                        <i className="far fa-clock"></i>
-                        <span>{record.time}</span>
-                      </div>
-                      <div className="detail-item-flex">
-                        <span>Issue: {record.issue}</span>
-                      </div>
-                      <div className="detail-item-flex">
-                        <i className="far fa-user"></i>
-                        <span>{record.patientName}</span>
-                      </div>
-                      <div className="detail-item-flex">
-                        {record.hasDocuments ? (
-                          <a href="#">View Documents</a>
-                        ) : (
-                          <span>-</span>
-                        )}
+                      <div className="record-actions-dropdown">
+                        <button 
+                          className="btn btn-outline btn-sm"
+                          onClick={() => openAppointmentModal(appointment)}
+                          style={{ marginBottom: '8px' }}
+                        >
+                          <i className="fas fa-eye"></i> View Details
+                        </button>
+                        <select 
+                          value={appointment.status}
+                          onChange={(e) => {
+                            // Here you could add status update functionality
+                            console.log('Status changed to:', e.target.value)
+                          }}
+                        >
+                          <option value="scheduled">Scheduled</option>
+                          <option value="confirmed">Confirmed</option>
+                          <option value="completed">Completed</option>
+                          <option value="cancelled">Cancelled</option>
+                        </select>
                       </div>
                     </div>
-                    <div className="record-actions-dropdown">
-                      <select>
-                        <option>Edit</option>
-                      </select>
-                    </div>
-                  </div>
-                ))}
+                  ))
+                )}
               </div>
             </section>
           )}
@@ -979,7 +1103,6 @@ const Dashboard: React.FC = React.memo(() => {
             <section className="content-section active">
               <div className="section-header-flex">
                 <div className="section-title">
-                  <p className="greeting-text">Hi, Doctor!</p>
                   <h1 className="section-main-title">Online Consult</h1>
                 </div>
               </div>
@@ -1221,6 +1344,297 @@ const Dashboard: React.FC = React.memo(() => {
           )}
         </div>
       </main>
+
+      {/* Appointment Details Modal */}
+      {showAppointmentModal && selectedAppointment && (
+        <div className="modal" style={{ display: 'block' }}>
+          <div className="modal-content" style={{ maxWidth: '800px', maxHeight: '90vh', overflow: 'hidden' }}>
+            <div className="modal-header">
+              <h3>Appointment Details</h3>
+              <button className="close-btn" onClick={closeAppointmentModal}>
+                <i className="fas fa-times"></i>
+              </button>
+            </div>
+            
+            <div className="modal-body" style={{ padding: '0', overflow: 'hidden' }}>
+              {/* Modal Tabs */}
+              <div className="modal-tabs">
+                <button 
+                  className={`modal-tab ${appointmentModalTab === 'details' ? 'active' : ''}`}
+                  onClick={() => setAppointmentModalTab('details')}
+                >
+                  <i className="fas fa-calendar-alt"></i> Appointment Details
+                </button>
+                <button 
+                  className={`modal-tab ${appointmentModalTab === 'personal' ? 'active' : ''}`}
+                  onClick={() => setAppointmentModalTab('personal')}
+                >
+                  <i className="fas fa-user"></i> Personal Info
+                </button>
+                <button 
+                  className={`modal-tab ${appointmentModalTab === 'conditions' ? 'active' : ''}`}
+                  onClick={() => setAppointmentModalTab('conditions')}
+                >
+                  <i className="fas fa-heartbeat"></i> Medical Conditions
+                </button>
+                <button 
+                  className={`modal-tab ${appointmentModalTab === 'history' ? 'active' : ''}`}
+                  onClick={() => setAppointmentModalTab('history')}
+                >
+                  <i className="fas fa-history"></i> Consultation History
+                </button>
+                <button 
+                  className={`modal-tab ${appointmentModalTab === 'documents' ? 'active' : ''}`}
+                  onClick={() => setAppointmentModalTab('documents')}
+                >
+                  <i className="fas fa-file-medical"></i> Documents
+                </button>
+              </div>
+
+              {/* Tab Content */}
+              <div className="modal-tab-content" style={{ padding: '20px', maxHeight: '60vh', overflow: 'auto' }}>
+                {/* Appointment Details Tab */}
+                {appointmentModalTab === 'details' && (
+                  <div className="tab-panel">
+                    <div className="appointment-details-grid">
+                      <div className="detail-section">
+                        <h4><i className="fas fa-calendar"></i> Appointment Information</h4>
+                        <div className="detail-item">
+                          <label>Date:</label>
+                          <span>{new Date(selectedAppointment.date).toLocaleDateString('en-US', { 
+                            weekday: 'long', 
+                            year: 'numeric', 
+                            month: 'long', 
+                            day: 'numeric' 
+                          })}</span>
+                        </div>
+                        <div className="detail-item">
+                          <label>Time:</label>
+                          <span>{selectedAppointment.time}</span>
+                        </div>
+                        <div className="detail-item">
+                          <label>Type:</label>
+                          <span className={`badge ${selectedAppointment.type}`}>{selectedAppointment.type}</span>
+                        </div>
+                        <div className="detail-item">
+                          <label>Status:</label>
+                          <span className={`badge ${selectedAppointment.status}`}>{selectedAppointment.status}</span>
+                        </div>
+                        {selectedAppointment.doctor && (
+                          <div className="detail-item">
+                            <label>Doctor:</label>
+                            <span>{selectedAppointment.doctor}</span>
+                          </div>
+                        )}
+                        {selectedAppointment.notes && (
+                          <div className="detail-item">
+                            <label>Notes:</label>
+                            <span>{selectedAppointment.notes}</span>
+                          </div>
+                        )}
+                      </div>
+
+                      <div className="detail-section">
+                        <h4><i className="fas fa-user"></i> Patient Information</h4>
+                        <div className="detail-item">
+                          <label>Name:</label>
+                          <span>{selectedAppointment.patientName}</span>
+                        </div>
+                        <div className="detail-item">
+                          <label>Email:</label>
+                          <span>{selectedAppointment.patientEmail}</span>
+                        </div>
+                        <div className="detail-item">
+                          <label>Facility:</label>
+                          <span>{selectedAppointment.facilityName}</span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* Personal Info Tab */}
+                {appointmentModalTab === 'personal' && (
+                  <div className="tab-panel">
+                    {isLoadingPatientData ? (
+                      <div className="loading-state">
+                        <i className="fas fa-spinner fa-spin"></i>
+                        <p>Loading patient information...</p>
+                      </div>
+                    ) : selectedPatientData ? (
+                      <div className="personal-info-grid">
+                        <div className="info-section">
+                          <h4><i className="fas fa-user-circle"></i> Basic Information</h4>
+                          <div className="info-item">
+                            <label>Full Name:</label>
+                            <span>{selectedPatientData.personalInfo?.fullName || 'Not provided'}</span>
+                          </div>
+                          <div className="info-item">
+                            <label>Date of Birth:</label>
+                            <span>{selectedPatientData.personalInfo?.dateOfBirth || 'Not provided'}</span>
+                          </div>
+                          <div className="info-item">
+                            <label>Age:</label>
+                            <span>{selectedPatientData.personalInfo?.age || 'Not provided'}</span>
+                          </div>
+                          <div className="info-item">
+                            <label>Gender:</label>
+                            <span>{selectedPatientData.personalInfo?.gender || 'Not provided'}</span>
+                          </div>
+                        </div>
+
+                        <div className="info-section">
+                          <h4><i className="fas fa-address-book"></i> Contact Information</h4>
+                          <div className="info-item">
+                            <label>Email:</label>
+                            <span>{selectedPatientData.email || 'Not provided'}</span>
+                          </div>
+                          <div className="info-item">
+                            <label>Phone:</label>
+                            <span>{selectedPatientData.personalInfo?.phone || 'Not provided'}</span>
+                          </div>
+                          <div className="info-item">
+                            <label>Address:</label>
+                            <span>{selectedPatientData.personalInfo?.address || 'Not provided'}</span>
+                          </div>
+                        </div>
+
+                        <div className="info-section">
+                          <h4><i className="fas fa-info-circle"></i> Additional Information</h4>
+                          <div className="info-item">
+                            <label>Bio:</label>
+                            <span>{selectedPatientData.personalInfo?.bio || 'Not provided'}</span>
+                          </div>
+                          <div className="info-item">
+                            <label>Profile Complete:</label>
+                            <span className={`badge ${selectedPatientData.profileComplete ? 'success' : 'warning'}`}>
+                              {selectedPatientData.profileComplete ? 'Complete' : 'Incomplete'}
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="empty-state">
+                        <i className="fas fa-user-slash"></i>
+                        <p>Patient information not available</p>
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {/* Medical Conditions Tab */}
+                {appointmentModalTab === 'conditions' && (
+                  <div className="tab-panel">
+                    {isLoadingPatientData ? (
+                      <div className="loading-state">
+                        <i className="fas fa-spinner fa-spin"></i>
+                        <p>Loading medical conditions...</p>
+                      </div>
+                    ) : selectedPatientData?.medicalInfo?.conditions ? (
+                      <div className="conditions-grid">
+                        {Object.entries(selectedPatientData.medicalInfo.conditions).map(([category, conditions]: [string, any]) => (
+                          <div key={category} className="condition-category">
+                            <h4><i className="fas fa-heartbeat"></i> {category}</h4>
+                            <div className="condition-tags">
+                              {conditions.map((condition: string, index: number) => (
+                                <span key={index} className="condition-tag">
+                                  {condition}
+                                </span>
+                              ))}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <div className="empty-state">
+                        <i className="fas fa-heartbeat"></i>
+                        <p>No medical conditions recorded</p>
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {/* Consultation History Tab */}
+                {appointmentModalTab === 'history' && (
+                  <div className="tab-panel">
+                    {isLoadingPatientData ? (
+                      <div className="loading-state">
+                        <i className="fas fa-spinner fa-spin"></i>
+                        <p>Loading consultation history...</p>
+                      </div>
+                    ) : selectedPatientData?.activity?.consultationHistory?.length > 0 ? (
+                      <div className="consultation-history">
+                        {selectedPatientData.activity.consultationHistory.map((consultation: any, index: number) => (
+                          <div key={index} className="consultation-item">
+                            <div className="consultation-header">
+                              <h5>{consultation.title || 'Consultation'}</h5>
+                              <span className={`badge ${consultation.status}`}>{consultation.status}</span>
+                            </div>
+                            <div className="consultation-details">
+                              <p><strong>Date:</strong> {consultation.date}</p>
+                              <p><strong>Doctor:</strong> {consultation.doctor || 'Not specified'}</p>
+                              <p><strong>Notes:</strong> {consultation.notes || 'No notes available'}</p>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <div className="empty-state">
+                        <i className="fas fa-history"></i>
+                        <p>No consultation history available</p>
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {/* Documents Tab */}
+                {appointmentModalTab === 'documents' && (
+                  <div className="tab-panel">
+                    {isLoadingPatientData ? (
+                      <div className="loading-state">
+                        <i className="fas fa-spinner fa-spin"></i>
+                        <p>Loading patient documents...</p>
+                      </div>
+                    ) : selectedPatientData?.activity?.documents?.length > 0 ? (
+                      <div className="documents-grid">
+                        {selectedPatientData.activity.documents.map((document: any, index: number) => (
+                          <div key={index} className="document-item">
+                            <div className="document-icon">
+                              <i className="fas fa-file-medical"></i>
+                            </div>
+                            <div className="document-info">
+                              <h5>{document.name}</h5>
+                              <p>{document.type}</p>
+                              <small>Uploaded: {document.uploadDate}</small>
+                            </div>
+                            <button className="btn btn-outline btn-sm">
+                              <i className="fas fa-download"></i> Download
+                            </button>
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <div className="empty-state">
+                        <i className="fas fa-file-medical"></i>
+                        <p>No documents available</p>
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+            </div>
+
+            <div className="modal-footer">
+              <button className="btn btn-secondary" onClick={closeAppointmentModal}>
+                Close
+              </button>
+              <button className="btn btn-primary">
+                <i className="fas fa-edit"></i> Edit Appointment
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 })

@@ -30,10 +30,7 @@ interface ValidationErrors {
   general?: string
 }
 
-interface AuthError {
-  code: string
-  message: string
-}
+// Removed unused AuthError interface
 
 const PatientSignUp: React.FC = React.memo(() => {
   const navigate = useNavigate()
@@ -49,7 +46,7 @@ const PatientSignUp: React.FC = React.memo(() => {
   const [isGoogleSignUpInProgress, setIsGoogleSignUpInProgress] = useState(false)
   const [validationErrors, setValidationErrors] = useState<ValidationErrors>({})
   const [isFormValid, setIsFormValid] = useState(false)
-  const [lastActivity, setLastActivity] = useState<Date>(new Date())
+  // Removed unused lastActivity state
   const [formProgress, setFormProgress] = useState(0)
 
   const emailInputRef = useRef<HTMLInputElement>(null)
@@ -58,7 +55,7 @@ const PatientSignUp: React.FC = React.memo(() => {
   const formRef = useRef<HTMLFormElement>(null)
 
   const emailRegex = useMemo(() => /^[^\s@]+@[^\s@]+\.[^\s@]+$/, [])
-  const phoneRegex = useMemo(() => /^[\d\s\-\(\)]+$/, [])
+  const phoneRegex = useMemo(() => /^[\d\s\-()]+$/, [])
   const nameRegex = useMemo(() => /^[a-zA-Z\s\-']+$/, [])
   const isFormComplete = useMemo(() => 
     formData.email.trim() !== '' && formData.phone.trim() !== '' && 
@@ -68,14 +65,7 @@ const PatientSignUp: React.FC = React.memo(() => {
     [formData]
   )
 
-  // Auto-refresh user activity
-  useEffect(() => {
-    const interval = setInterval(() => {
-      setLastActivity(new Date())
-    }, 60000) // Update every minute
 
-    return () => clearInterval(interval)
-  }, [])
 
   useEffect(() => {
     const errors: ValidationErrors = {}

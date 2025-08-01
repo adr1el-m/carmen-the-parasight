@@ -305,7 +305,7 @@ const LandingPage: React.FC = () => {
             <div className="hero-left">
               <h1>Get Your Consultation Online</h1>
               <h2>Connect with top healthcare facilities from home</h2>
-              <p className="consultation-types">Audio, Text, Video & In-Person options available</p>
+
               
               <div className="online-stats">
                 <div className="doctor-avatars" role="img" aria-label="Healthcare professionals">
@@ -623,14 +623,6 @@ const LandingPage: React.FC = () => {
                 <p>Connect with thousands of patients across the Philippines. Grow your practice with our digital platform.</p>
               </div>
               <div className="cta-actions-section">
-                                    <button 
-                      onClick={handlePartnerSignup}
-                      className="cta-primary-btn"
-                      aria-label="Register your healthcare facility"
-                    >
-                      <i className="fas fa-plus-circle" aria-hidden="true"></i>
-                      Register Your Practice
-                    </button>
                     <button 
                       onClick={handlePartnerSignin}
                       className="cta-secondary-btn"

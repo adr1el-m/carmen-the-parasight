@@ -36,7 +36,7 @@ const PatientSignUp: React.FC = React.memo(() => {
   const navigate = useNavigate()
   const [formData, setFormData] = useState<FormData>({
     email: '', phone: '', password: '', confirmPassword: '', birthDate: '',
-    firstName: '', lastName: '', address: '', countryCode: '+1', remember: false
+    firstName: '', lastName: '', address: '', countryCode: '+63', remember: false
   })
   const [isLoading, setIsLoading] = useState(false)
   const [showPassword, setShowPassword] = useState(false)
@@ -142,7 +142,7 @@ const PatientSignUp: React.FC = React.memo(() => {
           email: parsed.email || '',
           firstName: parsed.firstName || '',
           lastName: parsed.lastName || '',
-          countryCode: parsed.countryCode || '+1',
+          countryCode: parsed.countryCode || '+63',
           remember: parsed.remember || false
         }))
       } catch (error) {
@@ -602,6 +602,20 @@ const PatientSignUp: React.FC = React.memo(() => {
             className="close-link" 
             onClick={handleClose}
             aria-label="Close and return to home page"
+            style={{ 
+              backgroundColor: 'var(--primary-blue)', 
+              color: 'white',
+              border: 'none',
+              borderRadius: '50%',
+              width: '32px',
+              height: '32px',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              cursor: 'pointer',
+              fontSize: '18px',
+              fontWeight: 'bold'
+            }}
           >
             ×
           </button>
@@ -609,7 +623,7 @@ const PatientSignUp: React.FC = React.memo(() => {
         
         <div className="signup-content">
           <div className="signup-header">
-            <h1>Hey there</h1>
+            <h1 style={{ color: 'var(--primary-blue)' }}>Hey there</h1>
             <p>Already know LingapLink? <a href="/patient-sign-in" className="login-link">Log in</a></p>
           </div>
 
@@ -660,8 +674,8 @@ const PatientSignUp: React.FC = React.memo(() => {
                   disabled={isLoading}
                   aria-label="Country code"
                 >
-                  <option value="+1">🇺🇸 +1</option>
                   <option value="+63">🇵🇭 +63</option>
+                  <option value="+1">🇺🇸 +1</option>
                   <option value="+44">🇬🇧 +44</option>
                   <option value="+49">🇩🇪 +49</option>
                   <option value="+33">🇫🇷 +33</option>

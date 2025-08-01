@@ -43,7 +43,7 @@ interface QuickAction {
 
 const Dashboard: React.FC = React.memo(() => {
   const navigate = useNavigate()
-  const [activeSection, setActiveSection] = useState<'dashboard' | 'my-consults' | 'help'>('dashboard')
+  const [activeSection, setActiveSection] = useState<'dashboard' | 'my-consults' | 'help' | 'profile'>('dashboard')
   const [isLoading, setIsLoading] = useState(true)
   const [user, setUser] = useState<User | null>(null)
   const [currentMonth, setCurrentMonth] = useState(new Date())
@@ -78,6 +78,57 @@ const Dashboard: React.FC = React.memo(() => {
   const [isCreatingAppointment, setIsCreatingAppointment] = useState(false)
   const [patientValidationError, setPatientValidationError] = useState('')
   
+  // Edit appointment modal state
+  const [showEditAppointmentModal, setShowEditAppointmentModal] = useState(false)
+  const [editAppointmentForm, setEditAppointmentForm] = useState({
+    date: '',
+    time: '',
+    doctor: '',
+    status: 'scheduled',
+    notes: ''
+  })
+  const [isEditingAppointment, setIsEditingAppointment] = useState(false)
+  
+  // Profile editing state
+  const [showEditProfileModal, setShowEditProfileModal] = useState(false)
+  const [editProfileForm, setEditProfileForm] = useState({
+    name: '',
+    type: '',
+    email: '',
+    phone: '',
+    address: '',
+    city: '',
+    province: '',
+    postalCode: '',
+    country: '',
+    website: '',
+    description: '',
+    licenseNumber: '',
+    // New fields to match PatientPortal display
+    specialties: [] as string[],
+    services: [] as string[],
+    staff: {
+      totalStaff: 0,
+      doctors: 0,
+      nurses: 0,
+      supportStaff: 0
+    },
+    capacity: {
+      bedCapacity: 0,
+      consultationRooms: 0
+    },
+    operatingHours: {
+      monday: { open: '09:00', close: '17:00', closed: false },
+      tuesday: { open: '09:00', close: '17:00', closed: false },
+      wednesday: { open: '09:00', close: '17:00', closed: false },
+      thursday: { open: '09:00', close: '17:00', closed: false },
+      friday: { open: '09:00', close: '17:00', closed: false },
+      saturday: { open: '09:00', close: '12:00', closed: false },
+      sunday: { open: '09:00', close: '17:00', closed: true }
+    }
+  })
+  const [isSavingProfile, setIsSavingProfile] = useState(false)
+  
   const sidebarRef = useRef<HTMLElement>(null)
   const sidebarOverlayRef = useRef<HTMLDivElement>(null)
   const mainContentRef = useRef<HTMLDivElement>(null)
@@ -104,13 +155,6 @@ const Dashboard: React.FC = React.memo(() => {
       icon: 'fas fa-calendar-plus',
       action: 'schedule',
       description: 'Book a new appointment'
-    },
-    {
-      id: 'reports',
-      title: 'View Reports',
-      icon: 'fas fa-chart-bar',
-      action: 'reports',
-      description: 'Access analytics and reports'
     }
   ], [])
 
@@ -278,6 +322,129 @@ const Dashboard: React.FC = React.memo(() => {
     setPatientValidationError('')
   }, [])
 
+  const openEditAppointmentModal = useCallback((appointment: any) => {
+    setSelectedAppointment(appointment)
+    setEditAppointmentForm({
+      date: appointment.date || '',
+      time: appointment.time || '',
+      doctor: appointment.doctor || '',
+      status: appointment.status || 'scheduled',
+      notes: appointment.notes || ''
+    })
+    setShowEditAppointmentModal(true)
+  }, [])
+
+  const closeEditAppointmentModal = useCallback(() => {
+    setShowEditAppointmentModal(false)
+    setEditAppointmentForm({
+      date: '',
+      time: '',
+      doctor: '',
+      status: 'scheduled',
+      notes: ''
+    })
+    setSelectedAppointment(null)
+  }, [])
+
+  // Profile editing functions
+  const openEditProfileModal = useCallback(() => {
+    if (facilityData) {
+      setEditProfileForm({
+        name: facilityData.facilityInfo?.name || '',
+        type: facilityData.facilityInfo?.type || '',
+        email: facilityData.facilityInfo?.email || facilityData.email || '',
+        phone: facilityData.facilityInfo?.phone || '',
+        address: facilityData.facilityInfo?.address || '',
+        city: facilityData.facilityInfo?.city || '',
+        province: facilityData.facilityInfo?.province || '',
+        postalCode: facilityData.facilityInfo?.postalCode || '',
+        country: facilityData.facilityInfo?.country || '',
+        website: facilityData.facilityInfo?.website || '',
+        description: facilityData.facilityInfo?.description || '',
+        licenseNumber: facilityData.licenseNumber || '',
+        // New fields
+        specialties: facilityData.specialties || [],
+        services: facilityData.services || [],
+        staff: facilityData.staff || {
+          totalStaff: 0,
+          doctors: 0,
+          nurses: 0,
+          supportStaff: 0
+        },
+        capacity: facilityData.capacity || {
+          bedCapacity: 0,
+          consultationRooms: 0
+        },
+        operatingHours: facilityData.operatingHours || {
+          monday: { open: '09:00', close: '17:00', closed: false },
+          tuesday: { open: '09:00', close: '17:00', closed: false },
+          wednesday: { open: '09:00', close: '17:00', closed: false },
+          thursday: { open: '09:00', close: '17:00', closed: false },
+          friday: { open: '09:00', close: '17:00', closed: false },
+          saturday: { open: '09:00', close: '12:00', closed: false },
+          sunday: { open: '09:00', close: '17:00', closed: true }
+        }
+      })
+    }
+    setShowEditProfileModal(true)
+  }, [facilityData])
+
+  const closeEditProfileModal = useCallback(() => {
+    setShowEditProfileModal(false)
+    setEditProfileForm({
+      name: '',
+      type: '',
+      email: '',
+      phone: '',
+      address: '',
+      city: '',
+      province: '',
+      postalCode: '',
+      country: '',
+      website: '',
+      description: '',
+      licenseNumber: '',
+      // Reset new fields
+      specialties: [],
+      services: [],
+      staff: {
+        totalStaff: 0,
+        doctors: 0,
+        nurses: 0,
+        supportStaff: 0
+      },
+      capacity: {
+        bedCapacity: 0,
+        consultationRooms: 0
+      },
+      operatingHours: {
+        monday: { open: '09:00', close: '17:00', closed: false },
+        tuesday: { open: '09:00', close: '17:00', closed: false },
+        wednesday: { open: '09:00', close: '17:00', closed: false },
+        thursday: { open: '09:00', close: '17:00', closed: false },
+        friday: { open: '09:00', close: '17:00', closed: false },
+        saturday: { open: '09:00', close: '12:00', closed: false },
+        sunday: { open: '09:00', close: '17:00', closed: true }
+      }
+    })
+  }, [])
+
+  const handleEditProfileFormChange = useCallback((field: string, value: string) => {
+    setEditProfileForm(prev => ({
+      ...prev,
+      [field]: value
+    }))
+  }, [])
+
+
+
+  const handleEditAppointmentFormChange = useCallback((field: string, value: string) => {
+    setEditAppointmentForm(prev => ({
+      ...prev,
+      [field]: value
+    }))
+  }, [])
+
   const handleNewAppointmentFormChange = useCallback((field: string, value: string) => {
     setNewAppointmentForm(prev => ({
       ...prev,
@@ -338,7 +505,7 @@ const Dashboard: React.FC = React.memo(() => {
     setIsSidebarOpen(false)
   }, [])
 
-  const handleNavClick = useCallback((section: 'dashboard' | 'my-consults' | 'help') => {
+  const handleNavClick = useCallback((section: 'dashboard' | 'my-consults' | 'help' | 'profile') => {
     setActiveSection(section)
     closeSidebar()
   }, [closeSidebar])
@@ -385,8 +552,7 @@ const Dashboard: React.FC = React.memo(() => {
     
     switch (action) {
       case 'schedule':
-        showNotification('Opening appointment scheduler...', 'info')
-        // In production, this would open the appointment booking interface
+        openNewAppointmentModal()
         break
       case 'reports':
         showNotification('Loading analytics dashboard...', 'info')
@@ -396,7 +562,7 @@ const Dashboard: React.FC = React.memo(() => {
         showNotification('Action not implemented yet', 'info')
         break
     }
-  }, [])
+  }, [openNewAppointmentModal])
 
   const navigateMonth = useCallback((direction: 'prev' | 'next') => {
     setCurrentMonth(prev => {
@@ -536,6 +702,55 @@ const Dashboard: React.FC = React.memo(() => {
     }
   }, [])
 
+  const handleSaveProfile = useCallback(async () => {
+    if (!user?.uid || !facilityData) {
+      showNotification('Unable to save profile: User not found', 'error')
+      return
+    }
+
+    setIsSavingProfile(true)
+    
+    try {
+      const firestoreModule: any = await import('../services/firestoredb.js')
+      
+      // Update facility information
+      await firestoreModule.updateFacilityInfo(user.uid, {
+        facilityInfo: {
+          name: editProfileForm.name.trim(),
+          type: editProfileForm.type.trim(),
+          email: editProfileForm.email.trim(),
+          phone: editProfileForm.phone.trim(),
+          address: editProfileForm.address.trim(),
+          city: editProfileForm.city.trim(),
+          province: editProfileForm.province.trim(),
+          postalCode: editProfileForm.postalCode.trim(),
+          country: editProfileForm.country.trim(),
+          website: editProfileForm.website.trim(),
+          description: editProfileForm.description.trim()
+        },
+        licenseNumber: editProfileForm.licenseNumber.trim(),
+        // New fields
+        specialties: editProfileForm.specialties,
+        services: editProfileForm.services,
+        staff: editProfileForm.staff,
+        capacity: editProfileForm.capacity,
+        operatingHours: editProfileForm.operatingHours
+      })
+      
+      showNotification('Profile updated successfully!', 'success')
+      closeEditProfileModal()
+      
+      // Reload facility data to reflect changes
+      await loadFacilityData(user.uid)
+      
+    } catch (error: any) {
+      console.error('Error updating facility profile:', error)
+      showNotification(`Failed to update profile: ${error.message}`, 'error')
+    } finally {
+      setIsSavingProfile(false)
+    }
+  }, [user?.uid, facilityData, editProfileForm, closeEditProfileModal, loadFacilityData, showNotification])
+
   // Removed unused handleNotificationToggle function
 
   // Removed unused updateLastActivity function
@@ -603,6 +818,52 @@ const Dashboard: React.FC = React.memo(() => {
       setIsCreatingAppointment(false)
     }
   }, [newAppointmentForm, user?.uid, validatePatientUid, closeNewAppointmentModal, loadUserAppointments, getUserDisplayName, showNotification])
+
+  const handleSaveEditedAppointment = useCallback(async () => {
+    if (!selectedAppointment) {
+      showNotification('No appointment selected for editing', 'error')
+      return
+    }
+    
+    if (!editAppointmentForm.date || !editAppointmentForm.time) {
+      showNotification('Please select both date and time', 'error')
+      return
+    }
+    
+    setIsEditingAppointment(true)
+    
+    try {
+      const firestoreModule: any = await import('../services/firestoredb.js')
+      
+      await firestoreModule.updateAppointmentByFacility(
+        selectedAppointment.id,
+        selectedAppointment.patientId,
+        {
+          date: editAppointmentForm.date,
+          time: editAppointmentForm.time,
+          doctor: editAppointmentForm.doctor,
+          status: editAppointmentForm.status,
+          notes: editAppointmentForm.notes
+        },
+        user?.uid || ''
+      )
+      
+      showNotification('Appointment updated successfully!', 'success')
+      closeEditAppointmentModal()
+      closeAppointmentModal() // Also close the details modal
+      
+      // Refresh appointments list
+      if (user?.uid) {
+        loadUserAppointments(user.uid)
+      }
+      
+    } catch (error: any) {
+      console.error('Error updating appointment:', error)
+      showNotification(`Failed to update appointment: ${error.message}`, 'error')
+    } finally {
+      setIsEditingAppointment(false)
+    }
+  }, [selectedAppointment, editAppointmentForm, user?.uid, closeEditAppointmentModal, closeAppointmentModal, loadUserAppointments, showNotification])
 
   useEffect(() => {
     handleNavClick('dashboard')
@@ -780,6 +1041,16 @@ const Dashboard: React.FC = React.memo(() => {
                 <span>Help</span>
               </button>
             </li>
+            <li className={`nav-item ${activeSection === 'profile' ? 'active' : ''}`}>
+              <button 
+                className="nav-link" 
+                onClick={(e) => { e.preventDefault(); handleNavClick('profile'); }}
+                aria-current={activeSection === 'profile' ? 'page' : undefined}
+              >
+                <i className="fas fa-user-circle" aria-hidden="true"></i>
+                <span>Profile</span>
+              </button>
+            </li>
             <li className="nav-item">
               <button className="nav-link" onClick={handleLogout}>
                 <i className="fas fa-sign-out-alt" aria-hidden="true"></i>
@@ -951,10 +1222,7 @@ const Dashboard: React.FC = React.memo(() => {
                   </p>
                 </div>
                 <div className="section-controls">
-                  <select className="date-dropdown">
-                    <option>May'23</option>
-                  </select>
-                                    <button 
+                  <button 
                     className="btn btn-outline" 
                     onClick={() => user && loadUserAppointments(user.uid)}
                     disabled={isLoadingAppointments}
@@ -1257,6 +1525,245 @@ const Dashboard: React.FC = React.memo(() => {
               </div>
             </section>
           )}
+
+          {/* Profile Section */}
+          {activeSection === 'profile' && (
+            <section className="content-section active">
+              <div className="section-header-flex">
+                <div className="section-title">
+                  <h1 className="section-main-title">Healthcare Facility Profile</h1>
+                  <p>Manage your facility information and settings</p>
+                </div>
+                <div className="section-controls">
+                  <button className="btn btn-primary" onClick={openEditProfileModal}>
+                    <i className="fas fa-edit"></i> Edit Profile
+                  </button>
+                </div>
+              </div>
+
+              <div className="profile-container">
+                <div className="profile-header">
+                  <div className="profile-avatar">
+                    <div className="avatar-placeholder">
+                      <i className="fas fa-hospital"></i>
+                    </div>
+                  </div>
+                  <div className="profile-info">
+                    <h2>{getUserDisplayName()}</h2>
+                    <p className="facility-type">{facilityData?.facilityInfo?.type || 'Healthcare Facility'}</p>
+                    <p className="facility-location">
+                      <i className="fas fa-map-marker-alt"></i>
+                      {facilityData?.facilityInfo?.city && facilityData?.facilityInfo?.province 
+                        ? `${facilityData.facilityInfo.city}, ${facilityData.facilityInfo.province}`
+                        : facilityData?.facilityInfo?.address || 'Location not available'
+                      }
+                    </p>
+                  </div>
+                </div>
+
+                <div className="profile-content">
+                  <div className="info-grid">
+                    <div className="info-item">
+                      <label>Facility ID</label>
+                      <span style={{ 
+                        fontFamily: 'monospace', 
+                        fontWeight: 'bold', 
+                        color: '#0040e7',
+                        whiteSpace: 'nowrap',
+                        overflow: 'hidden',
+                        textOverflow: 'ellipsis',
+                        display: 'block'
+                      }}>{facilityData?.uniqueFacilityId || 'Not available'}</span>
+                    </div>
+                    <div className="info-item">
+                      <label>Facility Name</label>
+                      <span style={{ 
+                        whiteSpace: 'nowrap',
+                        overflow: 'hidden',
+                        textOverflow: 'ellipsis',
+                        display: 'block'
+                      }}>{facilityData?.facilityInfo?.name || 'Not available'}</span>
+                    </div>
+                    <div className="info-item">
+                      <label>Email Address</label>
+                      <span style={{ 
+                        whiteSpace: 'nowrap',
+                        overflow: 'hidden',
+                        textOverflow: 'ellipsis',
+                        display: 'block'
+                      }}>{facilityData?.email || user?.email || 'Not available'}</span>
+                    </div>
+                    <div className="info-item">
+                      <label>Phone Number</label>
+                      <span style={{ 
+                        whiteSpace: 'nowrap',
+                        overflow: 'hidden',
+                        textOverflow: 'ellipsis',
+                        display: 'block'
+                      }}>{facilityData?.facilityInfo?.phone || 'Not available'}</span>
+                    </div>
+                    <div className="info-item">
+                      <label>Address</label>
+                      <span style={{ 
+                        whiteSpace: 'nowrap',
+                        overflow: 'hidden',
+                        textOverflow: 'ellipsis',
+                        display: 'block'
+                      }}>{facilityData?.facilityInfo?.address || 'Not available'}</span>
+                    </div>
+                    <div className="info-item">
+                      <label>City</label>
+                      <span style={{ 
+                        whiteSpace: 'nowrap',
+                        overflow: 'hidden',
+                        textOverflow: 'ellipsis',
+                        display: 'block'
+                      }}>{facilityData?.facilityInfo?.city || 'Not available'}</span>
+                    </div>
+                    <div className="info-item">
+                      <label>Province</label>
+                      <span style={{ 
+                        whiteSpace: 'nowrap',
+                        overflow: 'hidden',
+                        textOverflow: 'ellipsis',
+                        display: 'block'
+                      }}>{facilityData?.facilityInfo?.province || 'Not available'}</span>
+                    </div>
+                    <div className="info-item">
+                      <label>Postal Code</label>
+                      <span style={{ 
+                        whiteSpace: 'nowrap',
+                        overflow: 'hidden',
+                        textOverflow: 'ellipsis',
+                        display: 'block'
+                      }}>{facilityData?.facilityInfo?.postalCode || 'Not available'}</span>
+                    </div>
+                    <div className="info-item">
+                      <label>Country</label>
+                      <span style={{ 
+                        whiteSpace: 'nowrap',
+                        overflow: 'hidden',
+                        textOverflow: 'ellipsis',
+                        display: 'block'
+                      }}>{facilityData?.facilityInfo?.country || 'Not available'}</span>
+                    </div>
+                    <div className="info-item">
+                      <label>Website</label>
+                      <span style={{ 
+                        whiteSpace: 'nowrap',
+                        overflow: 'hidden',
+                        textOverflow: 'ellipsis',
+                        display: 'block'
+                      }}>{facilityData?.facilityInfo?.website || 'Not available'}</span>
+                    </div>
+                    <div className="info-item">
+                      <label>License Number</label>
+                      <span style={{ 
+                        whiteSpace: 'nowrap',
+                        overflow: 'hidden',
+                        textOverflow: 'ellipsis',
+                        display: 'block'
+                      }}>{facilityData?.licenseNumber || 'Not available'}</span>
+                    </div>
+                    <div className="info-item">
+                      <label>Status</label>
+                      <span className={`badge ${facilityData?.isActive ? 'success' : 'warning'}`}>
+                        {facilityData?.isActive ? 'Active' : 'Inactive'}
+                      </span>
+                    </div>
+                  </div>
+
+                  {facilityData?.facilityInfo?.description && (
+                    <div className="description-section">
+                      <h3>Facility Description</h3>
+                      <p>{facilityData.facilityInfo.description}</p>
+                    </div>
+                  )}
+
+                  {facilityData?.specialties && facilityData.specialties.length > 0 && (
+                    <div className="specialties-section">
+                      <h3>Medical Specialties</h3>
+                      <div className="specialties-grid">
+                        {facilityData.specialties.map((specialty: string, index: number) => (
+                          <span key={index} className="specialty-tag">
+                            <i className="fas fa-stethoscope"></i>
+                            {specialty}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {facilityData?.services && facilityData.services.length > 0 && (
+                    <div className="services-section">
+                      <h3>Services Offered</h3>
+                      <div className="services-grid">
+                        {facilityData.services.map((service: string, index: number) => (
+                          <span key={index} className="service-tag">
+                            <i className="fas fa-medical-kit"></i>
+                            {service}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  <div className="staff-section">
+                    <h3>Staff Information</h3>
+                    <div className="staff-grid">
+                      <div className="staff-item">
+                        <span className="staff-label">Total Staff:</span>
+                        <span className="staff-value">{facilityData?.staff?.totalStaff || 0}</span>
+                      </div>
+                      <div className="staff-item">
+                        <span className="staff-label">Doctors:</span>
+                        <span className="staff-value">{facilityData?.staff?.doctors || 0}</span>
+                      </div>
+                      <div className="staff-item">
+                        <span className="staff-label">Nurses:</span>
+                        <span className="staff-value">{facilityData?.staff?.nurses || 0}</span>
+                      </div>
+                      <div className="staff-item">
+                        <span className="staff-label">Support Staff:</span>
+                        <span className="staff-value">{facilityData?.staff?.supportStaff || 0}</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="capacity-section">
+                    <h3>Facility Capacity</h3>
+                    <div className="capacity-grid">
+                      <div className="capacity-item">
+                        <span className="capacity-label">Bed Capacity:</span>
+                        <span className="capacity-value">{facilityData?.capacity?.bedCapacity || 0}</span>
+                      </div>
+                      <div className="capacity-item">
+                        <span className="capacity-label">Consultation Rooms:</span>
+                        <span className="capacity-value">{facilityData?.capacity?.consultationRooms || 0}</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="settings-section">
+                    <h3>Account Settings</h3>
+                    <div className="settings-grid">
+                      <div className="setting-item">
+                        <label className="setting-label">
+                          <input 
+                            type="checkbox" 
+                            checked={notificationsEnabled}
+                            onChange={(e) => setNotificationsEnabled(e.target.checked)}
+                          />
+                          Enable Notifications
+                        </label>
+                        <p className="setting-description">Receive notifications for new appointments and updates</p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </section>
+          )}
         </div>
       </main>
 
@@ -1416,10 +1923,6 @@ const Dashboard: React.FC = React.memo(() => {
 
                         <div className="info-section">
                           <h4><i className="fas fa-info-circle"></i> Additional Information</h4>
-                          <div className="info-item">
-                            <label>Bio:</label>
-                            <span>{selectedPatientData.personalInfo?.bio || 'Not provided'}</span>
-                          </div>
                           <div className="info-item">
                             <label>Profile Complete:</label>
                             <span className={`badge ${selectedPatientData.profileComplete ? 'success' : 'warning'}`}>
@@ -1605,7 +2108,10 @@ const Dashboard: React.FC = React.memo(() => {
               <button className="btn btn-secondary" onClick={closeAppointmentModal}>
                 Close
               </button>
-              <button className="btn btn-primary">
+              <button 
+                className="btn btn-primary" 
+                onClick={() => openEditAppointmentModal(selectedAppointment)}
+              >
                 <i className="fas fa-edit"></i> Edit Appointment
               </button>
             </div>
@@ -1742,6 +2248,608 @@ const Dashboard: React.FC = React.memo(() => {
                   <>
                     <i className="fas fa-plus"></i>
                     Create Appointment
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Edit Appointment Modal */}
+      {showEditAppointmentModal && selectedAppointment && (
+        <div className="modal" style={{ display: 'block' }}>
+          <div className="modal-content" style={{ maxWidth: '600px' }}>
+            <div className="modal-header">
+              <h3>Edit Appointment</h3>
+              <button className="close-btn" onClick={closeEditAppointmentModal}>
+                <i className="fas fa-times"></i>
+              </button>
+            </div>
+            
+            <div className="modal-body">
+              <div className="form-group">
+                <label>Patient</label>
+                <input
+                  type="text"
+                  value={selectedAppointment.patientName || 'Patient'}
+                  disabled
+                  className="disabled-input"
+                />
+                <small className="form-help">
+                  <i className="fas fa-info-circle"></i>
+                  Patient information cannot be changed
+                </small>
+              </div>
+
+              <div className="form-row">
+                <div className="form-group">
+                  <label htmlFor="editAppointmentDate">Date *</label>
+                  <input
+                    type="date"
+                    id="editAppointmentDate"
+                    value={editAppointmentForm.date}
+                    onChange={(e) => handleEditAppointmentFormChange('date', e.target.value)}
+                    min={new Date().toISOString().split('T')[0]}
+                  />
+                </div>
+                
+                <div className="form-group">
+                  <label htmlFor="editAppointmentTime">Time *</label>
+                  <input
+                    type="time"
+                    id="editAppointmentTime"
+                    value={editAppointmentForm.time}
+                    onChange={(e) => handleEditAppointmentFormChange('time', e.target.value)}
+                  />
+                </div>
+              </div>
+
+              <div className="form-row">
+                <div className="form-group">
+                  <label htmlFor="editDoctor">Doctor</label>
+                  <input
+                    type="text"
+                    id="editDoctor"
+                    value={editAppointmentForm.doctor}
+                    onChange={(e) => handleEditAppointmentFormChange('doctor', e.target.value)}
+                    placeholder="Doctor's name"
+                  />
+                </div>
+                
+                <div className="form-group">
+                  <label htmlFor="editAppointmentStatus">Status</label>
+                  <select
+                    id="editAppointmentStatus"
+                    value={editAppointmentForm.status}
+                    onChange={(e) => handleEditAppointmentFormChange('status', e.target.value)}
+                  >
+                    <option value="scheduled">Scheduled</option>
+                    <option value="confirmed">Confirmed</option>
+                    <option value="pending">Pending</option>
+                    <option value="completed">Completed</option>
+                    <option value="cancelled">Cancelled</option>
+                  </select>
+                </div>
+              </div>
+
+              <div className="form-group">
+                <label htmlFor="editAppointmentNotes">Notes</label>
+                <textarea
+                  id="editAppointmentNotes"
+                  value={editAppointmentForm.notes}
+                  onChange={(e) => handleEditAppointmentFormChange('notes', e.target.value)}
+                  placeholder="Additional notes about the appointment..."
+                  rows={3}
+                />
+              </div>
+
+              <div className="alert alert-info">
+                <i className="fas fa-info-circle"></i>
+                <strong>Note:</strong> Changes made here will be reflected in the patient's portal. 
+                The patient will be able to see when and what was modified.
+              </div>
+            </div>
+
+            <div className="modal-footer">
+              <button className="btn btn-secondary" onClick={closeEditAppointmentModal}>
+                Cancel
+              </button>
+              <button 
+                className="btn btn-primary" 
+                onClick={handleSaveEditedAppointment}
+                disabled={isEditingAppointment}
+              >
+                {isEditingAppointment ? (
+                  <>
+                    <i className="fas fa-spinner fa-spin"></i>
+                    Updating...
+                  </>
+                ) : (
+                  <>
+                    <i className="fas fa-save"></i>
+                    Save Changes
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Edit Profile Modal */}
+      {showEditProfileModal && (
+        <div className="modal" style={{ display: 'block' }}>
+          <div className="modal-content" style={{ maxWidth: '800px', maxHeight: '90vh', overflow: 'auto' }}>
+            <div className="modal-header">
+              <h3>Edit Facility Profile</h3>
+              <button className="close-btn" onClick={closeEditProfileModal}>
+                <i className="fas fa-times"></i>
+              </button>
+            </div>
+            
+            <div className="modal-body">
+              <div className="form-section">
+                <h4><i className="fas fa-hospital"></i> Basic Information</h4>
+                <div className="form-row">
+                  <div className="form-group">
+                    <label htmlFor="facilityName">Facility Name *</label>
+                    <input
+                      type="text"
+                      id="facilityName"
+                      value={editProfileForm.name}
+                      onChange={(e) => handleEditProfileFormChange('name', e.target.value)}
+                      placeholder="Enter facility name"
+                      required
+                    />
+                  </div>
+                  <div className="form-group">
+                    <label htmlFor="facilityType">Facility Type *</label>
+                    <select
+                      id="facilityType"
+                      value={editProfileForm.type}
+                      onChange={(e) => handleEditProfileFormChange('type', e.target.value)}
+                      required
+                    >
+                      <option value="">Select facility type</option>
+                      <option value="Hospital">Hospital</option>
+                      <option value="Medical Clinic">Medical Clinic</option>
+                      <option value="Dental Clinic">Dental Clinic</option>
+                      <option value="Specialty Clinic">Specialty Clinic</option>
+                      <option value="Diagnostic Center">Diagnostic Center</option>
+                      <option value="Rehabilitation Center">Rehabilitation Center</option>
+                      <option value="Mental Health Facility">Mental Health Facility</option>
+                      <option value="Maternity Clinic">Maternity Clinic</option>
+                      <option value="Pediatric Clinic">Pediatric Clinic</option>
+                      <option value="Surgical Center">Surgical Center</option>
+                      <option value="Urgent Care Center">Urgent Care Center</option>
+                    </select>
+                  </div>
+                </div>
+
+                <div className="form-row">
+                  <div className="form-group">
+                    <label htmlFor="facilityEmail">Email Address *</label>
+                    <input
+                      type="email"
+                      id="facilityEmail"
+                      value={editProfileForm.email}
+                      onChange={(e) => handleEditProfileFormChange('email', e.target.value)}
+                      placeholder="Enter email address"
+                      required
+                    />
+                  </div>
+                  <div className="form-group">
+                    <label htmlFor="facilityPhone">Phone Number *</label>
+                    <input
+                      type="tel"
+                      id="facilityPhone"
+                      value={editProfileForm.phone}
+                      onChange={(e) => handleEditProfileFormChange('phone', e.target.value)}
+                      placeholder="Enter phone number"
+                      required
+                    />
+                  </div>
+                </div>
+
+                <div className="form-group">
+                  <label htmlFor="facilityWebsite">Website</label>
+                  <input
+                    type="url"
+                    id="facilityWebsite"
+                    value={editProfileForm.website}
+                    onChange={(e) => handleEditProfileFormChange('website', e.target.value)}
+                    placeholder="Enter website URL (optional)"
+                  />
+                </div>
+
+                <div className="form-group">
+                  <label htmlFor="facilityLicense">License Number</label>
+                  <input
+                    type="text"
+                    id="facilityLicense"
+                    value={editProfileForm.licenseNumber}
+                    onChange={(e) => handleEditProfileFormChange('licenseNumber', e.target.value)}
+                    placeholder="Enter license number (optional)"
+                  />
+                </div>
+              </div>
+
+              <div className="form-section">
+                <h4><i className="fas fa-map-marker-alt"></i> Address Information</h4>
+                <div className="form-group">
+                  <label htmlFor="facilityAddress">Complete Address *</label>
+                  <textarea
+                    id="facilityAddress"
+                    value={editProfileForm.address}
+                    onChange={(e) => handleEditProfileFormChange('address', e.target.value)}
+                    placeholder="Enter complete address"
+                    rows={3}
+                    required
+                  />
+                </div>
+
+                <div className="form-row">
+                  <div className="form-group">
+                    <label htmlFor="facilityCity">City *</label>
+                    <input
+                      type="text"
+                      id="facilityCity"
+                      value={editProfileForm.city}
+                      onChange={(e) => handleEditProfileFormChange('city', e.target.value)}
+                      placeholder="Enter city"
+                      required
+                    />
+                  </div>
+                  <div className="form-group">
+                    <label htmlFor="facilityProvince">Province *</label>
+                    <input
+                      type="text"
+                      id="facilityProvince"
+                      value={editProfileForm.province}
+                      onChange={(e) => handleEditProfileFormChange('province', e.target.value)}
+                      placeholder="Enter province"
+                      required
+                    />
+                  </div>
+                </div>
+
+                <div className="form-row">
+                  <div className="form-group">
+                    <label htmlFor="facilityPostalCode">Postal Code</label>
+                    <input
+                      type="text"
+                      id="facilityPostalCode"
+                      value={editProfileForm.postalCode}
+                      onChange={(e) => handleEditProfileFormChange('postalCode', e.target.value)}
+                      placeholder="Enter postal code"
+                    />
+                  </div>
+                  <div className="form-group">
+                    <label htmlFor="facilityCountry">Country *</label>
+                    <input
+                      type="text"
+                      id="facilityCountry"
+                      value={editProfileForm.country}
+                      onChange={(e) => handleEditProfileFormChange('country', e.target.value)}
+                      placeholder="Enter country"
+                      required
+                    />
+                  </div>
+                </div>
+              </div>
+
+              <div className="form-section">
+                <h4><i className="fas fa-info-circle"></i> Additional Information</h4>
+                <div className="form-group">
+                  <label htmlFor="facilityDescription">Facility Description</label>
+                  <textarea
+                    id="facilityDescription"
+                    value={editProfileForm.description}
+                    onChange={(e) => handleEditProfileFormChange('description', e.target.value)}
+                    placeholder="Describe your facility, services, and specialties..."
+                    rows={4}
+                  />
+                  <small className="form-help">
+                    <i className="fas fa-info-circle"></i>
+                    This description will be visible to patients when they search for healthcare facilities.
+                  </small>
+                </div>
+              </div>
+
+              <div className="form-section">
+                <h4><i className="fas fa-stethoscope"></i> Medical Specialties</h4>
+                <div className="form-group">
+                  <label htmlFor="facilitySpecialties">Specialties (comma-separated)</label>
+                  <input
+                    type="text"
+                    id="facilitySpecialties"
+                    value={editProfileForm.specialties.join(', ')}
+                    onChange={(e) => {
+                      const specialties = e.target.value.split(',').map(s => s.trim()).filter(s => s)
+                      setEditProfileForm(prev => ({ ...prev, specialties }))
+                    }}
+                    placeholder="e.g., Cardiology, Pediatrics, General Medicine"
+                  />
+                  <small className="form-help">
+                    <i className="fas fa-info-circle"></i>
+                    Enter medical specialties offered by your facility, separated by commas.
+                  </small>
+                </div>
+              </div>
+
+              <div className="form-section">
+                <h4><i className="fas fa-medical-kit"></i> Services Offered</h4>
+                <div className="form-group">
+                  <label htmlFor="facilityServices">Services (comma-separated)</label>
+                  <input
+                    type="text"
+                    id="facilityServices"
+                    value={editProfileForm.services.join(', ')}
+                    onChange={(e) => {
+                      const services = e.target.value.split(',').map(s => s.trim()).filter(s => s)
+                      setEditProfileForm(prev => ({ ...prev, services }))
+                    }}
+                    placeholder="e.g., Consultation, Laboratory Tests, X-Ray, Surgery"
+                  />
+                  <small className="form-help">
+                    <i className="fas fa-info-circle"></i>
+                    Enter services offered by your facility, separated by commas.
+                  </small>
+                </div>
+              </div>
+
+              <div className="form-section">
+                <h4><i className="fas fa-users"></i> Staff Information</h4>
+                <div className="form-row">
+                  <div className="form-group">
+                    <label htmlFor="totalStaff">Total Staff</label>
+                    <input
+                      type="number"
+                      id="totalStaff"
+                      value={editProfileForm.staff.totalStaff}
+                      onChange={(e) => setEditProfileForm(prev => ({
+                        ...prev,
+                        staff: { ...prev.staff, totalStaff: parseInt(e.target.value) || 0 }
+                      }))}
+                      min="0"
+                    />
+                  </div>
+                  <div className="form-group">
+                    <label htmlFor="doctors">Doctors</label>
+                    <input
+                      type="number"
+                      id="doctors"
+                      value={editProfileForm.staff.doctors}
+                      onChange={(e) => setEditProfileForm(prev => ({
+                        ...prev,
+                        staff: { ...prev.staff, doctors: parseInt(e.target.value) || 0 }
+                      }))}
+                      min="0"
+                    />
+                  </div>
+                </div>
+                <div className="form-row">
+                  <div className="form-group">
+                    <label htmlFor="nurses">Nurses</label>
+                    <input
+                      type="number"
+                      id="nurses"
+                      value={editProfileForm.staff.nurses}
+                      onChange={(e) => setEditProfileForm(prev => ({
+                        ...prev,
+                        staff: { ...prev.staff, nurses: parseInt(e.target.value) || 0 }
+                      }))}
+                      min="0"
+                    />
+                  </div>
+                  <div className="form-group">
+                    <label htmlFor="supportStaff">Support Staff</label>
+                    <input
+                      type="number"
+                      id="supportStaff"
+                      value={editProfileForm.staff.supportStaff}
+                      onChange={(e) => setEditProfileForm(prev => ({
+                        ...prev,
+                        staff: { ...prev.staff, supportStaff: parseInt(e.target.value) || 0 }
+                      }))}
+                      min="0"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              <div className="form-section">
+                <h4><i className="fas fa-bed"></i> Facility Capacity</h4>
+                <div className="form-row">
+                  <div className="form-group">
+                    <label htmlFor="bedCapacity">Bed Capacity</label>
+                    <input
+                      type="number"
+                      id="bedCapacity"
+                      value={editProfileForm.capacity.bedCapacity}
+                      onChange={(e) => setEditProfileForm(prev => ({
+                        ...prev,
+                        capacity: { ...prev.capacity, bedCapacity: parseInt(e.target.value) || 0 }
+                      }))}
+                      min="0"
+                    />
+                  </div>
+                  <div className="form-group">
+                    <label htmlFor="consultationRooms">Consultation Rooms</label>
+                    <input
+                      type="number"
+                      id="consultationRooms"
+                      value={editProfileForm.capacity.consultationRooms}
+                      onChange={(e) => setEditProfileForm(prev => ({
+                        ...prev,
+                        capacity: { ...prev.capacity, consultationRooms: parseInt(e.target.value) || 0 }
+                      }))}
+                      min="0"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              <div className="form-section">
+                <h4><i className="fas fa-clock"></i> Operating Hours</h4>
+                <div className="hours-grid">
+                  <div className="hours-item">
+                    <label>Monday - Friday</label>
+                    <div className="time-inputs">
+                      <input
+                        type="time"
+                        value={editProfileForm.operatingHours.monday.open}
+                        onChange={(e) => setEditProfileForm(prev => ({
+                          ...prev,
+                          operatingHours: {
+                            ...prev.operatingHours,
+                            monday: { ...prev.operatingHours.monday, open: e.target.value }
+                          }
+                        }))}
+                      />
+                      <span>to</span>
+                      <input
+                        type="time"
+                        value={editProfileForm.operatingHours.monday.close}
+                        onChange={(e) => setEditProfileForm(prev => ({
+                          ...prev,
+                          operatingHours: {
+                            ...prev.operatingHours,
+                            monday: { ...prev.operatingHours.monday, close: e.target.value }
+                          }
+                        }))}
+                      />
+                      <label className="checkbox-label">
+                        <input
+                          type="checkbox"
+                          checked={editProfileForm.operatingHours.monday.closed}
+                          onChange={(e) => setEditProfileForm(prev => ({
+                            ...prev,
+                            operatingHours: {
+                              ...prev.operatingHours,
+                              monday: { ...prev.operatingHours.monday, closed: e.target.checked }
+                            }
+                          }))}
+                        />
+                        Closed
+                      </label>
+                    </div>
+                  </div>
+                  
+                  <div className="hours-item">
+                    <label>Saturday</label>
+                    <div className="time-inputs">
+                      <input
+                        type="time"
+                        value={editProfileForm.operatingHours.saturday.open}
+                        onChange={(e) => setEditProfileForm(prev => ({
+                          ...prev,
+                          operatingHours: {
+                            ...prev.operatingHours,
+                            saturday: { ...prev.operatingHours.saturday, open: e.target.value }
+                          }
+                        }))}
+                      />
+                      <span>to</span>
+                      <input
+                        type="time"
+                        value={editProfileForm.operatingHours.saturday.close}
+                        onChange={(e) => setEditProfileForm(prev => ({
+                          ...prev,
+                          operatingHours: {
+                            ...prev.operatingHours,
+                            saturday: { ...prev.operatingHours.saturday, close: e.target.value }
+                          }
+                        }))}
+                      />
+                      <label className="checkbox-label">
+                        <input
+                          type="checkbox"
+                          checked={editProfileForm.operatingHours.saturday.closed}
+                          onChange={(e) => setEditProfileForm(prev => ({
+                            ...prev,
+                            operatingHours: {
+                              ...prev.operatingHours,
+                              saturday: { ...prev.operatingHours.saturday, closed: e.target.checked }
+                            }
+                          }))}
+                        />
+                        Closed
+                      </label>
+                    </div>
+                  </div>
+                  
+                  <div className="hours-item">
+                    <label>Sunday</label>
+                    <div className="time-inputs">
+                      <input
+                        type="time"
+                        value={editProfileForm.operatingHours.sunday.open}
+                        onChange={(e) => setEditProfileForm(prev => ({
+                          ...prev,
+                          operatingHours: {
+                            ...prev.operatingHours,
+                            sunday: { ...prev.operatingHours.sunday, open: e.target.value }
+                          }
+                        }))}
+                      />
+                      <span>to</span>
+                      <input
+                        type="time"
+                        value={editProfileForm.operatingHours.sunday.close}
+                        onChange={(e) => setEditProfileForm(prev => ({
+                          ...prev,
+                          operatingHours: {
+                            ...prev.operatingHours,
+                            sunday: { ...prev.operatingHours.sunday, close: e.target.value }
+                          }
+                        }))}
+                      />
+                      <label className="checkbox-label">
+                        <input
+                          type="checkbox"
+                          checked={editProfileForm.operatingHours.sunday.closed}
+                          onChange={(e) => setEditProfileForm(prev => ({
+                            ...prev,
+                            operatingHours: {
+                              ...prev.operatingHours,
+                              sunday: { ...prev.operatingHours.sunday, closed: e.target.checked }
+                            }
+                          }))}
+                        />
+                        Closed
+                      </label>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div className="alert alert-info">
+                <i className="fas fa-info-circle"></i>
+                <strong>Note:</strong> Changes made here will be reflected in the patient portal when they search for healthcare facilities. 
+                Make sure all information is accurate and up-to-date.
+              </div>
+            </div>
+
+            <div className="modal-footer">
+              <button className="btn btn-secondary" onClick={closeEditProfileModal}>
+                Cancel
+              </button>
+              <button 
+                className="btn btn-primary" 
+                onClick={handleSaveProfile}
+                disabled={isSavingProfile}
+              >
+                {isSavingProfile ? (
+                  <>
+                    <i className="fas fa-spinner fa-spin"></i>
+                    Saving...
+                  </>
+                ) : (
+                  <>
+                    <i className="fas fa-save"></i>
+                    Save Changes
                   </>
                 )}
               </button>

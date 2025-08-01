@@ -60,6 +60,18 @@ interface AppointmentData {
   facilityId: string;
   facilityName: string;
   createdAt: string;
+  updatedAt?: string;
+  updatedBy?: string;
+  modificationHistory?: Array<{
+    timestamp: string;
+    modifiedBy: string;
+    changes: {
+      [field: string]: {
+        from: any;
+        to: any;
+      } | null;
+    };
+  }>;
 }
 
 interface PersonalInfo {
@@ -191,11 +203,11 @@ interface FacilityData {
 
 const PatientPortal: React.FC = () => {
   const navigate = useNavigate()
-  const [activeSection, setActiveSection] = useState<'dashboard' | 'calendar' | 'profile' | 'help' | 'facilities'>('dashboard')
+  const [activeSection, setActiveSection] = useState<'dashboard' | 'profile' | 'help' | 'facilities'>('dashboard')
   const [activeTab, setActiveTab] = useState<'general' | 'consultation-history' | 'patient-documents'>('general')
   const [isLoading, setIsLoading] = useState(true)
   const [user, setUser] = useState<User | null>(null)
-  const [currentMonth, setCurrentMonth] = useState(new Date(2025, 6, 1)) // July 2025
+
   const [showModal, setShowModal] = useState<string | null>(null)
   const [notificationsEnabled, setNotificationsEnabled] = useState(true)
   const [isSidebarOpen, setIsSidebarOpen] = useState(false)
@@ -257,6 +269,19 @@ const PatientPortal: React.FC = () => {
   
   // Document viewer state
   const [viewingDocument, setViewingDocument] = useState<any>(null)
+  
+  // Edit appointment state
+  const [editingAppointment, setEditingAppointment] = useState<any>(null)
+  const [isEditingAppointment, setIsEditingAppointment] = useState(false)
+  const [editAppointmentForm, setEditAppointmentForm] = useState({
+    facilityId: '',
+    facilityName: '',
+    doctor: '',
+    date: '',
+    time: '',
+    type: '',
+    notes: ''
+  })
   
   // Facilities state
   const [facilities, setFacilities] = useState<FacilityData[]>([])
@@ -341,6 +366,12 @@ const PatientPortal: React.FC = () => {
             const parsedData = JSON.parse(localPatientData)
             console.log('📦 Loaded patient data from localStorage:', parsedData)
             setPatientData(parsedData)
+            
+            // Check for appointment modifications on localStorage load
+            if (parsedData?.activity?.appointments) {
+              checkForAppointmentModifications(parsedData.activity.appointments)
+            }
+            
             setIsLoadingPatientData(false)
             return
           }
@@ -359,6 +390,12 @@ const PatientPortal: React.FC = () => {
             console.log('📋 Documents in loaded data:', existingPatientData?.activity?.documents)
             console.log('📋 Number of documents:', existingPatientData?.activity?.documents?.length || 0)
             setPatientData(existingPatientData)
+            
+            // Check for appointment modifications on Firestore load
+            if (existingPatientData?.activity?.appointments) {
+              checkForAppointmentModifications(existingPatientData.activity.appointments)
+            }
+            
             setIsLoadingPatientData(false)
             return
           }
@@ -377,6 +414,11 @@ const PatientPortal: React.FC = () => {
           })
           console.log('✅ Patient document created in Firestore:', firestorePatientData)
           setPatientData(firestorePatientData)
+          
+          // Check for appointment modifications on initial load
+          if (firestorePatientData?.activity?.appointments) {
+            checkForAppointmentModifications(firestorePatientData.activity.appointments)
+          }
         } catch (error) {
           console.warn('⚠️ Failed to create patient document in Firestore, using local data:', error)
           
@@ -450,6 +492,11 @@ const PatientPortal: React.FC = () => {
           console.log('📋 Appointments in update:', updatedPatientData?.activity?.appointments || [])
           console.log('📋 Number of appointments:', updatedPatientData?.activity?.appointments?.length || 0)
           
+          // Check for appointment modifications and show notifications
+          if (updatedPatientData?.activity?.appointments) {
+            checkForAppointmentModifications(updatedPatientData.activity.appointments)
+          }
+          
           // Update the state with fresh data
           setPatientData(updatedPatientData)
           
@@ -483,10 +530,7 @@ const PatientPortal: React.FC = () => {
     }
   }, [user?.uid])
 
-  useEffect(() => {
-    // Initialize calendar
-    generateCalendarDays()
-  }, [currentMonth])
+
 
   // Debug patient data changes
   useEffect(() => {
@@ -523,48 +567,13 @@ const PatientPortal: React.FC = () => {
     }
   }, [])
 
-  const handleNavClick = useCallback((section: 'dashboard' | 'calendar' | 'profile' | 'help' | 'facilities') => {
+  const handleNavClick = useCallback((section: 'dashboard' | 'profile' | 'help' | 'facilities') => {
     setActiveSection(section)
     closeSidebar()
   }, [closeSidebar])
 
   const handleTabClick = useCallback((tab: 'general' | 'consultation-history' | 'patient-documents') => {
     setActiveTab(tab)
-  }, [])
-
-  const generateCalendarDays = useCallback(() => {
-    const year = currentMonth.getFullYear()
-    const month = currentMonth.getMonth()
-    const firstDay = new Date(year, month, 1)
-    const lastDay = new Date(year, month + 1, 0)
-    const startDate = new Date(firstDay)
-    startDate.setDate(startDate.getDate() - firstDay.getDay())
-    
-    const days = []
-    const currentDate = new Date(startDate)
-    
-    while (currentDate <= lastDay || days.length < 42) {
-      days.push(new Date(currentDate))
-      currentDate.setDate(currentDate.getDate() + 1)
-    }
-    
-    return days
-  }, [currentMonth])
-
-  const formatMonth = useCallback((date: Date) => {
-    return date.toLocaleDateString('en-US', { month: 'long', year: 'numeric' })
-  }, [])
-
-  const navigateMonth = useCallback((direction: 'prev' | 'next') => {
-    setCurrentMonth(prev => {
-      const newDate = new Date(prev)
-      if (direction === 'prev') {
-        newDate.setMonth(newDate.getMonth() - 1)
-      } else {
-        newDate.setMonth(newDate.getMonth() + 1)
-      }
-      return newDate
-    })
   }, [])
 
   const openModal = useCallback((modalType: string) => {
@@ -606,6 +615,17 @@ const PatientPortal: React.FC = () => {
       type: '',
       notes: ''
     })
+    // Reset edit appointment form
+    setEditAppointmentForm({
+      facilityId: '',
+      facilityName: '',
+      doctor: '',
+      date: '',
+      time: '',
+      type: '',
+      notes: ''
+    })
+    setEditingAppointment(null)
     // Reset consultation history form
     setConsultationHistoryForm({
       date: '',
@@ -620,6 +640,103 @@ const PatientPortal: React.FC = () => {
     setUploadProgress(0)
     setIsUploadingDocument(false)
   }, [])
+
+  // Notification functions
+  const getNotificationIcon = useCallback((type: string) => {
+    switch (type) {
+      case 'success': return 'check-circle'
+      case 'error': return 'exclamation-circle'
+      case 'warning': return 'exclamation-triangle'
+      case 'info': return 'info-circle'
+      default: return 'info-circle'
+    }
+  }, [])
+
+  const getNotificationColor = useCallback((type: string) => {
+    switch (type) {
+      case 'success': return '#22c55e'
+      case 'error': return '#ef4444'
+      case 'warning': return '#f59e0b'
+      case 'info': return '#3b82f6'
+      default: return '#3b82f6'
+    }
+  }, [])
+
+  const showNotification = useCallback((message: string, type: 'success' | 'error' | 'info' = 'info') => {
+    // Remove existing notifications
+    const existingNotifications = document.querySelectorAll('.notification')
+    existingNotifications.forEach(notification => notification.remove())
+    
+    // Create notification
+    const notification = document.createElement('div')
+    notification.className = `notification notification-${type}`
+    notification.innerHTML = `
+      <div class="notification-content">
+        <i class="fas fa-${getNotificationIcon(type)}"></i>
+        <span>${message}</span>
+        <button class="notification-close">&times;</button>
+      </div>
+    `
+    
+    // Add styles
+    notification.style.cssText = `
+      position: fixed;
+      top: 20px;
+      right: 20px;
+      background: ${getNotificationColor(type)};
+      color: white;
+      padding: 16px 20px;
+      border-radius: 8px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+      z-index: 10000;
+      font-family: 'Inter', sans-serif;
+      font-size: 14px;
+      max-width: 350px;
+      animation: slideIn 0.3s ease-out;
+    `
+    
+    // Add close functionality
+    const closeBtn = notification.querySelector('.notification-close')
+    closeBtn?.addEventListener('click', () => notification.remove())
+    
+    // Add to page
+    document.body.appendChild(notification)
+    
+    // Auto remove after 5 seconds
+    setTimeout(() => {
+      if (notification.parentNode) {
+        notification.style.animation = 'slideOut 0.3s ease-in'
+        setTimeout(() => notification.remove(), 300)
+      }
+    }, 5000)
+  }, [getNotificationIcon, getNotificationColor])
+
+  // Check for appointment modifications and show notifications
+  const checkForAppointmentModifications = useCallback((appointments: any[]) => {
+    appointments.forEach(appointment => {
+      if (appointment.updatedBy === 'facility' && appointment.modificationHistory && appointment.modificationHistory.length > 0) {
+        const lastModification = appointment.modificationHistory[appointment.modificationHistory.length - 1]
+        const modificationTime = new Date(lastModification.timestamp)
+        const now = new Date()
+        
+        // Show notification if modification was made in the last 5 minutes
+        if (now.getTime() - modificationTime.getTime() < 5 * 60 * 1000) {
+          const changes = Object.entries(lastModification.changes)
+            .filter(([field, change]) => {
+              const typedChange = change as { from: any; to: any } | null
+              return typedChange && typedChange.from !== typedChange.to
+            })
+            .map(([field, change]) => {
+              const typedChange = change as { from: any; to: any }
+              return `${field}: ${typedChange.from} → ${typedChange.to}`
+            })
+            .join(', ')
+          
+          showNotification(`Your appointment has been updated by ${appointment.facilityName || 'the healthcare facility'}: ${changes}`, 'info')
+        }
+      }
+    })
+  }, [showNotification])
 
   const handleBookAppointment = useCallback(async () => {
     console.log('🔍 handleBookAppointment called')
@@ -766,6 +883,8 @@ const PatientPortal: React.FC = () => {
       }
       
       console.log('📋 Personal info to update:', personalInfo)
+      console.log('🔍 Gender value being sent:', personalInfo.gender)
+      console.log('🔍 Gender type:', typeof personalInfo.gender)
       
       // Update local state immediately for better UX
       setPatientData(prev => prev ? {
@@ -1189,6 +1308,109 @@ const PatientPortal: React.FC = () => {
     }
   }, [user])
 
+  const handleEditAppointment = useCallback(async () => {
+    console.log('🔍 handleEditAppointment called')
+    console.log('User:', user)
+    console.log('Edit appointment form:', editAppointmentForm)
+    console.log('Editing appointment:', editingAppointment)
+    
+    if (!user || !editingAppointment) {
+      console.error('❌ No user or appointment to edit')
+      alert('Please select an appointment to edit')
+      return
+    }
+    
+    // Enhanced validation
+    const requiredFields = {
+      facilityId: editAppointmentForm.facilityId,
+      date: editAppointmentForm.date,
+      time: editAppointmentForm.time,
+      type: editAppointmentForm.type
+    }
+    
+    const missingFields = Object.entries(requiredFields)
+      .filter(([key, value]) => !value)
+      .map(([key]) => key)
+    
+    if (missingFields.length > 0) {
+      console.error('❌ Missing required fields:', missingFields)
+      alert(`Please fill in all required fields: ${missingFields.join(', ')}`)
+      return
+    }
+
+    // Validate date is not in the past
+    const selectedDate = new Date(editAppointmentForm.date + 'T' + editAppointmentForm.time)
+    const now = new Date()
+    if (selectedDate <= now) {
+      alert('Please select a future date and time for your appointment')
+      return
+    }
+
+    setIsEditingAppointment(true)
+    console.log('🔄 Starting appointment update...')
+    
+    try {
+      console.log('📦 Importing firestoredb...')
+      const { updateAppointment } = await import('../services/firestoredb.js')
+      console.log('✅ updateAppointment imported successfully')
+      
+      const updatedAppointmentData = {
+        facilityId: editAppointmentForm.facilityId,
+        facilityName: editAppointmentForm.facilityName,
+        patientName: user.displayName || patientData?.personalInfo?.fullName || 'Patient',
+        patientEmail: user.email || patientData?.email || '',
+        doctor: editAppointmentForm.doctor || 'TBD',
+        date: editAppointmentForm.date,
+        time: editAppointmentForm.time,
+        type: editAppointmentForm.type,
+        notes: editAppointmentForm.notes || '',
+        status: editingAppointment.status || 'scheduled'
+      }
+      
+      console.log('📋 Updated appointment data:', updatedAppointmentData)
+      console.log('🔄 Calling updateAppointment...')
+      
+      const result = await updateAppointment(user.uid, editingAppointment.id, updatedAppointmentData)
+      
+      console.log('✅ Appointment updated successfully!', result)
+      
+      // Refresh patient data to show the updated appointment
+      try {
+        const { getCurrentPatientData } = await import('../services/firestoredb.js')
+        const updatedPatientData = await getCurrentPatientData()
+        setPatientData(updatedPatientData)
+        console.log('✅ Patient data refreshed with updated appointment')
+      } catch (refreshError) {
+        console.warn('⚠️ Could not refresh patient data:', refreshError)
+      }
+      
+      alert('Appointment updated successfully!')
+      closeModal()
+      
+    } catch (error: any) {
+      console.error('❌ Error updating appointment:', error)
+      console.error('Error details:', {
+        message: error.message,
+        code: error.code,
+        stack: error.stack
+      })
+      
+      let errorMessage = 'Failed to update appointment'
+      
+      if (error.code === 'permission-denied') {
+        errorMessage = 'You do not have permission to update appointments. Please contact support.'
+      } else if (error.code === 'unavailable') {
+        errorMessage = 'Service temporarily unavailable. Please try again in a few minutes.'
+      } else if (error.message) {
+        errorMessage = `Update failed: ${error.message}`
+      }
+      
+      alert(errorMessage)
+    } finally {
+      setIsEditingAppointment(false)
+    }
+  }, [user, editAppointmentForm, editingAppointment, patientData, closeModal])
+
   const handleFileSelect = useCallback((event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0]
     if (file) {
@@ -1275,18 +1497,42 @@ const PatientPortal: React.FC = () => {
     }
   }, [user])
 
-  const refreshPatientData = useCallback(async () => {
+  const handleRemoveConsultation = useCallback(async (consultationId: string) => {
     if (!user) return
     
+    if (!confirm('Are you sure you want to delete this consultation? This action cannot be undone.')) {
+      return
+    }
+    
     try {
-      const { getCurrentPatientData } = await import('../services/firestoredb.js')
-      const updatedData = await getCurrentPatientData()
-      setPatientData(updatedData)
-      console.log('✅ Patient data refreshed successfully')
+      console.log('🔍 handleRemoveConsultation called for consultation:', consultationId)
+      
+      // Update local state immediately for better UX
+      setConsultationHistory(prev => {
+        const updatedConsultations = prev.filter(consultation => consultation.id !== consultationId)
+        return updatedConsultations
+      })
+      
+      // Try to remove from Firestore
+      try {
+        console.log('📦 Attempting Firestore removal...')
+        const firestoredb: any = await import('../services/firestoredb.js')
+        
+        await firestoredb.removePatientConsultation(user.uid, consultationId)
+        
+        console.log('✅ Firestore removal successful!')
+        alert('Consultation removed successfully!')
+      } catch (firebaseError: any) {
+        console.warn('⚠️ Firestore removal failed:', firebaseError)
+        alert('Consultation removal failed. Please try again.')
+      }
     } catch (error: any) {
-      console.error('❌ Error refreshing patient data:', error)
+      console.error('❌ Error removing consultation:', error)
+      alert(`Failed to remove consultation: ${error.message}`)
     }
   }, [user])
+
+
 
 
 
@@ -1622,18 +1868,7 @@ const PatientPortal: React.FC = () => {
                 <span>Dashboard</span>
               </button>
             </li>
-            <li className={`nav-item ${activeSection === 'calendar' ? 'active' : ''}`} role="none">
-              <button 
-                className="nav-link" 
-                onClick={(e) => { e.preventDefault(); handleNavClick('calendar'); }}
-                role="menuitem"
-                aria-current={activeSection === 'calendar' ? 'page' : undefined}
-                aria-label="Navigate to Calendar"
-              >
-                <i className="fas fa-calendar-alt" aria-hidden="true"></i>
-                <span>Calendar</span>
-              </button>
-            </li>
+
             <li className={`nav-item ${activeSection === 'profile' ? 'active' : ''}`} role="none">
               <button 
                 className="nav-link" 
@@ -1702,23 +1937,7 @@ const PatientPortal: React.FC = () => {
             <i className="fas fa-bars" aria-hidden="true"></i>
           </button>
           
-          <div className="user-info">
-            <div className="language-selector">
-              <select id="language-select">
-                <option value="en">EN</option>
-                <option value="tl">TL</option>
-              </select>
-            </div>
-            
-            <div className="notifications" role="button" tabIndex={0} aria-label="View notifications (2 unread)">
-              <i className="fas fa-bell" aria-hidden="true"></i>
-              <span className="notification-badge" aria-label="2 unread notifications">2</span>
-            </div>
-            
-            <div className="user-avatar" role="button" tabIndex={0} aria-label={`User menu for ${getUserDisplayName()}`}>
-              <span aria-hidden="true">{getUserInitials()}</span>
-            </div>
-          </div>
+
         </div>
         
         <div className="main-container">
@@ -1729,15 +1948,6 @@ const PatientPortal: React.FC = () => {
               <div className="greeting">
                 <h1>Hi, <span>{getUserDisplayName()}!</span></h1>
                 <h2>Welcome to your personal health dashboard</h2>
-                <button 
-                  className="btn btn-outline" 
-                  onClick={refreshPatientData}
-                  style={{ marginTop: '10px', fontSize: '14px' }}
-                >
-                  <i className="fas fa-sync-alt"></i>
-                  Refresh Data
-                </button>
-
               </div>
             
               <div className="stats-grid">
@@ -1805,7 +2015,7 @@ const PatientPortal: React.FC = () => {
                       .sort((a, b) => new Date(a.date + 'T' + a.time).getTime() - new Date(b.date + 'T' + b.time).getTime())
                       .slice(0, 3) // Show only first 3
                       .map((appointment) => (
-                        <div key={appointment.id} className="appointment-card">
+                        <div key={appointment.id} className={`appointment-card ${appointment.updatedBy === 'facility' ? 'has-modifications' : ''}`}>
                           <div className="appointment-date">
                             <span className="date">{new Date(appointment.date).getDate()}</span>
                             <span className="month">{new Date(appointment.date).toLocaleDateString('en-US', { month: 'short' })}</span>
@@ -1815,15 +2025,67 @@ const PatientPortal: React.FC = () => {
                             <p>{appointment.type || 'Consultation'}</p>
                             <div className="appointment-time">{appointment.time}</div>
                             <div className="appointment-facility">{appointment.facilityName || 'Facility TBD'}</div>
+                            
+                            {/* Show modification indicator if appointment was modified by facility */}
+                            {appointment.updatedBy === 'facility' && appointment.modificationHistory && appointment.modificationHistory.length > 0 && (
+                              <div className="appointment-modification-info">
+                                <div className="modification-indicator">
+                                  <i className="fas fa-edit"></i>
+                                  <span>Modified by {appointment.facilityName || 'Healthcare Facility'}</span>
+                                </div>
+                                <div className="modification-details">
+                                  {appointment.modificationHistory[appointment.modificationHistory.length - 1]?.changes && (
+                                    <div className="changes-list">
+                                      {Object.entries(appointment.modificationHistory[appointment.modificationHistory.length - 1].changes).map(([field, change]: [string, any]) => {
+                                        if (change && change.from !== change.to) {
+                                          return (
+                                            <div key={field} className="change-item">
+                                              <span className="change-field">{field.charAt(0).toUpperCase() + field.slice(1)}:</span>
+                                              <span className="change-from">{change.from}</span>
+                                              <i className="fas fa-arrow-right"></i>
+                                              <span className="change-to">{change.to}</span>
+                                            </div>
+                                          )
+                                        }
+                                        return null
+                                      })}
+                                    </div>
+                                  )}
+                                  <small className="modification-time">
+                                    Updated: {new Date(appointment.updatedAt).toLocaleString()}
+                                  </small>
+                                </div>
+                              </div>
+                            )}
                           </div>
                           <div className="appointment-actions">
-                            <span className={`status ${appointment.status}`}>
+                            <div className={`status ${appointment.status}`}>
                               {appointment.status === 'confirmed' ? 'Confirmed' : 
                                appointment.status === 'pending' ? 'Pending' : 
                                appointment.status === 'scheduled' ? 'Scheduled' : 
                                appointment.status === 'completed' ? 'Completed' : 
                                appointment.status === 'cancelled' ? 'Cancelled' : appointment.status}
-                            </span>
+                            </div>
+                            <button 
+                              className="btn btn-outline btn-sm"
+                              onClick={() => {
+                                setEditingAppointment(appointment)
+                                setEditAppointmentForm({
+                                  facilityId: appointment.facilityId || '',
+                                  facilityName: appointment.facilityName || '',
+                                  doctor: appointment.doctor || '',
+                                  date: appointment.date || '',
+                                  time: appointment.time || '',
+                                  type: appointment.type || '',
+                                  notes: appointment.notes || ''
+                                })
+                                openModal('editAppointment')
+                              }}
+                              title="Edit appointment"
+                            >
+                              <i className="fas fa-edit"></i>
+                              Edit
+                            </button>
                           </div>
                         </div>
                       ))
@@ -1845,80 +2107,7 @@ const PatientPortal: React.FC = () => {
             </section>
           )}
 
-          {/* Calendar Section */}
-          {activeSection === 'calendar' && (
-            <section className="content-section active">
-              <div className="calendar-header">
-                <h1>Calendar</h1>
-                <div className="calendar-actions">
-                  <button className="btn-primary" onClick={() => openModal('bookAppointment')}>
-                    <i className="fas fa-plus"></i>
-                    Book Appointment
-                  </button>
-                </div>
-              </div>
 
-              <div className="calendar-navigation">
-                <button className="nav-btn" onClick={() => navigateMonth('prev')}>
-                  <i className="fas fa-chevron-left"></i>
-                </button>
-                <h2 className="current-month">{formatMonth(currentMonth)}</h2>
-                <button className="nav-btn" onClick={() => navigateMonth('next')}>
-                  <i className="fas fa-chevron-right"></i>
-                </button>
-              </div>
-
-              <div className="calendar-grid">
-                <div className="calendar-weekdays">
-                  <div className="weekday">Sun</div>
-                  <div className="weekday">Mon</div>
-                  <div className="weekday">Tue</div>
-                  <div className="weekday">Wed</div>
-                  <div className="weekday">Thu</div>
-                  <div className="weekday">Fri</div>
-                  <div className="weekday">Sat</div>
-                </div>
-                
-                <div className="calendar-days">
-                  {generateCalendarDays().map((date, index) => {
-                    const isToday = date.toDateString() === new Date().toDateString()
-                    const isCurrentMonth = date.getMonth() === currentMonth.getMonth()
-                    const isSelected = date.getDate() === 11 && date.getMonth() === 6 // July 11th for demo
-                    
-                    return (
-                      <div 
-                        key={index} 
-                        className={`calendar-day ${!isCurrentMonth ? 'other-month' : ''} ${isToday ? 'today' : ''} ${isSelected ? 'selected' : ''}`}
-                      >
-                        <span className="day-number">{date.getDate()}</span>
-                      </div>
-                    )
-                  })}
-                </div>
-              </div>
-
-              <div className="upcoming-appointments">
-                <h3>Upcoming Appointments</h3>
-                <div className="appointment-list">
-                  <div className="appointment-item">
-                    <div className="appointment-time">
-                      <span className="time">10:30 AM</span>
-                      <span className="date">Mar 22, 2024</span>
-                    </div>
-                    <div className="appointment-details">
-                      <h4>Dr. Sarah Johnson</h4>
-                      <p>Cardiology Consultation</p>
-                      <span className="location">Virtual Consultation</span>
-                    </div>
-                    <div className="appointment-actions">
-                      <button className="btn-sm btn-outline">Reschedule</button>
-                      <button className="btn-sm btn-primary">Join</button>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </section>
-          )}
 
           {/* Profile Section */}
           {activeSection === 'profile' && (
@@ -2174,25 +2363,38 @@ const PatientPortal: React.FC = () => {
                                   <div className="appointment-main">
                                     <div className="appointment-info">
                                       <div className="appointment-avatar-placeholder">
-                                        {consultation.doctorName ? consultation.doctorName.split(' ').map((n: string) => n[0]).join('').toUpperCase() : 'DR'}
+                                        {(consultation.doctorName || consultation.doctor) ? 
+                                          (consultation.doctorName || consultation.doctor).split(' ').map((n: string) => n[0]).join('').toUpperCase() : 'DR'}
                                       </div>
                                       <span className="appointment-name">
-                                        {consultation.doctorName || 'Doctor TBD'}
+                                        {consultation.doctorName || consultation.doctor || 'Doctor TBD'}
                                       </span>
                                     </div>
-                                    <button className="document-icon-btn" title="View consultation details">
-                                      <i className="far fa-file-alt"></i>
-                                    </button>
+                                    <div className="consultation-actions">
+                                      <button 
+                                        className="delete-consultation-btn" 
+                                        onClick={() => handleRemoveConsultation(consultation.id)}
+                                        title="Delete consultation"
+                                      >
+                                        <i className="fas fa-trash"></i>
+                                      </button>
+                                    </div>
                                   </div>
                                   <div className="appointment-time-slot">
                                     {consultation.time || '00:00'} - {dateGroup}
                                   </div>
                                   <div className="appointment-details">
-                                    <span className="appointment-type">{consultation.specialty || 'Consultation'}</span>
+                                    <span className="appointment-type">{consultation.specialty || consultation.type || 'Consultation'}</span>
                                     <span className={`appointment-status status-${consultation.status}`}>
                                       {consultation.status}
                                     </span>
                                   </div>
+                                  {(consultation.notes && consultation.notes.trim()) && (
+                                    <div className="consultation-notes">
+                                      <div className="notes-label">Notes:</div>
+                                      <div className="notes-content">{consultation.notes}</div>
+                                    </div>
+                                  )}
                                 </div>
                               )
                             })}
@@ -2581,7 +2783,7 @@ const PatientPortal: React.FC = () => {
                       <i className="fas fa-chevron-down"></i>
                     </button>
                     <div className="faq-answer">
-                      <p>You can book an appointment by going to the Calendar section and clicking "Book Appointment". Choose your preferred doctor, date, and time, then submit your request.</p>
+                      <p>You can book an appointment by clicking the "Book Appointment" button in the Quick Actions section on the Dashboard. Choose your preferred doctor, date, and time, then submit your request.</p>
                     </div>
                   </div>
                   
@@ -3253,6 +3455,134 @@ const PatientPortal: React.FC = () => {
                 Download
               </a>
               <button className="btn-secondary" onClick={closeModal}>Close</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Edit Appointment Modal */}
+      {showModal === 'editAppointment' && (
+        <div className="modal" style={{ display: 'block' }}>
+          <div className="modal-content">
+            <div className="modal-header">
+              <h3>Edit Appointment</h3>
+              <button className="close-btn" onClick={closeModal}>
+                <i className="fas fa-times"></i>
+              </button>
+            </div>
+            <div className="modal-body">
+              <form id="editAppointmentForm" onSubmit={(e) => { 
+                e.preventDefault(); 
+                console.log('Edit appointment form submitted, calling handleEditAppointment...');
+                handleEditAppointment(); 
+              }}>
+                <div className="form-group">
+                  <label htmlFor="editAppointmentFacility">Healthcare Facility *</label>
+                  <select 
+                    id="editAppointmentFacility" 
+                    required
+                    value={editAppointmentForm.facilityId}
+                    onChange={(e) => {
+                      const facilityId = e.target.value
+                      const facilityName = e.target.options[e.target.selectedIndex].text
+                      console.log('Selected facility for edit:', { facilityId, facilityName })
+                      setEditAppointmentForm(prev => ({
+                        ...prev,
+                        facilityId,
+                        facilityName
+                      }))
+                    }}
+                  >
+                    <option value="">Select Facility</option>
+                    {facilities.map(facility => (
+                      <option key={facility.uid} value={facility.uid}>
+                        {facility.facilityInfo.name}
+                      </option>
+                    ))}
+                  </select>
+                  {facilities.length === 0 && (
+                    <small style={{ color: '#dc3545', fontSize: '12px' }}>
+                      No facilities available. Please check back later.
+                    </small>
+                  )}
+                </div>
+                <div className="form-group">
+                  <label htmlFor="editAppointmentType">Appointment Type *</label>
+                  <select 
+                    id="editAppointmentType" 
+                    required
+                    value={editAppointmentForm.type}
+                    onChange={(e) => setEditAppointmentForm(prev => ({ ...prev, type: e.target.value }))}
+                  >
+                    <option value="">Select Type</option>
+                    <option value="checkup">Regular Checkup</option>
+                    <option value="consultation">Consultation</option>
+                    <option value="therapy">Therapy Session</option>
+                    <option value="emergency">Emergency</option>
+                  </select>
+                </div>
+                <div className="form-group">
+                  <label htmlFor="editAppointmentDoctor">Doctor (Optional)</label>
+                  <input 
+                    type="text" 
+                    id="editAppointmentDoctor"
+                    placeholder="Enter doctor name or leave blank"
+                    value={editAppointmentForm.doctor}
+                    onChange={(e) => setEditAppointmentForm(prev => ({ ...prev, doctor: e.target.value }))}
+                  />
+                </div>
+                <div className="form-group">
+                  <label htmlFor="editAppointmentDate">Date *</label>
+                  <input 
+                    type="date" 
+                    id="editAppointmentDate" 
+                    required
+                    min={new Date().toISOString().split('T')[0]}
+                    value={editAppointmentForm.date}
+                    onChange={(e) => setEditAppointmentForm(prev => ({ ...prev, date: e.target.value }))}
+                  />
+                  <small style={{ color: '#666', fontSize: '12px' }}>
+                    Select a future date
+                  </small>
+                </div>
+                <div className="form-group">
+                  <label htmlFor="editAppointmentTime">Time *</label>
+                  <input 
+                    type="time" 
+                    id="editAppointmentTime" 
+                    required
+                    value={editAppointmentForm.time}
+                    onChange={(e) => setEditAppointmentForm(prev => ({ ...prev, time: e.target.value }))}
+                  />
+                  <small style={{ color: '#666', fontSize: '12px' }}>
+                    Select appointment time
+                  </small>
+                </div>
+                <div className="form-group">
+                  <label htmlFor="editAppointmentNotes">Notes</label>
+                  <textarea 
+                    id="editAppointmentNotes" 
+                    rows={3}
+                    placeholder="Any additional information..."
+                    value={editAppointmentForm.notes}
+                    onChange={(e) => setEditAppointmentForm(prev => ({ ...prev, notes: e.target.value }))}
+                  ></textarea>
+                </div>
+              </form>
+            </div>
+            <div className="modal-footer">
+              <button className="btn-secondary" onClick={closeModal}>Cancel</button>
+              <button 
+                className="btn-primary" 
+                onClick={(e) => {
+                  e.preventDefault()
+                  console.log('🔘 Edit Appointment button clicked!')
+                  handleEditAppointment()
+                }}
+                disabled={isEditingAppointment}
+              >
+                {isEditingAppointment ? 'Updating...' : 'Update Appointment'}
+              </button>
             </div>
           </div>
         </div>

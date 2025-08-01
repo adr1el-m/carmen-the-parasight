@@ -872,14 +872,104 @@ body {
 
 .appointment-actions {
     display: flex;
+    flex-direction: column;
     gap: 0.5rem;
+    align-items: flex-end;
+}
+
+.appointment-actions .btn-sm {
+    padding: 0.25rem 0.5rem;
+    font-size: 0.75rem;
+    min-height: auto;
+    margin-top: 0.25rem;
+}
+
+.appointment-actions .status {
+    font-size: 0.75rem;
+    padding: 0.25rem 0.5rem;
+    border-radius: 12px;
+    font-weight: 500;
+    text-transform: capitalize;
+    border: none;
+    outline: none;
+    -webkit-appearance: none;
+    -moz-appearance: none;
+    appearance: none;
+    display: inline-block;
+    line-height: 1.2;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 100px;
+    /* Safari-specific fixes */
+    -webkit-user-select: none;
+    -moz-user-select: none;
+    -ms-user-select: none;
+    user-select: none;
+    /* Prevent Safari from treating as form element */
+    -webkit-box-sizing: border-box;
+    -moz-box-sizing: border-box;
+    box-sizing: border-box;
+    /* Remove any default Safari styling */
+    -webkit-tap-highlight-color: transparent;
+    /* Ensure proper text rendering */
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+}
+
+.appointment-actions .status.scheduled {
+    background-color: #e3f2fd !important;
+    color: #1976d2 !important;
+    border: 1px solid #bbdefb;
+}
+
+.appointment-actions .status.confirmed {
+    background-color: #e8f5e8 !important;
+    color: #2e7d32 !important;
+    border: 1px solid #c8e6c9;
+}
+
+.appointment-actions .status.pending {
+    background-color: #fff3e0 !important;
+    color: #f57c00 !important;
+    border: 1px solid #ffcc02;
+}
+
+.appointment-actions .status.completed {
+    background-color: #f3e5f5 !important;
+    color: #7b1fa2 !important;
+    border: 1px solid #e1bee7;
+}
+
+.appointment-actions .status.cancelled {
+    background-color: #ffebee !important;
+    color: #c62828 !important;
+    border: 1px solid #ffcdd2;
+}
+
+/* Safari-specific fixes */
+@media screen and (-webkit-min-device-pixel-ratio: 0) {
+    .appointment-actions .status {
+        /* Force Safari to respect our styling */
+        background-image: none !important;
+        -webkit-background-clip: unset !important;
+        background-clip: unset !important;
+        /* Remove any gradient or image Safari might add */
+        -webkit-mask-image: none !important;
+        mask-image: none !important;
+        /* Ensure text color is respected */
+        -webkit-text-fill-color: unset !important;
+        /* Remove any Safari-specific borders */
+        -webkit-border-image: none !important;
+        border-image: none !important;
+    }
 }
 
 .btn-outline {
     padding: 0.5rem 1rem;
     border: 1px solid var(--border-light);
     background: white;
-    color: var(--text-light);
+    color: var(--primary-blue);
     border-radius: var(--border-radius);
     cursor: pointer;
     transition: all 0.3s ease;
@@ -3271,6 +3361,12 @@ input:checked + .slider:before {
   border-radius: var(--border-radius);
   font-size: 1rem;
   transition: var(--transition-normal);
+  color: var(--text-dark);
+  background: white;
+}
+
+.search-box input::placeholder {
+  color: var(--text-muted);
 }
 
 .search-box input:focus {
@@ -3294,6 +3390,7 @@ input:checked + .slider:before {
   background: white;
   font-size: 0.9rem;
   transition: var(--transition-normal);
+  color: var(--text-dark);
 }
 
 .filter-select:focus {
@@ -3345,36 +3442,31 @@ input:checked + .slider:before {
   border-radius: var(--border-radius);
   box-shadow: var(--shadow-light);
   border: 1px solid var(--border-light);
-  grid-column: 1 / -1;
 }
 
 .empty-state .empty-icon {
-  width: 80px;
-  height: 80px;
-  background: var(--gradient-primary);
-  border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: white;
-  font-size: 2rem;
+  font-size: 4rem;
+  color: var(--text-muted);
   margin-bottom: 1.5rem;
+  opacity: 0.5;
 }
 
 .empty-state h3 {
   color: var(--text-dark);
   font-size: 1.5rem;
-  font-weight: 600;
   margin-bottom: 1rem;
+  font-weight: 600;
 }
 
 .empty-state p {
   color: var(--text-medium);
   font-size: 1rem;
   margin-bottom: 0.5rem;
-  max-width: 400px;
+  max-width: 500px;
+  line-height: 1.6;
 }
 
+/* Facility Cards */
 .facility-card {
   background: white;
   border-radius: var(--border-radius);
@@ -3392,7 +3484,7 @@ input:checked + .slider:before {
   top: 0;
   left: 0;
   right: 0;
-  height: 3px;
+  height: 4px;
   background: var(--gradient-primary);
   opacity: 0;
   transition: var(--transition-normal);
@@ -3409,16 +3501,16 @@ input:checked + .slider:before {
 
 .facility-header {
   display: flex;
-  align-items: flex-start;
+  align-items: center;
   gap: 1rem;
-  margin-bottom: 1.5rem;
+  margin-bottom: 1rem;
 }
 
 .facility-icon {
   width: 50px;
   height: 50px;
   background: var(--gradient-primary);
-  border-radius: 12px;
+  border-radius: 50%;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -3432,9 +3524,9 @@ input:checked + .slider:before {
 }
 
 .facility-info h3 {
+  color: var(--text-dark);
   font-size: 1.25rem;
   font-weight: 600;
-  color: var(--text-dark);
   margin-bottom: 0.25rem;
 }
 
@@ -3453,45 +3545,44 @@ input:checked + .slider:before {
 }
 
 .facility-location i {
-  color: var(--primary-blue);
+  color: var(--text-muted);
 }
 
 .facility-rating {
-  text-align: right;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
 }
 
 .stars {
   display: flex;
-  gap: 0.25rem;
-  margin-bottom: 0.25rem;
+  gap: 0.125rem;
 }
 
 .stars i {
-  color: #ffd700;
-  font-size: 0.9rem;
+  color: #FFD700;
+  font-size: 0.875rem;
 }
 
 .rating-text {
-  font-size: 0.8rem;
-  color: var(--text-light);
+  color: var(--text-medium);
+  font-size: 0.875rem;
 }
 
 .facility-details {
-  margin-bottom: 1.5rem;
+  margin-top: 1rem;
 }
 
 .facility-specialties,
-.facility-services,
-.facility-hours {
+.facility-services {
   margin-bottom: 1rem;
 }
 
 .facility-specialties h4,
-.facility-services h4,
-.facility-hours h4 {
+.facility-services h4 {
+  color: var(--text-dark);
   font-size: 0.9rem;
   font-weight: 600;
-  color: var(--text-dark);
   margin-bottom: 0.5rem;
 }
 
@@ -3505,7 +3596,7 @@ input:checked + .slider:before {
 .specialty-tag,
 .service-tag {
   background: var(--background-light);
-  color: var(--text-medium);
+  color: var(--text-dark);
   padding: 0.25rem 0.75rem;
   border-radius: 20px;
   font-size: 0.8rem;
@@ -3513,110 +3604,164 @@ input:checked + .slider:before {
 }
 
 .facility-hours p {
-  font-size: 0.9rem;
   color: var(--text-medium);
+  font-size: 0.875rem;
   margin-bottom: 0.25rem;
 }
 
 .facility-actions {
+  margin-top: 1.5rem;
   display: flex;
-  gap: 1rem;
-  justify-content: flex-end;
+  gap: 0.75rem;
 }
 
 .facility-actions .btn {
-  padding: 0.75rem 1.5rem;
-  font-size: 0.9rem;
+  flex: 1;
+  padding: 0.75rem 1rem;
   border-radius: var(--border-radius);
+  font-size: 0.9rem;
+  font-weight: 500;
+  text-align: center;
   transition: var(--transition-normal);
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
+  cursor: pointer;
+  border: none;
 }
 
-/* Responsive Design for Facilities */
-@media (max-width: 768px) {
-  .facilities-grid {
-    grid-template-columns: 1fr;
-    gap: 1rem;
-  }
-  
-  .facility-card {
+/* Ensure section header text is visible */
+.section-header h1 {
+  color: var(--text-dark) !important;
+  font-size: 2rem;
+  font-weight: 700;
+  margin-bottom: 0.5rem;
+}
+
+.section-header p {
+  color: var(--text-medium) !important;
+  font-size: 1rem;
+  margin: 0;
+  line-height: 1.5;
+}
+
+/* Ensure all text in facilities section is visible */
+.facilities-search,
+.facilities-grid,
+.loading-state,
+.empty-state {
+  color: var(--text-dark);
+}
+
+.facilities-search *,
+.facilities-grid *,
+.loading-state *,
+.empty-state * {
+  color: inherit;
+}
+
+/* Override any conflicting styles */
+.facilities-search h1,
+.facilities-search h2,
+.facilities-search h3,
+.facilities-search p,
+.facilities-search span {
+  color: var(--text-dark) !important;
+}
+
+.facilities-search input,
+.facilities-search select {
+  color: var(--text-dark) !important;
+  background: white !important;
+}
+
+.facilities-search input::placeholder {
+  color: var(--text-muted) !important;
+}
+
+/* Apply solid blue styling to profile edit buttons */
+.btn-outline {
+    background: var(--primary-blue) !important;
+    border: 2px solid var(--primary-blue) !important;
+    color: white !important;
+    transition: all 0.3s ease;
+    font-weight: 500 !important;
+    box-shadow: 0 2px 4px rgba(0, 64, 231, 0.2) !important;
+}
+
+.btn-outline:hover {
+    background: #0033cc !important;
+    border-color: #0033cc !important;
+    color: white !important;
+    box-shadow: 0 4px 8px rgba(0, 64, 231, 0.3) !important;
+    transform: translateY(-1px) !important;
+}
+
+.btn-outline i {
+    color: white !important;
+}
+
+.btn-outline:hover i {
+    color: white !important;
+}
+
+/* Ensure proper capitalization for medical condition categories */
+.disease-category h4,
+.condition-category h4,
+select option,
+.disease-tag,
+.condition-tag {
+    text-transform: none !important;
+    font-weight: 500 !important;
+}
+
+/* Consultation notes styling */
+.consultation-notes {
+    margin-top: 1rem;
     padding: 1rem;
-  }
-  
-  .facility-header {
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 0.75rem;
-  }
-  
-  .facility-rating {
-    text-align: left;
-  }
-  
-  .filter-row {
-    flex-direction: column;
-  }
-  
-  .filter-select {
-    min-width: auto;
-  }
-  
-  .facility-actions {
-    flex-direction: column;
-  }
-  
-  .facility-actions .btn {
-    width: 100%;
+    background: #f8f9fa;
+    border-radius: 8px;
+    border-left: 4px solid var(--primary-blue);
+}
+
+.notes-label {
+    font-weight: 600;
+    color: var(--text-dark);
+    margin-bottom: 0.5rem;
+    font-size: 0.9rem;
+}
+
+.notes-content {
+    color: var(--text-dark);
+    line-height: 1.5;
+    font-size: 0.9rem;
+}
+
+/* Delete consultation button */
+.delete-consultation-btn {
+    background: #dc3545;
+    color: white;
+    border: none;
+    border-radius: 6px;
+    padding: 0.5rem;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    display: flex;
+    align-items: center;
     justify-content: center;
-  }
+    width: 32px;
+    height: 32px;
 }
 
-@media (max-width: 480px) {
-  .facility-card {
-    padding: 0.75rem;
-  }
-  
-  .facility-info h3 {
-    font-size: 1.1rem;
-  }
-  
-  .specialty-tags,
-  .service-tags {
-    gap: 0.25rem;
-  }
-  
-  .specialty-tag,
-  .service-tag {
-    font-size: 0.75rem;
-    padding: 0.2rem 0.5rem;
-  }
+.delete-consultation-btn:hover {
+    background: #c82333;
+    transform: scale(1.05);
 }
 
-/* Appointment facility styles */
-.appointment-facility {
-  color: var(--text-light);
-  font-size: 0.75rem;
-  margin-top: 0.25rem;
-  display: flex;
-  align-items: center;
-  gap: 0.25rem;
+.delete-consultation-btn i {
+    font-size: 0.8rem;
 }
 
-.appointment-facility i {
-  color: var(--primary-blue);
-  font-size: 0.875rem;
-}
-
-.appointment-card .appointment-facility {
-  margin-top: 0.5rem;
-  font-size: 0.875rem;
-  color: var(--text-medium);
-}
-
-.appointment-card-h .appointment-facility {
-  margin-top: 0.5rem;
-  padding-top: 0.5rem;
-  border-top: 1px solid var(--border-light);
+/* Consultation actions container */
+.consultation-actions {
+    display: flex;
+    gap: 0.5rem;
+    align-items: center;
 }

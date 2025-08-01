@@ -325,6 +325,9 @@ export async function updatePatientPersonalInfo(userId, personalInfo) {
 
         // Validate and sanitize the personal information
         const validationResult = validateProfileUpdateData(personalInfo);
+        console.log('🔍 Validation result:', validationResult);
+        console.log('🔍 Sanitized data:', validationResult.sanitizedData);
+        
         if (!validationResult.valid) {
             throw new Error(validationResult.errors[0]);
         }
@@ -579,6 +582,35 @@ export async function getConsultationHistory(userId) {
         return patientData?.activity?.consultationHistory || [];
     } catch (error) {
         console.error('Error fetching consultation history:', error);
+        throw error;
+    }
+}
+
+/**
+ * Remove consultation from patient history
+ */
+export async function removePatientConsultation(userId, consultationId) {
+    try {
+        console.log('🔍 removePatientConsultation called for user:', userId, 'consultation:', consultationId);
+        
+        // Get current consultation history
+        const patientData = await getPatientData(userId);
+        const currentConsultations = patientData?.activity?.consultationHistory || [];
+        
+        // Filter out the consultation to remove
+        const updatedConsultations = currentConsultations.filter(consultation => consultation.id !== consultationId);
+        
+        // Update the document with the filtered array
+        const updates = {
+            'activity.consultationHistory': updatedConsultations,
+            updatedAt: serverTimestamp()
+        };
+        
+        await updateDoc(doc(db, 'patients', userId), updates);
+        console.log('✅ Consultation removed successfully from Firestore');
+        return true;
+    } catch (error) {
+        console.error('❌ Error removing consultation from Firestore:', error);
         throw error;
     }
 }
@@ -900,14 +932,139 @@ export async function updateAppointmentStatus(appointmentId, status, patientId, 
 }
 
 /**
+ * Update appointment details (for patients to edit their appointments)
+ */
+export async function updateAppointment(userId, appointmentId, updatedAppointmentData) {
+    try {
+        console.log('🔍 Updating appointment:', appointmentId);
+        console.log('📋 Updated data:', updatedAppointmentData);
+        
+        // Get current patient data
+        const patientData = await getPatientData(userId);
+        if (!patientData) {
+            throw new Error('Patient data not found');
+        }
+        
+        const appointments = patientData?.activity?.appointments || [];
+        const appointmentIndex = appointments.findIndex(apt => apt.id === appointmentId);
+        
+        if (appointmentIndex === -1) {
+            throw new Error('Appointment not found');
+        }
+        
+        // Update the appointment with new data while preserving existing fields
+        const updatedAppointments = appointments.map((apt, index) => {
+            if (index === appointmentIndex) {
+                return {
+                    ...apt,
+                    ...updatedAppointmentData,
+                    updatedAt: new Date().toISOString()
+                };
+            }
+            return apt;
+        });
+        
+        // Update the patient document
+        const patientUpdates = {
+            'activity.appointments': updatedAppointments,
+            updatedAt: serverTimestamp()
+        };
+        
+        await updateDoc(doc(db, 'patients', userId), patientUpdates);
+        
+        console.log('✅ Appointment updated successfully');
+        return true;
+    } catch (error) {
+        console.error('Error updating appointment:', error);
+        throw error;
+    }
+}
+
+/**
+ * Update appointment details by facility (for healthcare providers to edit appointments)
+ */
+export async function updateAppointmentByFacility(appointmentId, patientId, updatedAppointmentData, facilityId) {
+    try {
+        console.log('🏥 Facility updating appointment:', appointmentId);
+        console.log('📋 Updated data:', updatedAppointmentData);
+        console.log('👤 Patient ID:', patientId);
+        console.log('🏥 Facility ID:', facilityId);
+        
+        // Get current patient data
+        const patientData = await getPatientData(patientId);
+        if (!patientData) {
+            throw new Error('Patient data not found');
+        }
+        
+        const appointments = patientData?.activity?.appointments || [];
+        const appointmentIndex = appointments.findIndex(apt => apt.id === appointmentId);
+        
+        if (appointmentIndex === -1) {
+            throw new Error('Appointment not found');
+        }
+        
+        // Get the original appointment to preserve some fields
+        const originalAppointment = appointments[appointmentIndex];
+        
+        // Update the appointment with new data while preserving existing fields
+        const updatedAppointments = appointments.map((apt, index) => {
+            if (index === appointmentIndex) {
+                return {
+                    ...apt,
+                    // Update only the fields that facilities can edit
+                    date: updatedAppointmentData.date || apt.date,
+                    time: updatedAppointmentData.time || apt.time,
+                    doctor: updatedAppointmentData.doctor || apt.doctor,
+                    status: updatedAppointmentData.status || apt.status,
+                    notes: updatedAppointmentData.notes || apt.notes,
+                    // Add metadata about the update
+                    updatedAt: new Date().toISOString(),
+                    updatedBy: 'facility',
+                    facilityId: facilityId,
+                    lastModifiedBy: facilityId,
+                    modificationHistory: [
+                        ...(apt.modificationHistory || []),
+                        {
+                            timestamp: new Date().toISOString(),
+                            modifiedBy: facilityId,
+                            changes: {
+                                date: apt.date !== updatedAppointmentData.date ? { from: apt.date, to: updatedAppointmentData.date } : null,
+                                time: apt.time !== updatedAppointmentData.time ? { from: apt.time, to: updatedAppointmentData.time } : null,
+                                doctor: apt.doctor !== updatedAppointmentData.doctor ? { from: apt.doctor, to: updatedAppointmentData.doctor } : null,
+                                status: apt.status !== updatedAppointmentData.status ? { from: apt.status, to: updatedAppointmentData.status } : null
+                            }
+                        }
+                    ]
+                };
+            }
+            return apt;
+        });
+        
+        // Update the patient document
+        const patientUpdates = {
+            'activity.appointments': updatedAppointments,
+            updatedAt: serverTimestamp()
+        };
+        
+        await updateDoc(doc(db, 'patients', patientId), patientUpdates);
+        
+        console.log('✅ Appointment updated by facility successfully');
+        return true;
+    } catch (error) {
+        console.error('Error updating appointment by facility:', error);
+        throw error;
+    }
+}
+
+/**
  * Create appointment for a patient by facility (using patient UID)
  */
 export async function createAppointmentForPatient(patientUid, appointmentData, facilityId, facilityName) {
     try {
-        console.log('Creating appointment for patient:', patientUid);
-        console.log('Appointment data:', appointmentData);
-        console.log('Facility ID:', facilityId);
-        console.log('Facility Name:', facilityName);
+        console.log('🔍 Creating appointment for patient:', patientUid);
+        console.log('📋 Appointment data:', appointmentData);
+        console.log('🏥 Facility ID:', facilityId);
+        console.log('🏥 Facility Name:', facilityName);
         
         // First, get the patient data to ensure they exist and get their details
         const patientDocRef = doc(db, 'patients', patientUid);
@@ -918,7 +1075,15 @@ export async function createAppointmentForPatient(patientUid, appointmentData, f
         }
         
         const patientData = patientDocSnap.data();
-        console.log('Found patient data:', patientData);
+        console.log('📋 Found patient data:', patientData);
+        console.log('📋 Current activity field:', patientData.activity);
+        console.log('📋 Current appointments:', patientData.activity?.appointments || []);
+        
+        // Ensure activity field exists
+        if (!patientData.activity) {
+            console.log('⚠️ Activity field not found, initializing...');
+            await initializePatientActivity(patientUid);
+        }
         
         // Create the appointment object
         const appointment = {
@@ -938,18 +1103,33 @@ export async function createAppointmentForPatient(patientUid, appointmentData, f
             createdBy: 'facility' // Mark that this was created by the facility
         };
         
+        console.log('📅 Created appointment object:', appointment);
+        
         // Add the appointment to the patient's document
         const patientUpdates = {
             'activity.appointments': arrayUnion(appointment),
             updatedAt: serverTimestamp()
         };
         
+        console.log('📝 Updating patient document with:', patientUpdates);
+        
         await updateDoc(patientDocRef, patientUpdates);
         
-        console.log('Appointment created successfully for patient:', patientUid);
+        console.log('✅ Appointment created successfully for patient:', patientUid);
+        console.log('✅ Patient document updated with new appointment');
+        
+        // Verify the update by reading the document again
+        const updatedDocSnap = await getDoc(patientDocRef);
+        if (updatedDocSnap.exists()) {
+            const updatedData = updatedDocSnap.data();
+            console.log('🔍 Verification - Updated patient data:', updatedData);
+            console.log('🔍 Verification - Updated appointments:', updatedData.activity?.appointments || []);
+            console.log('🔍 Verification - Number of appointments:', updatedData.activity?.appointments?.length || 0);
+        }
+        
         return appointment;
     } catch (error) {
-        console.error('Error creating appointment for patient:', error);
+        console.error('❌ Error creating appointment for patient:', error);
         throw error;
     }
 }
@@ -1474,6 +1654,77 @@ export async function cleanupTestFacilities() {
     } catch (error) {
         console.error('❌ Error cleaning up test facilities:', error)
         throw error
+    }
+}
+
+/**
+ * Update facility information
+ */
+export async function updateFacilityInfo(facilityId, updateData) {
+    try {
+        console.log('🔍 updateFacilityInfo called for facility:', facilityId);
+        console.log('📦 Update data:', updateData);
+        
+        const facilityRef = doc(db, 'facilities', facilityId);
+        
+        // Validate that the facility exists
+        const facilityDoc = await getDoc(facilityRef);
+        if (!facilityDoc.exists()) {
+            throw new Error('Facility not found');
+        }
+        
+        // Prepare the update object
+        const updates = {
+            updatedAt: serverTimestamp()
+        };
+        
+        // Add facilityInfo updates if provided
+        if (updateData.facilityInfo) {
+            Object.keys(updateData.facilityInfo).forEach(key => {
+                updates[`facilityInfo.${key}`] = updateData.facilityInfo[key];
+            });
+        }
+        
+        // Add other updates if provided
+        if (updateData.licenseNumber !== undefined) {
+            updates.licenseNumber = updateData.licenseNumber;
+        }
+        
+        // Add new fields if provided
+        if (updateData.specialties !== undefined) {
+            updates.specialties = updateData.specialties;
+        }
+        if (updateData.services !== undefined) {
+            updates.services = updateData.services;
+        }
+        if (updateData.staff !== undefined) {
+            updates.staff = updateData.staff;
+        }
+        if (updateData.capacity !== undefined) {
+            updates.capacity = updateData.capacity;
+        }
+        if (updateData.operatingHours !== undefined) {
+            updates.operatingHours = updateData.operatingHours;
+        }
+        
+        // Preserve isSearchable field if it exists
+        const currentData = facilityDoc.data();
+        if (currentData.isSearchable !== undefined) {
+            updates.isSearchable = currentData.isSearchable;
+        }
+        
+        console.log('📦 Final updates object:', updates);
+        console.log('🔍 Current facility data before update:', currentData);
+        
+        // Update the facility document
+        await updateDoc(facilityRef, updates);
+        
+        console.log('✅ Facility information updated successfully');
+        return true;
+        
+    } catch (error) {
+        console.error('❌ Error updating facility information:', error);
+        throw error;
     }
 }
 

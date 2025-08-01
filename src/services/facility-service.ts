@@ -40,8 +40,13 @@ interface Facility {
   description: string
   isActive: boolean
   isSearchable: boolean
+  isVerified?: boolean
+  profileComplete?: boolean
   createdAt: any
   updatedAt: any
+  lastLoginAt?: any
+  emailVerified?: boolean
+  authProvider?: string
 }
 
 interface SearchFilters {
@@ -61,46 +66,63 @@ class FacilityService {
    */
   async searchFacilities(filters: SearchFilters = {}): Promise<Facility[]> {
     try {
+      console.log('🔍 Searching facilities with filters:', filters)
+      
+      // Start with a simple query that doesn't require complex indexes
       let q = query(
         collection(this.db, 'facilities'),
         where('isActive', '==', true),
-        where('isSearchable', '==', true)
+        limit(50)
       )
-
-      // Add filters
-      if (filters.name) {
-        q = query(q, where('name', '>=', filters.name), where('name', '<=', filters.name + '\uf8ff'))
-      }
-
-      if (filters.type) {
-        q = query(q, where('type', '==', filters.type))
-      }
-
-      if (filters.city) {
-        q = query(q, where('city', '==', filters.city))
-      }
-
-      if (filters.province) {
-        q = query(q, where('province', '==', filters.province))
-      }
-
-      // Add ordering and limit
-      q = query(q, orderBy('name'), limit(50))
 
       const querySnapshot = await getDocs(q)
       const facilities: Facility[] = []
 
       querySnapshot.forEach((doc) => {
         const data = doc.data() as Facility
-        facilities.push({
-          ...data,
-          uid: doc.id
-        })
+        // Only include facilities that are searchable
+        if (data.isSearchable !== false) {
+          facilities.push({
+            ...data,
+            uid: doc.id
+          })
+        }
       })
 
-      // Filter by specialties and services if provided (client-side filtering for array fields)
+      console.log(`✅ Found ${facilities.length} facilities from database`)
+
+      // Apply filters client-side to avoid index requirements
       let filteredFacilities = facilities
 
+      // Filter by name (case-insensitive)
+      if (filters.name) {
+        filteredFacilities = filteredFacilities.filter(facility =>
+          facility.name.toLowerCase().includes(filters.name!.toLowerCase())
+        )
+      }
+
+      // Filter by type
+      if (filters.type) {
+        filteredFacilities = filteredFacilities.filter(facility =>
+          facility.type === filters.type
+        )
+      }
+
+      // Filter by city
+      if (filters.city) {
+        filteredFacilities = filteredFacilities.filter(facility =>
+          facility.city === filters.city
+        )
+      }
+
+      // Filter by province
+      if (filters.province) {
+        filteredFacilities = filteredFacilities.filter(facility =>
+          facility.province === filters.province
+        )
+      }
+
+      // Filter by specialties
       if (filters.specialties && filters.specialties.length > 0) {
         filteredFacilities = filteredFacilities.filter(facility =>
           filters.specialties!.some(specialty =>
@@ -109,6 +131,7 @@ class FacilityService {
         )
       }
 
+      // Filter by services
       if (filters.services && filters.services.length > 0) {
         filteredFacilities = filteredFacilities.filter(facility =>
           filters.services!.some(service =>
@@ -117,10 +140,14 @@ class FacilityService {
         )
       }
 
+      // Sort by name
+      filteredFacilities.sort((a, b) => a.name.localeCompare(b.name))
+
+      console.log(`✅ Returning ${filteredFacilities.length} filtered facilities`)
       return filteredFacilities
     } catch (error) {
-      console.error('Error searching facilities:', error)
-      throw error
+      console.error('❌ Error searching facilities:', error)
+      return []
     }
   }
 

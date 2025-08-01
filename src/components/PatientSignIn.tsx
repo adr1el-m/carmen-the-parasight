@@ -50,7 +50,8 @@ const PatientSignIn: React.FC = React.memo(() => {
   // Auto-refresh user activity
   useEffect(() => {
     const interval = setInterval(() => {
-      setLastActivity(new Date())
+      // Update last activity timestamp
+      localStorage.setItem('lastActivity', new Date().toISOString())
     }, 60000) // Update every minute
 
     return () => clearInterval(interval)

@@ -1,8 +1,33 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-    // Allow all authenticated users to read and write
-    match /{document=**} {
+    // Allow authenticated users to read and write to patients collection
+    // Patients can read/write their own documents
+    // Facilities can read patient documents to see appointments
+    match /patients/{userId} {
+      allow read: if request.auth != null;
+      allow write: if request.auth != null && request.auth.uid == userId;
+    }
+    
+    // Allow authenticated users to read all facilities (for patient search)
+    // But only allow facilities to write to their own document
+    match /facilities/{facilityId} {
+      allow read: if request.auth != null;
+      allow write: if request.auth != null && request.auth.uid == facilityId;
+    }
+    
+    // Allow authenticated users to read and write to counters collection
+    match /counters/{document=**} {
+      allow read, write: if request.auth != null;
+    }
+    
+    // Allow authenticated users to read and write to appointments collection
+    match /appointments/{document=**} {
+      allow read, write: if request.auth != null;
+    }
+    
+    // Allow authenticated users to read and write to documentData collection
+    match /documentData/{documentId} {
       allow read, write: if request.auth != null;
     }
   }

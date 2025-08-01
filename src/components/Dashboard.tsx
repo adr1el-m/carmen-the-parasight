@@ -23,37 +23,14 @@ interface Appointment {
   status: 'confirmed' | 'pending' | 'virtual'
 }
 
-interface Activity {
-  id: string
-  type: 'patient' | 'appointment' | 'upload'
-  title: string
-  description: string
-  timestamp: string
-  icon: string
-}
 
-interface PatientRecord {
-  id: string
-  date: string
-  day: string
-  time: string
-  issue: string
-  patientName: string
-  hasDocuments: boolean
-}
 
-interface AvailabilitySlot {
-  id: string
-  clinic: string
-  time: string
-  date: string
-}
+
 
 interface DashboardStats {
   totalPatients: number
   staffMembers: number
   todayAppointments: number
-  virtualConsultations: number
 }
 
 interface QuickAction {
@@ -66,21 +43,13 @@ interface QuickAction {
 
 const Dashboard: React.FC = React.memo(() => {
   const navigate = useNavigate()
-  const [activeSection, setActiveSection] = useState<'dashboard' | 'patient-records' | 'my-availability' | 'my-consults' | 'online-consult' | 'help'>('dashboard')
+  const [activeSection, setActiveSection] = useState<'dashboard' | 'my-consults' | 'help'>('dashboard')
   const [isLoading, setIsLoading] = useState(true)
   const [user, setUser] = useState<User | null>(null)
   const [currentMonth, setCurrentMonth] = useState(new Date())
   const [notificationsEnabled, setNotificationsEnabled] = useState(true)
   const [isSidebarOpen, setIsSidebarOpen] = useState(false)
   const [activeTab, setActiveTab] = useState<string>('Yesterday')
-  const [availabilityEnabled, setAvailabilityEnabled] = useState(true)
-  const [consultationTypes, setConsultationTypes] = useState({
-    whatsapp: false,
-    video: true,
-    phone: false
-  })
-  const [consultationDuration, setConsultationDuration] = useState('30')
-  const [consultationFees, setConsultationFees] = useState('500')
   // Removed unused lastActivity state
   const [isRefreshing, setIsRefreshing] = useState(false)
   const [facilityAppointments, setFacilityAppointments] = useState<any[]>([])
@@ -93,151 +62,48 @@ const Dashboard: React.FC = React.memo(() => {
   const [appointmentModalTab, setAppointmentModalTab] = useState<'details' | 'personal' | 'conditions' | 'history' | 'documents'>('details')
   const [facilityData, setFacilityData] = useState<any>(null)
   const [isLoadingFacilityData, setIsLoadingFacilityData] = useState(true)
+  const [activeConsultsTab, setActiveConsultsTab] = useState<'upcoming' | 'past' | 'cancelled'>('upcoming')
+  
+  // New appointment modal state
+  const [showNewAppointmentModal, setShowNewAppointmentModal] = useState(false)
+  const [newAppointmentForm, setNewAppointmentForm] = useState({
+    patientUid: '',
+    date: '',
+    time: '',
+    doctor: '',
+    type: 'consultation',
+    notes: '',
+    status: 'scheduled'
+  })
+  const [isCreatingAppointment, setIsCreatingAppointment] = useState(false)
+  const [patientValidationError, setPatientValidationError] = useState('')
   
   const sidebarRef = useRef<HTMLElement>(null)
   const sidebarOverlayRef = useRef<HTMLDivElement>(null)
   const mainContentRef = useRef<HTMLDivElement>(null)
   const statsRef = useRef<HTMLDivElement>(null)
 
-  // Memoized data for better performance
-  const appointments: Appointment[] = useMemo(() => [
-    {
-      id: '1',
-      doctorName: 'Dr. Maria Santos',
-      specialty: 'Cardiology - Room 301',
-      time: '9:30 AM',
-      patientName: 'John Doe (Consultation)',
-      type: 'in-person',
-      status: 'confirmed'
-    },
-    {
-      id: '2',
-      doctorName: 'Dr. Juan Dela Cruz',
-      specialty: 'Pediatrics - Room 205',
-      time: '11:00 AM',
-      patientName: 'Sarah Johnson (Follow-up)',
-      type: 'in-person',
-      status: 'pending'
-    },
-    {
-      id: '3',
-      doctorName: 'Dr. Ana Gonzales',
-      specialty: 'Dermatology - Room 102',
-      time: '2:30 PM',
-      patientName: 'Mike Chen (Virtual)',
-      type: 'virtual',
-      status: 'virtual'
-    }
-  ], [])
 
-  const activities: Activity[] = useMemo(() => [
-    {
-      id: '1',
-      type: 'patient',
-      title: 'New Patient Registered',
-      description: 'Maria Santos joined the patient portal',
-      timestamp: '2 hours ago',
-      icon: 'fas fa-user-plus'
-    },
-    {
-      id: '2',
-      type: 'appointment',
-      title: 'Appointment Confirmed',
-      description: 'Dr. Juan Dela Cruz - Pediatrics consultation',
-      timestamp: '4 hours ago',
-      icon: 'fas fa-calendar-check'
-    },
-    {
-      id: '3',
-      type: 'upload',
-      title: 'Lab Results Uploaded',
-      description: 'Blood work results for Patient #2547',
-      timestamp: '1 day ago',
-      icon: 'fas fa-file-upload'
-    }
-  ], [])
 
-  const patientRecords: PatientRecord[] = useMemo(() => [
-    {
-      id: '1',
-      date: '15',
-      day: 'Thu',
-      time: '09:00am - 09:30am',
-      issue: 'Fever',
-      patientName: 'Stephine Claire',
-      hasDocuments: true
-    },
-    {
-      id: '2',
-      date: '16',
-      day: 'Fri',
-      time: '09:00am - 09:30am',
-      issue: 'Fever',
-      patientName: 'Stephine Claire',
-      hasDocuments: true
-    },
-    {
-      id: '3',
-      date: '19',
-      day: 'Mon',
-      time: '09:00am - 09:30am',
-      issue: 'Fever',
-      patientName: 'Stephine Claire',
-      hasDocuments: false
-    }
-  ], [])
 
-  const availabilitySlots: AvailabilitySlot[] = useMemo(() => [
-    {
-      id: '1',
-      clinic: 'Sit at clinic 1',
-      time: '10:00am - 11:00am',
-      date: 'Nov 01, 2022'
-    },
-    {
-      id: '2',
-      clinic: 'Sit at clinic 2',
-      time: '10:00am - 11:00am',
-      date: 'Nov 01, 2022'
-    },
-    {
-      id: '3',
-      clinic: 'Sit at clinic 3',
-      time: '10:00am - 11:00am',
-      date: 'Nov 01, 2022'
-    }
-  ], [])
+
+
 
   // Dashboard statistics
   const dashboardStats: DashboardStats = useMemo(() => ({
     totalPatients: 2547,
     staffMembers: 45,
-    todayAppointments: facilityAppointments.length,
-    virtualConsultations: facilityAppointments.filter(apt => apt.type === 'virtual' || apt.type === 'consultation').length
+    todayAppointments: facilityAppointments.length
   }), [facilityAppointments])
 
   // Quick actions configuration
   const quickActions: QuickAction[] = useMemo(() => [
-    {
-      id: 'add-patient',
-      title: 'Register Patient',
-      icon: 'fas fa-user-plus',
-      action: 'add-patient',
-      description: 'Add a new patient to the system'
-    },
     {
       id: 'schedule',
       title: 'Schedule Appointment',
       icon: 'fas fa-calendar-plus',
       action: 'schedule',
       description: 'Book a new appointment'
-    },
-    {
-      id: 'add-staff',
-      title: 'Add Staff Member',
-      icon: 'fas fa-user-md',
-      action: 'add-staff',
-      description: 'Register a new staff member'
     },
     {
       id: 'reports',
@@ -255,11 +121,28 @@ const Dashboard: React.FC = React.memo(() => {
         setUser(user)
         setIsLoading(false)
         
+        console.log('🔍 User authenticated:', user.uid, user.email)
+        
         // Load facility data
         await loadFacilityData(user.uid)
         
-        // Load facility appointments
-        loadFacilityAppointments('g9dIxoSXbLM0Q95uUVNsLDddPJA2')
+        // Check if user is actually a facility
+        try {
+          const { getFirestore, doc, getDoc } = await import('firebase/firestore')
+          const db = getFirestore()
+          const facilityDoc = await getDoc(doc(db, 'facilities', user.uid))
+          console.log('🔍 Is user a facility?', facilityDoc.exists())
+          if (facilityDoc.exists()) {
+            const facilityData = facilityDoc.data()
+            console.log('🔍 Facility data:', facilityData)
+          }
+        } catch (error) {
+          console.error('❌ Error checking if user is facility:', error)
+        }
+        
+        // Load appointments for the current user (facility or patient)
+        console.log('🔍 Current user UID for appointments:', user.uid)
+        loadUserAppointments(user.uid)
       } else {
         navigate('/')
       }
@@ -270,21 +153,25 @@ const Dashboard: React.FC = React.memo(() => {
     }
   }, [navigate])
 
-  // Commented out real-time listener for now to prevent rapid refreshes
-  // useEffect(() => {
-  //   if (!user) return
-  //   // Real-time listener setup would go here
-  // }, [user])
+
 
   const loadFacilityData = useCallback(async (userId: string) => {
     console.log('🔍 Loading facility data for userId:', userId)
     setIsLoadingFacilityData(true)
     try {
       // Import the function dynamically to avoid TypeScript issues
-      const { getPatientData } = await import('../services/firestoredb.js')
-      const data = await getPatientData(userId)
-      console.log('📋 Found facility data:', data)
-      setFacilityData(data)
+      const { getFirestore, doc, getDoc } = await import('firebase/firestore')
+      const db = getFirestore()
+      const facilityDoc = await getDoc(doc(db, 'facilities', userId))
+      
+      if (facilityDoc.exists()) {
+        const data = facilityDoc.data()
+        console.log('📋 Found facility data:', data)
+        setFacilityData(data)
+      } else {
+        console.log('❌ No facility data found for userId:', userId)
+        setFacilityData(null)
+      }
     } catch (error) {
       console.error('❌ Error loading facility data:', error)
       setFacilityData(null)
@@ -293,38 +180,85 @@ const Dashboard: React.FC = React.memo(() => {
     }
   }, [])
 
-  const loadFacilityAppointments = useCallback(async (facilityId: string) => {
-    console.log('🔍 Loading facility appointments for facilityId:', facilityId)
+  const loadUserAppointments = useCallback(async (userId: string) => {
+    console.log('🔍 Loading appointments for userId:', userId)
     setIsLoadingAppointments(true)
     try {
-      // Import the function dynamically to avoid TypeScript issues
-      const { getFacilityAppointments } = await import('../services/firestoredb.js')
-      const appointments = await getFacilityAppointments(facilityId)
-      console.log('📋 Found appointments:', appointments)
-      setFacilityAppointments(appointments)
+      // First, check if user is a facility
+      const { getFirestore, doc, getDoc } = await import('firebase/firestore')
+      const db = getFirestore()
+      const facilityDoc = await getDoc(doc(db, 'facilities', userId))
+      
+      if (facilityDoc.exists()) {
+        // User is a facility - load facility appointments
+        console.log('🏥 User is a facility, loading facility appointments')
+        const { getFacilityAppointments } = await import('../services/firestoredb.js')
+        const appointments = await getFacilityAppointments(userId)
+        console.log('📋 Found facility appointments:', appointments)
+        setFacilityAppointments(appointments)
+      } else {
+        // User is a patient - load patient appointments
+        console.log('👤 User is a patient, loading patient appointments')
+        const { getPatientAppointments } = await import('../services/firestoredb.js')
+        const appointments = await getPatientAppointments(userId)
+        console.log('📋 Found patient appointments:', appointments)
+        setFacilityAppointments(appointments)
+      }
     } catch (error) {
-      console.error('❌ Error loading facility appointments:', error)
-      // If no appointments found or error, set empty array
+      console.error('❌ Error loading appointments:', error)
       setFacilityAppointments([])
     } finally {
       setIsLoadingAppointments(false)
     }
   }, [])
 
+
+
   const openAppointmentModal = useCallback(async (appointment: any) => {
-    console.log('🔍 Opening appointment modal for:', appointment)
     setSelectedAppointment(appointment)
     setShowAppointmentModal(true)
     setAppointmentModalTab('details')
     
-    // Load patient data
+    // Load comprehensive patient data
     if (appointment.patientId) {
       setIsLoadingPatientData(true)
       try {
-        const { getPatientData } = await import('../services/firestoredb.js')
+        const { getPatientData, getConsultationHistory, getPatientDocuments } = await import('../services/firestoredb.js')
+        
+        // Load basic patient data
         const patientData = await getPatientData(appointment.patientId)
-        console.log('📋 Patient data loaded:', patientData)
-        setSelectedPatientData(patientData)
+        console.log('📋 Basic patient data loaded:', patientData)
+        
+        // Load consultation history
+        let consultationHistory: any[] = []
+        try {
+          consultationHistory = await getConsultationHistory(appointment.patientId)
+          console.log('📋 Consultation history loaded:', consultationHistory)
+        } catch (error) {
+          console.warn('⚠️ Could not load consultation history:', error)
+        }
+        
+        // Load patient documents
+        let patientDocuments: any[] = []
+        try {
+          patientDocuments = await getPatientDocuments(appointment.patientId)
+          console.log('📋 Patient documents loaded:', patientDocuments)
+        } catch (error) {
+          console.warn('⚠️ Could not load patient documents:', error)
+        }
+        
+        // Combine all patient data
+        const comprehensivePatientData = {
+          ...patientData,
+          activity: {
+            ...(patientData?.activity || {}),
+            consultationHistory: consultationHistory,
+            documents: patientDocuments
+          }
+        }
+        
+        console.log('📋 Comprehensive patient data:', comprehensivePatientData)
+        setSelectedPatientData(comprehensivePatientData)
       } catch (error) {
         console.error('❌ Error loading patient data:', error)
         setSelectedPatientData(null)
@@ -339,6 +273,75 @@ const Dashboard: React.FC = React.memo(() => {
     setSelectedAppointment(null)
     setSelectedPatientData(null)
     setAppointmentModalTab('details')
+  }, [])
+
+  const openNewAppointmentModal = useCallback(() => {
+    setShowNewAppointmentModal(true)
+    setNewAppointmentForm({
+      patientUid: '',
+      date: '',
+      time: '',
+      doctor: '',
+      type: 'consultation',
+      notes: '',
+      status: 'scheduled'
+    })
+    setPatientValidationError('')
+  }, [])
+
+  const closeNewAppointmentModal = useCallback(() => {
+    setShowNewAppointmentModal(false)
+    setNewAppointmentForm({
+      patientUid: '',
+      date: '',
+      time: '',
+      doctor: '',
+      type: 'consultation',
+      notes: '',
+      status: 'scheduled'
+    })
+    setPatientValidationError('')
+  }, [])
+
+  const handleNewAppointmentFormChange = useCallback((field: string, value: string) => {
+    setNewAppointmentForm(prev => ({
+      ...prev,
+      [field]: value
+    }))
+    
+    // Clear validation error when patient UID is being typed
+    if (field === 'patientUid') {
+      setPatientValidationError('')
+    }
+  }, [])
+
+  const validatePatientUid = useCallback(async (uid: string) => {
+    if (!uid.trim()) {
+      setPatientValidationError('Patient UID is required')
+      return false
+    }
+    
+    try {
+      const { getPatientData } = await import('../services/firestoredb.js')
+      const patientData = await getPatientData(uid)
+      
+      if (!patientData) {
+        setPatientValidationError('Patient not found with this UID')
+        return false
+      }
+      
+      if (patientData.role !== 'patient') {
+        setPatientValidationError('UID belongs to a non-patient user')
+        return false
+      }
+      
+      setPatientValidationError('')
+      return true
+    } catch (error) {
+      console.error('Error validating patient UID:', error)
+      setPatientValidationError('Error validating patient UID')
+      return false
+    }
   }, [])
 
   // Removed unused auto-refresh effect
@@ -360,7 +363,7 @@ const Dashboard: React.FC = React.memo(() => {
     setIsSidebarOpen(false)
   }, [])
 
-  const handleNavClick = useCallback((section: 'dashboard' | 'patient-records' | 'my-availability' | 'my-consults' | 'online-consult' | 'help') => {
+  const handleNavClick = useCallback((section: 'dashboard' | 'my-consults' | 'help') => {
     setActiveSection(section)
     closeSidebar()
   }, [closeSidebar])
@@ -369,21 +372,46 @@ const Dashboard: React.FC = React.memo(() => {
     setActiveTab(tab)
   }, [])
 
+  const handleConsultsTabClick = useCallback((tab: 'upcoming' | 'past' | 'cancelled') => {
+    setActiveConsultsTab(tab)
+  }, [])
+
+  const filteredAppointments = useMemo(() => {
+    if (!facilityAppointments.length) return []
+    
+    const now = new Date()
+    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate())
+    
+    return facilityAppointments.filter(appointment => {
+      const appointmentDate = new Date(appointment.date)
+      const appointmentDateTime = new Date(appointmentDate.getFullYear(), appointmentDate.getMonth(), appointmentDate.getDate())
+      
+      switch (activeConsultsTab) {
+        case 'upcoming':
+          return appointmentDateTime >= today && 
+                 ['scheduled', 'confirmed', 'pending'].includes(appointment.status)
+        case 'past':
+          return appointmentDateTime < today || 
+                 appointment.status === 'completed'
+        case 'cancelled':
+          return appointment.status === 'cancelled'
+        default:
+          return true
+      }
+    }).sort((a, b) => {
+      const dateA = new Date(a.date)
+      const dateB = new Date(b.date)
+      return activeConsultsTab === 'past' ? dateB.getTime() - dateA.getTime() : dateA.getTime() - dateB.getTime()
+    })
+  }, [facilityAppointments, activeConsultsTab])
+
   const handleQuickAction = useCallback((action: string) => {
     console.log(`Executing quick action: ${action}`)
     
     switch (action) {
-      case 'add-patient':
-        showNotification('Opening patient registration form...', 'info')
-        // In production, this would open a modal or navigate to registration
-        break
       case 'schedule':
         showNotification('Opening appointment scheduler...', 'info')
         // In production, this would open the appointment booking interface
-        break
-      case 'add-staff':
-        showNotification('Opening staff registration form...', 'info')
-        // In production, this would open staff management interface
         break
       case 'reports':
         showNotification('Loading analytics dashboard...', 'info')
@@ -411,24 +439,58 @@ const Dashboard: React.FC = React.memo(() => {
     return date.toLocaleDateString('en-US', { month: 'long', year: 'numeric' })
   }, [])
 
+  const formatTime = useCallback((timeString: string) => {
+    try {
+      // Handle different time formats
+      let time = timeString
+      
+      // If time is already in AM/PM format, return as is
+      if (timeString.includes('AM') || timeString.includes('PM')) {
+        return timeString
+      }
+      
+      // If time is in HH:MM format, convert to AM/PM
+      if (timeString.includes(':')) {
+        const [hours, minutes] = timeString.split(':')
+        const hour = parseInt(hours, 10)
+        const ampm = hour >= 12 ? 'PM' : 'AM'
+        const displayHour = hour % 12 || 12
+        return `${displayHour}:${minutes.padStart(2, '0')} ${ampm}`
+      }
+      
+      return timeString
+    } catch (error) {
+      console.warn('Error formatting time:', error)
+      return timeString
+    }
+  }, [])
+
   const getUserInitials = useCallback(() => {
     if (!user?.displayName) return 'HF'
     return user.displayName.split(' ').map(n => n[0]).join('').toUpperCase()
   }, [user?.displayName])
 
   const getUserDisplayName = useCallback(() => {
-    // Get the facility name from Firestore data
+    // For facilities, get the facility name from the correct fields
+    if (facilityData?.facilityInfo?.name) {
+      return facilityData.facilityInfo.name
+    }
+    if (facilityData?.name) {
+      return facilityData.name
+    }
     if (facilityData?.personalInfo?.fullName) {
       return facilityData.personalInfo.fullName
-    }
-    if (facilityData?.facilityName) {
-      return facilityData.facilityName
     }
     if (user?.displayName) {
       return user.displayName
     }
     return 'Healthcare Facility'
   }, [facilityData, user?.displayName])
+
+  // Check if current user is the facility that owns the appointment
+  const isCurrentUserFacility = useCallback((appointmentFacilityId: string) => {
+    return appointmentFacilityId === user?.uid
+  }, [user?.uid])
 
   const showNotification = useCallback((message: string, type: 'success' | 'error' | 'info' = 'info') => {
     // Remove existing notifications
@@ -514,10 +576,170 @@ const Dashboard: React.FC = React.memo(() => {
     }, 1500)
   }, [showNotification])
 
+  const handleCreateAppointment = useCallback(async () => {
+    // Validate form
+    if (!newAppointmentForm.patientUid.trim()) {
+      setPatientValidationError('Patient UID is required')
+      return
+    }
+    
+    if (!newAppointmentForm.date || !newAppointmentForm.time) {
+      showNotification('Please select both date and time', 'error')
+      return
+    }
+    
+    // Validate patient UID
+    const isValidPatient = await validatePatientUid(newAppointmentForm.patientUid)
+    if (!isValidPatient) {
+      return
+    }
+    
+    setIsCreatingAppointment(true)
+    
+    try {
+      const firestoreModule: any = await import('../services/firestoredb.js')
+      
+      await firestoreModule.createAppointmentForPatient(
+        newAppointmentForm.patientUid,
+        {
+          date: newAppointmentForm.date,
+          time: newAppointmentForm.time,
+          doctor: newAppointmentForm.doctor,
+          type: newAppointmentForm.type,
+          notes: newAppointmentForm.notes,
+          status: newAppointmentForm.status
+        },
+        user?.uid || '',
+        getUserDisplayName()
+      )
+      
+      showNotification('Appointment created successfully!', 'success')
+      closeNewAppointmentModal()
+      
+      // Refresh appointments list
+      if (user?.uid) {
+        loadUserAppointments(user.uid)
+      }
+      
+    } catch (error: any) {
+      console.error('Error creating appointment:', error)
+      showNotification(`Failed to create appointment: ${error.message}`, 'error')
+    } finally {
+      setIsCreatingAppointment(false)
+    }
+  }, [newAppointmentForm, user?.uid, validatePatientUid, closeNewAppointmentModal, loadUserAppointments, getUserDisplayName, showNotification])
+
   useEffect(() => {
     handleNavClick('dashboard')
     handleRefresh()
   }, [handleNavClick, handleRefresh])
+
+  // Real-time listener for appointments (both facility and patient)
+  useEffect(() => {
+    if (!user?.uid) return
+    
+    console.log('🔍 Setting up real-time listener for appointments...')
+    console.log('🔍 Current user UID:', user.uid)
+    
+    const setupRealTimeListener = async () => {
+      try {
+        const { getFirestore, collection, onSnapshot } = await import('firebase/firestore')
+        const db = getFirestore()
+        const patientsRef = collection(db, 'patients')
+        
+        const unsubscribe = onSnapshot(patientsRef, (querySnapshot) => {
+          console.log('🔄 Real-time update received from Firestore')
+          console.log(`📊 Total patients in collection: ${querySnapshot.size}`)
+          
+          const appointments: any[] = []
+          querySnapshot.forEach((doc) => {
+            const patientData = doc.data()
+            const patientAppointments = patientData?.activity?.appointments || []
+            
+            console.log(`📋 Patient ${doc.id} has ${patientAppointments.length} appointments`)
+            
+            // Filter appointments based on user type
+            let userAppointments: any[] = []
+            
+            // Check if current user is a facility
+            if (doc.id === user.uid) {
+              // User is a patient - show their own appointments
+              userAppointments = patientAppointments
+              console.log(`👤 User is patient, showing their appointments`)
+            } else {
+              // Check if any appointments belong to this facility
+              userAppointments = patientAppointments.filter((appointment: any) => {
+                const isMatch = appointment.facilityId === user.uid
+                console.log(`🔍 Appointment ${appointment.id}: facilityId=${appointment.facilityId}, currentUser=${user.uid}, match=${isMatch}`)
+                if (appointment.facilityId === "p5MJlb5lkIXnzDzNJXpWdolgiES2") {
+                  console.log(`🎯 Found the appointment from the screenshot! facilityId=${appointment.facilityId}, currentUser=${user.uid}`)
+                }
+                return isMatch
+              })
+            }
+            
+            appointments.push(...userAppointments)
+          })
+          
+          console.log(`📋 Real-time update: Found ${appointments.length} appointments for user ${user.uid}`)
+          console.log('📋 Appointments:', appointments)
+          
+          // Update the state with fresh data
+          setFacilityAppointments(appointments)
+          
+          // Show notification if new appointments were added
+          setFacilityAppointments(prevAppointments => {
+            if (appointments.length > prevAppointments.length) {
+              const newCount = appointments.length - prevAppointments.length
+              const notification = document.createElement('div')
+              notification.style.cssText = `
+                position: fixed;
+                top: 20px;
+                right: 20px;
+                background: #22c55e;
+                color: white;
+                padding: 16px 20px;
+                border-radius: 8px;
+                box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+                z-index: 10000;
+                font-family: 'Inter', sans-serif;
+                font-size: 14px;
+                max-width: 350px;
+                animation: slideIn 0.3s ease-out;
+              `
+              notification.textContent = `${newCount} new appointment${newCount > 1 ? 's' : ''} received!`
+              document.body.appendChild(notification)
+              
+              setTimeout(() => {
+                if (notification.parentNode) {
+                  notification.remove()
+                }
+              }, 3000)
+            }
+            return appointments
+          })
+        })
+        
+        return unsubscribe
+      } catch (error) {
+        console.error('Error setting up real-time listener:', error)
+        return () => {}
+      }
+    }
+    
+    let unsubscribe: (() => void) | null = null
+    
+    setupRealTimeListener().then((unsub) => {
+      unsubscribe = unsub
+    })
+    
+    return () => {
+      if (unsubscribe) {
+        console.log('🔍 Cleaning up real-time listener...')
+        unsubscribe()
+      }
+    }
+  }, [user?.uid]) // Removed facilityAppointments.length from dependencies to prevent infinite loop
 
   // Removed unused handleAction function
 
@@ -579,26 +801,6 @@ const Dashboard: React.FC = React.memo(() => {
                 <span>Dashboard</span>
               </button>
             </li>
-            <li className={`nav-item ${activeSection === 'patient-records' ? 'active' : ''}`}>
-              <button 
-                className="nav-link" 
-                onClick={(e) => { e.preventDefault(); handleNavClick('patient-records'); }}
-                aria-current={activeSection === 'patient-records' ? 'page' : undefined}
-              >
-                <i className="fas fa-folder-open" aria-hidden="true"></i>
-                <span>Patient Records</span>
-              </button>
-            </li>
-            <li className={`nav-item ${activeSection === 'my-availability' ? 'active' : ''}`}>
-              <button 
-                className="nav-link" 
-                onClick={(e) => { e.preventDefault(); handleNavClick('my-availability'); }}
-                aria-current={activeSection === 'my-availability' ? 'page' : undefined}
-              >
-                <i className="far fa-calendar-check" aria-hidden="true"></i>
-                <span>My Availability</span>
-              </button>
-            </li>
             <li className={`nav-item ${activeSection === 'my-consults' ? 'active' : ''}`}>
               <button 
                 className="nav-link" 
@@ -606,17 +808,7 @@ const Dashboard: React.FC = React.memo(() => {
                 aria-current={activeSection === 'my-consults' ? 'page' : undefined}
               >
                 <i className="fas fa-notes-medical" aria-hidden="true"></i>
-                <span>My Consults</span>
-              </button>
-            </li>
-            <li className={`nav-item ${activeSection === 'online-consult' ? 'active' : ''}`}>
-              <button 
-                className="nav-link" 
-                onClick={(e) => { e.preventDefault(); handleNavClick('online-consult'); }}
-                aria-current={activeSection === 'online-consult' ? 'page' : undefined}
-              >
-                <i className="fas fa-laptop-medical" aria-hidden="true"></i>
-                <span>Online Consult</span>
+                <span>Appointments</span>
               </button>
             </li>
             <li className={`nav-item ${activeSection === 'help' ? 'active' : ''}`}>
@@ -655,7 +847,6 @@ const Dashboard: React.FC = React.memo(() => {
               onClick={toggleSidebar}
               aria-label="Toggle mobile menu"
             >
-              <i className="fas fa-bars" aria-hidden="true"></i>
             </button>
             
             <button 
@@ -665,27 +856,10 @@ const Dashboard: React.FC = React.memo(() => {
               aria-label="Refresh dashboard data"
               title="Refresh dashboard (Ctrl+R)"
             >
-              <i className={`fas fa-sync-alt ${isRefreshing ? 'fa-spin' : ''}`} aria-hidden="true"></i>
             </button>
           </div>
           
-          <div className="user-info">
-            <div className="language-selector">
-              <select id="language-select" aria-label="Select language">
-                <option value="en">EN</option>
-                <option value="tl">TL</option>
-              </select>
-            </div>
-            
-            <div className="notifications" role="button" tabIndex={0} aria-label="View notifications (3 unread)">
-              <i className="fas fa-bell" aria-hidden="true"></i>
-              <span className="notification-badge" aria-label="3 unread notifications">3</span>
-            </div>
-            
-            <div className="user-avatar" role="button" tabIndex={0} aria-label={`User menu for ${getUserDisplayName()}`}>
-              <span aria-hidden="true">{getUserInitials()}</span>
-            </div>
-          </div>
+
         </div>
         
         <div className="main-container">
@@ -693,7 +867,7 @@ const Dashboard: React.FC = React.memo(() => {
           {activeSection === 'dashboard' && (
             <section className="content-section active">
               <div className="section-header">
-                <h1>Welcome to <span>{getUserDisplayName()}</span></h1>
+                <h1>Dashboard</h1>
                 <p>Healthcare facility management dashboard</p>
               </div>
             
@@ -734,17 +908,7 @@ const Dashboard: React.FC = React.memo(() => {
                   </div>
                 </div>
                 
-                <div className="stat-card" role="article" aria-label="Virtual consultations statistic">
-                  <div className="stat-icon">
-                    <i className="fas fa-video" aria-hidden="true"></i>
-                  </div>
-                  <div className="stat-info">
-                    <h3 className="stat-number" data-target={dashboardStats.virtualConsultations}>
-                      {dashboardStats.virtualConsultations}
-                    </h3>
-                    <p>Virtual Consultations</p>
-                  </div>
-                </div>
+
               </div>
 
               <div className="quick-actions" role="region" aria-label="Quick actions">
@@ -768,213 +932,54 @@ const Dashboard: React.FC = React.memo(() => {
               <div className="dashboard-section" role="region" aria-label="Today's schedule">
                 <h3>Today's Schedule</h3>
                 <div className="appointments-list" role="list" aria-label="List of today's appointments">
-                  {appointments.map((appointment) => (
-                    <div key={appointment.id} className="appointment-card" role="listitem">
-                      <div className="appointment-date" aria-label={`Appointment time: ${appointment.time}`}>
-                        <span className="date">{appointment.time.split(' ')[0]}</span>
-                        <span className="month">{appointment.time.split(' ')[1]}</span>
+                  {isLoadingAppointments ? (
+                    <div className="empty-state">
+                      <div className="empty-state-icon">
+                        <i className="fas fa-spinner fa-spin"></i>
                       </div>
-                      <div className="appointment-info">
-                        <h4>{appointment.doctorName}</h4>
-                        <p>{appointment.specialty}</p>
-                        <div className="appointment-time">Patient: {appointment.patientName}</div>
-                      </div>
-                      <div className="appointment-actions">
-                        <span className={`status ${appointment.status}`} aria-label={`Appointment status: ${appointment.status}`}>
-                          {appointment.status === 'confirmed' ? 'Confirmed' : 
-                           appointment.status === 'pending' ? 'Pending' : 'Virtual'}
-                        </span>
-                      </div>
+                      <h3>Loading Schedule...</h3>
+                      <p>Please wait while we fetch today's appointments.</p>
                     </div>
-                  ))}
-                </div>
-              </div>
-
-              <div className="dashboard-section" role="region" aria-label="Recent activities">
-                <h3>Recent Activities</h3>
-                <div className="activity-list" role="list" aria-label="List of recent activities">
-                  {activities.map((activity) => (
-                    <div key={activity.id} className="activity-item" role="listitem">
-                      <div className="activity-icon" aria-hidden="true">
-                        <i className={activity.icon}></i>
+                  ) : facilityAppointments.length === 0 ? (
+                    <div className="empty-state">
+                      <div className="empty-state-icon">
+                        <i className="fas fa-calendar-times"></i>
                       </div>
-                      <div className="activity-content">
-                        <h4>{activity.title}</h4>
-                        <p>{activity.description}</p>
-                        <div className="activity-time" aria-label={`Activity occurred ${activity.timestamp}`}>
-                          {activity.timestamp}
+                      <h3>No Appointments Today</h3>
+                      <p>You don't have any appointments scheduled for today.</p>
+                    </div>
+                  ) : (
+                    facilityAppointments.map((appointment) => (
+                      <div key={appointment.id} className="appointment-card" role="listitem">
+                        <div className="appointment-date" aria-label={`Appointment time: ${appointment.time}`}>
+                          <span className="date">{formatTime(appointment.time).split(' ')[0]}</span>
+                          <span className="month">{formatTime(appointment.time).split(' ')[1]}</span>
+                        </div>
+                        <div className="appointment-info">
+                          <h4>{appointment.doctor || 'Doctor TBD'}</h4>
+                          <p>{appointment.type} - {appointment.facilityName || 'Facility'}</p>
+                          <div className="appointment-time">Patient: {appointment.patientName}</div>
+                        </div>
+                        <div className="appointment-actions">
+                          <span className={`status ${appointment.status}`} aria-label={`Appointment status: ${appointment.status}`}>
+                            {appointment.status === 'confirmed' ? 'Confirmed' : 
+                             appointment.status === 'pending' ? 'Pending' : 
+                             appointment.status === 'scheduled' ? 'Scheduled' : 
+                             appointment.status === 'completed' ? 'Completed' : 
+                             appointment.status === 'cancelled' ? 'Cancelled' : appointment.status}
+                          </span>
                         </div>
                       </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            </section>
-          )}
-
-          {/* Patient Records Section */}
-          {activeSection === 'patient-records' && (
-            <section className="content-section active">
-              <div className="section-header-flex">
-                <div className="section-title">
-                  <h1 className="section-main-title">Patient Records</h1>
-                </div>
-                <div className="section-controls">
-                  <select className="date-dropdown">
-                    <option>May'23</option>
-                    <option>Apr'23</option>
-                    <option>Mar'23</option>
-                  </select>
+                    ))
+                  )}
                 </div>
               </div>
 
-              <div className="content-tabs">
-                <button 
-                  className={`tab-link ${activeTab === 'Yesterday' ? 'active' : ''}`}
-                  onClick={() => handleTabClick('Yesterday')}
-                >
-                  Yesterday
-                </button>
-                <button 
-                  className={`tab-link ${activeTab === 'Today' ? 'active' : ''}`}
-                  onClick={() => handleTabClick('Today')}
-                >
-                  Today
-                </button>
-                <button 
-                  className={`tab-link ${activeTab === 'Past' ? 'active' : ''}`}
-                  onClick={() => handleTabClick('Past')}
-                >
-                  Past
-                </button>
-              </div>
-              
-              <div className="records-list">
-                {patientRecords.map((record) => (
-                  <div key={record.id} className="record-item-card">
-                    <div className="date-box">
-                      <span className="day">{record.day}</span>
-                      <span className="date-num">{record.date}</span>
-                    </div>
-                    <div className="record-divider-v"></div>
-                    <div className="record-details-grid">
-                      <div className="detail-item-flex">
-                        <i className="far fa-clock"></i>
-                        <span>{record.time}</span>
-                      </div>
-                      <div className="detail-item-flex">
-                        <span>Issue: {record.issue}</span>
-                      </div>
-                      <div className="detail-item-flex">
-                        <i className="far fa-user"></i>
-                        <span>{record.patientName}</span>
-                      </div>
-                      <div className="detail-item-flex">
-                        {record.hasDocuments ? (
-                          <a href="#">View Documents</a>
-                        ) : (
-                          <span>-</span>
-                        )}
-                      </div>
-                    </div>
-                    <div className="record-actions-dropdown">
-                      <select>
-                        <option>Edit</option>
-                      </select>
-                    </div>
-                  </div>
-                ))}
-              </div>
+
             </section>
           )}
 
-          {/* My Availability Section */}
-          {activeSection === 'my-availability' && (
-            <section className="content-section active">
-              <div className="section-header-flex">
-                <div className="section-title">
-                  <h1 className="section-main-title">My Availability</h1>
-                </div>
-              </div>
-              <div className="availability-grid">
-                <div className="availability-calendar-container">
-                  <div className="calendar-controls">
-                    <h3>{formatMonth(currentMonth)}</h3>
-                    <div className="calendar-nav-arrows">
-                      <button className="arrow-btn" onClick={() => navigateMonth('prev')}>&lt;</button>
-                      <button className="arrow-btn" onClick={() => navigateMonth('next')}>&gt;</button>
-                    </div>
-                  </div>
-                  <div className="calendar-grid-view">
-                    <div className="calendar-header-days">
-                      <span>Mon</span><span>Tue</span><span>Wed</span><span>Thu</span><span>Fri</span><span>Sat</span><span>Sun</span>
-                    </div>
-                    <div className="calendar-body-days">
-                      {/* Calendar days would be generated here */}
-                      <div className="day-cell-avail other-month">31</div>
-                      <div className="day-cell-avail">01</div>
-                      <div className="day-cell-avail">02</div>
-                      <div className="day-cell-avail">03<div className="tags-wrapper"><span className="avail-tag">01</span></div></div>
-                      <div className="day-cell-avail">04<div className="tags-wrapper"><span className="avail-tag">02</span><span className="avail-tag">03</span></div></div>
-                      <div className="day-cell-avail">05<div className="tags-wrapper"><span className="avail-tag">01</span><span className="avail-tag">02</span><span className="avail-tag">03</span></div></div>
-                      <div className="day-cell-avail">06<div className="tags-wrapper"><span className="avail-tag">03</span></div></div>
-                      <div className="day-cell-avail">07<div className="tags-wrapper"><span className="avail-tag">02</span><span className="avail-tag">03</span></div></div>
-                      <div className="day-cell-avail">08</div>
-                      <div className="day-cell-avail">09<div className="tags-wrapper"><span className="avail-tag">01</span><span className="avail-tag">02</span><span className="avail-tag">03</span></div></div>
-                      <div className="day-cell-avail">10<div className="tags-wrapper"><span className="avail-tag">03</span></div></div>
-                      <div className="day-cell-avail">11</div>
-                      <div className="day-cell-avail">12<div className="tags-wrapper"><span className="avail-tag">02</span><span className="avail-tag">03</span></div></div>
-                      <div className="day-cell-avail">13<div className="tags-wrapper"><span className="avail-tag">01</span><span className="avail-tag">02</span><span className="avail-tag">03</span></div></div>
-                      <div className="day-cell-avail">14<div className="tags-wrapper"><span className="avail-tag">01</span><span className="avail-tag">02</span><span className="avail-tag">03</span></div></div>
-                      <div className="day-cell-avail">15</div>
-                      <div className="day-cell-avail">16<div className="tags-wrapper"><span className="avail-tag">02</span><span className="avail-tag">03</span></div></div>
-                      <div className="day-cell-avail">17</div>
-                      <div className="day-cell-avail">18<div className="tags-wrapper"><span className="avail-tag">01</span><span className="avail-tag">02</span></div></div>
-                      <div className="day-cell-avail">19<div className="tags-wrapper"><span className="avail-tag">03</span></div></div>
-                      <div className="day-cell-avail">20<div className="tags-wrapper"><span className="avail-tag">01</span><span className="avail-tag">02</span><span className="avail-tag">03</span></div></div>
-                      <div className="day-cell-avail">21<div className="tags-wrapper"><span className="avail-tag">01</span><span className="avail-tag">03</span></div></div>
-                      <div className="day-cell-avail">22</div>
-                      <div className="day-cell-avail">23<div className="tags-wrapper"><span className="avail-tag">01</span><span className="avail-tag">02</span><span className="avail-tag">03</span></div></div>
-                      <div className="day-cell-avail">24</div>
-                      <div className="day-cell-avail">25</div>
-                      <div className="day-cell-avail">26<div className="tags-wrapper"><span className="avail-tag">01</span><span className="avail-tag">02</span></div></div>
-                      <div className="day-cell-avail">27</div>
-                      <div className="day-cell-avail">28</div>
-                      <div className="day-cell-avail">29<div className="tags-wrapper"><span className="avail-tag">01</span><span className="avail-tag">02</span><span className="avail-tag">03</span></div></div>
-                      <div className="day-cell-avail">30</div>
-                      <div className="day-cell-avail other-month">01<div className="tags-wrapper"><span className="avail-tag faded">01</span><span className="avail-tag faded">02</span><span className="avail-tag faded">03</span></div></div>
-                      <div className="day-cell-avail other-month">02</div>
-                      <div className="day-cell-avail other-month">03</div>
-                      <div className="day-cell-avail other-month">04</div>
-                    </div>
-                  </div>
-                </div>
-                <div className="upcoming-appointments-list">
-                  <h3>Upcoming</h3>
-                  <div className="upcoming-group">
-                    <p className="group-title">Today</p>
-                    {availabilitySlots.map((slot) => (
-                      <div key={slot.id} className="appointment-info-card">
-                        <p>{slot.clinic}</p>
-                        <span>{slot.time}</span>
-                        <span className="date-text">{slot.date}</span>
-                      </div>
-                    ))}
-                  </div>
-                  <div className="upcoming-group">
-                    <p className="group-title">Tomorrow</p>
-                    {availabilitySlots.map((slot) => (
-                      <div key={`tomorrow-${slot.id}`} className="appointment-info-card">
-                        <p>{slot.clinic}</p>
-                        <span>{slot.time}</span>
-                        <span className="date-text">{slot.date}</span>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              </div>
-            </section>
-          )}
+
 
           {/* My Consults Section */}
           {activeSection === 'my-consults' && (
@@ -983,7 +988,7 @@ const Dashboard: React.FC = React.memo(() => {
                 <div className="section-title">
                   <h1 className="section-main-title">Appointments</h1>
                   <p className="facility-info" style={{ fontSize: '14px', color: '#666', marginTop: '4px' }}>
-                    <i className="fas fa-hospital"></i> Carmen Medical Clinic
+                    <i className="fas fa-calendar-alt"></i> {facilityData ? 'Healthcare Facility' : 'Patient Portal'}
                   </p>
                 </div>
                 <div className="section-controls">
@@ -992,23 +997,108 @@ const Dashboard: React.FC = React.memo(() => {
                   </select>
                   <button 
                     className="btn btn-outline" 
-                    onClick={() => loadFacilityAppointments('g9dIxoSXbLM0Q95uUVNsLDddPJA2')}
+                    onClick={() => user && loadUserAppointments(user.uid)}
                     disabled={isLoadingAppointments}
                     title="Refresh appointments list"
                   >
                     <i className={`fas ${isLoadingAppointments ? 'fa-spinner fa-spin' : 'fa-sync-alt'}`}></i>
                     {isLoadingAppointments ? ' Refreshing...' : ' Refresh Appointments'}
                   </button>
-                  <button className="btn btn-primary">
-                    <i className="fas fa-plus"></i> New Appointment
+                  <button 
+                    className="btn btn-outline" 
+                    onClick={async () => {
+                      console.log('🔍 Force refresh appointments...')
+                      console.log('🔍 Current appointments in state:', facilityAppointments)
+                      console.log('🔍 Current user UID:', user?.uid)
+                      console.log('🔍 Expected facility ID from screenshot:', "p5MJlb5lkIXnzDzNJXpWdolgiES2")
+                      
+                      if (user?.uid) {
+                        await loadUserAppointments(user.uid)
+                      }
+                    }}
+                    title="Force refresh and debug"
+                  >
+                    <i className="fas fa-bug"></i> Force Refresh
                   </button>
+                  <button 
+                    className="btn btn-outline" 
+                    onClick={async () => {
+                      console.log('🔍 Testing with specific facility ID from screenshot...')
+                      try {
+                        const { getFacilityAppointments } = await import('../services/firestoredb.js')
+                        const appointments = await getFacilityAppointments("p5MJlb5lkIXnzDzNJXpWdolgiES2")
+                        console.log('📋 Appointments for facility p5MJlb5lkIXnzDzNJXpWdolgiES2:', appointments)
+                      } catch (error) {
+                        console.error('❌ Error testing with specific facility ID:', error)
+                      }
+                    }}
+                    title="Test with specific facility ID"
+                  >
+                    <i className="fas fa-search"></i> Test Facility ID
+                  </button>
+                  <button 
+                    className="btn btn-outline" 
+                    onClick={async () => {
+                      console.log('🔍 Searching all patients for the appointment from screenshot...')
+                      try {
+                        const { getFirestore, collection, getDocs } = await import('firebase/firestore')
+                        const db = getFirestore()
+                        const patientsRef = collection(db, 'patients')
+                        const querySnapshot = await getDocs(patientsRef)
+                        
+                        let foundAppointment = null
+                        querySnapshot.forEach((doc) => {
+                          const patientData = doc.data()
+                          const patientAppointments = patientData?.activity?.appointments || []
+                          
+                          const targetAppointment = patientAppointments.find((apt: any) => 
+                            apt.facilityId === "p5MJlb5lkIXnzDzNJXpWdolgiES2"
+                          )
+                          
+                          if (targetAppointment) {
+                            foundAppointment = { patientId: doc.id, appointment: targetAppointment }
+                            console.log('🎯 Found appointment in patient:', doc.id, targetAppointment)
+                          }
+                        })
+                        
+                        if (!foundAppointment) {
+                          console.log('❌ Appointment not found in any patient')
+                        }
+                      } catch (error) {
+                        console.error('❌ Error searching all patients:', error)
+                      }
+                    }}
+                    title="Search all patients for appointment"
+                  >
+                    <i className="fas fa-search-plus"></i> Search All Patients
+                  </button>
+                                      {facilityData && (
+                      <button className="btn btn-primary" onClick={openNewAppointmentModal}>
+                        <i className="fas fa-plus"></i> New Appointment
+                      </button>
+                    )}
                 </div>
               </div>
 
               <div className="content-tabs">
-                <button className="tab-link active">Upcoming</button>
-                <button className="tab-link">Past</button>
-                <button className="tab-link">Cancelled</button>
+                <button 
+                  className={`tab-link ${activeConsultsTab === 'upcoming' ? 'active' : ''}`}
+                  onClick={() => handleConsultsTabClick('upcoming')}
+                >
+                  Upcoming
+                </button>
+                <button 
+                  className={`tab-link ${activeConsultsTab === 'past' ? 'active' : ''}`}
+                  onClick={() => handleConsultsTabClick('past')}
+                >
+                  Past
+                </button>
+                <button 
+                  className={`tab-link ${activeConsultsTab === 'cancelled' ? 'active' : ''}`}
+                  onClick={() => handleConsultsTabClick('cancelled')}
+                >
+                  Cancelled
+                </button>
               </div>
               
               <div className="records-list">
@@ -1020,23 +1110,36 @@ const Dashboard: React.FC = React.memo(() => {
                     <h3>Loading Appointments...</h3>
                     <p>Please wait while we fetch your appointments.</p>
                   </div>
-                ) : facilityAppointments.length === 0 ? (
+                ) : filteredAppointments.length === 0 ? (
                   <div className="empty-state">
                     <div className="empty-state-icon">
                       <i className="fas fa-calendar-times"></i>
                     </div>
-                    <h3>No Appointments Found</h3>
-                    <p>You don't have any appointments scheduled yet.</p>
-                    <p style={{ fontSize: '14px', color: '#666', marginTop: '8px' }}>
-                      <i className="fas fa-info-circle"></i> 
-                      Patients can book appointments through the PatientPortal. Use the refresh button above to check for new appointments.
+                    <h3>No {activeConsultsTab.charAt(0).toUpperCase() + activeConsultsTab.slice(1)} Appointments</h3>
+                    <p>
+                      {activeConsultsTab === 'upcoming' && "You don't have any upcoming appointments scheduled."}
+                      {activeConsultsTab === 'past' && "You don't have any past appointments or completed consultations."}
+                      {activeConsultsTab === 'cancelled' && "You don't have any cancelled appointments."}
                     </p>
-                    <button className="btn btn-primary">
-                      <i className="fas fa-plus"></i> Schedule New Appointment
-                    </button>
+                    {activeConsultsTab === 'upcoming' && (
+                      <>
+                        <p style={{ fontSize: '14px', color: '#666', marginTop: '8px' }}>
+                          <i className="fas fa-info-circle"></i> 
+                          {facilityData ? 
+                            'Patients can book appointments through the PatientPortal. Use the refresh button above to check for new appointments.' :
+                            'You can book appointments through the PatientPortal. Use the refresh button above to check for new appointments.'
+                          }
+                        </p>
+                        {facilityData && (
+                          <button className="btn btn-primary" onClick={openNewAppointmentModal}>
+                            <i className="fas fa-plus"></i> Schedule New Appointment
+                          </button>
+                        )}
+                      </>
+                    )}
                   </div>
                 ) : (
-                  facilityAppointments.map((appointment) => (
+                  filteredAppointments.map((appointment) => (
                     <div key={appointment.id} className="record-item-card">
                       <div className="date-box">
                         <span className="day">{new Date(appointment.date).toLocaleDateString('en-US', { weekday: 'short' })}</span>
@@ -1046,7 +1149,7 @@ const Dashboard: React.FC = React.memo(() => {
                       <div className="record-details-grid">
                         <div className="detail-item-flex">
                           <i className="far fa-clock"></i>
-                          <span>{appointment.time}</span>
+                          <span>{formatTime(appointment.time)}</span>
                         </div>
                         <div className="detail-item-flex">
                           <span>Type: {appointment.type}</span>
@@ -1080,9 +1183,34 @@ const Dashboard: React.FC = React.memo(() => {
                         </button>
                         <select 
                           value={appointment.status}
-                          onChange={(e) => {
-                            // Here you could add status update functionality
-                            console.log('Status changed to:', e.target.value)
+                          onChange={async (e) => {
+                            const newStatus = e.target.value
+                            console.log('Status changed to:', newStatus)
+                            
+                            try {
+                              // Import the update function
+                              const { updateAppointmentStatus } = await import('../services/firestoredb.js')
+                              
+                              // Update the appointment status in the database
+                              await updateAppointmentStatus(
+                                appointment.id,
+                                newStatus,
+                                appointment.patientId,
+                                user?.uid || ''
+                              )
+                              
+                              // Show success notification
+                              showNotification(`Appointment status updated to ${newStatus}`, 'success')
+                              
+                              // Reload appointments to reflect the change
+                              if (user?.uid) {
+                                loadUserAppointments(user.uid)
+                              }
+                              
+                            } catch (error) {
+                              console.error('Error updating appointment status:', error)
+                              showNotification('Failed to update appointment status', 'error')
+                            }
                           }}
                         >
                           <option value="scheduled">Scheduled</option>
@@ -1098,107 +1226,7 @@ const Dashboard: React.FC = React.memo(() => {
             </section>
           )}
 
-          {/* Online Consult Section */}
-          {activeSection === 'online-consult' && (
-            <section className="content-section active">
-              <div className="section-header-flex">
-                <div className="section-title">
-                  <h1 className="section-main-title">Online Consult</h1>
-                </div>
-              </div>
-              <div className="form-container-card">
-                <div className="form-header">
-                  <h3>Consultation Info</h3>
-                  <p>Lorem ipsum dolor sit amet consectetur. Aliquet at adipiscing et at. Urna cursus justo nunc viverra et ipsum pellentesque sit imperdiet. Sed tortor egestas facilisis purus integer euismod. Vel amet quisque suspendisse in ut magna bibendum.</p>
-                </div>
-                <form className="consult-form">
-                  <div className="form-row">
-                    <div className="form-group-flex">
-                      <label>Availability</label>
-                      <div className="radio-group">
-                        <label className="radio-label">
-                          <input 
-                            type="radio" 
-                            name="availability" 
-                            checked={!availabilityEnabled}
-                            onChange={() => setAvailabilityEnabled(false)}
-                          /> 
-                          Disable
-                        </label>
-                        <label className="radio-label">
-                          <input 
-                            type="radio" 
-                            name="availability" 
-                            checked={availabilityEnabled}
-                            onChange={() => setAvailabilityEnabled(true)}
-                          /> 
-                          Enable
-                        </label>
-                      </div>
-                    </div>
-                    <div className="form-group-flex">
-                      <label>Type Of Availability</label>
-                      <div className="checkbox-group-row">
-                        <label className="checkbox-label">
-                          <input 
-                            type="checkbox" 
-                            checked={consultationTypes.whatsapp}
-                            onChange={(e) => setConsultationTypes(prev => ({ ...prev, whatsapp: e.target.checked }))}
-                          /> 
-                          Whatsapp chat
-                        </label>
-                        <label className="checkbox-label">
-                          <input 
-                            type="checkbox" 
-                            checked={consultationTypes.video}
-                            onChange={(e) => setConsultationTypes(prev => ({ ...prev, video: e.target.checked }))}
-                          /> 
-                          Video call
-                        </label>
-                        <label className="checkbox-label">
-                          <input 
-                            type="checkbox" 
-                            checked={consultationTypes.phone}
-                            onChange={(e) => setConsultationTypes(prev => ({ ...prev, phone: e.target.checked }))}
-                          /> 
-                          Phone Call
-                        </label>
-                      </div>
-                    </div>
-                  </div>
-                  <div className="form-row">
-                    <div className="form-group-flex">
-                      <label htmlFor="duration">Duration</label>
-                      <select 
-                        id="duration" 
-                        className="form-control"
-                        value={consultationDuration}
-                        onChange={(e) => setConsultationDuration(e.target.value)}
-                      >
-                        <option value="30">30 mins</option>
-                        <option value="45">45 mins</option>
-                        <option value="60">60 mins</option>
-                      </select>
-                    </div>
-                    <div className="form-group-flex">
-                      <label htmlFor="fees">Fees</label>
-                      <input 
-                        type="text" 
-                        id="fees" 
-                        className="form-control" 
-                        value={`zł ${consultationFees}`}
-                        onChange={(e) => setConsultationFees(e.target.value.replace('zł ', ''))}
-                      />
-                    </div>
-                  </div>
-                  <div className="form-actions">
-                    <button type="button" className="btn btn-outline">Reset</button>
-                    <button type="submit" className="btn btn-primary">Save</button>
-                  </div>
-                </form>
-              </div>
-            </section>
-          )}
+
 
           {/* Help Section */}
           {activeSection === 'help' && (
@@ -1410,7 +1438,7 @@ const Dashboard: React.FC = React.memo(() => {
                         </div>
                         <div className="detail-item">
                           <label>Time:</label>
-                          <span>{selectedAppointment.time}</span>
+                          <span>{formatTime(selectedAppointment.time)}</span>
                         </div>
                         <div className="detail-item">
                           <label>Type:</label>
@@ -1534,21 +1562,36 @@ const Dashboard: React.FC = React.memo(() => {
                       <div className="conditions-grid">
                         {Object.entries(selectedPatientData.medicalInfo.conditions).map(([category, conditions]: [string, any]) => (
                           <div key={category} className="condition-category">
-                            <h4><i className="fas fa-heartbeat"></i> {category}</h4>
+                            <h4>
+                              <i className="fas fa-heartbeat"></i> 
+                              {category.charAt(0).toUpperCase() + category.slice(1)}
+                            </h4>
                             <div className="condition-tags">
                               {conditions.map((condition: string, index: number) => (
                                 <span key={index} className="condition-tag">
+                                  <i className="fas fa-exclamation-triangle"></i>
                                   {condition}
                                 </span>
                               ))}
                             </div>
+                            <div className="condition-count">
+                              <small>{conditions.length} condition{conditions.length !== 1 ? 's' : ''} in this category</small>
+                            </div>
                           </div>
                         ))}
+                        <div className="conditions-summary">
+                          <div className="summary-card">
+                            <h5><i className="fas fa-chart-pie"></i> Summary</h5>
+                            <p>Total Categories: {Object.keys(selectedPatientData.medicalInfo.conditions).length}</p>
+                            <p>Total Conditions: {Object.values(selectedPatientData.medicalInfo.conditions).flat().length}</p>
+                          </div>
+                        </div>
                       </div>
                     ) : (
                       <div className="empty-state">
                         <i className="fas fa-heartbeat"></i>
                         <p>No medical conditions recorded</p>
+                        <small>Patient has not reported any pre-existing medical conditions.</small>
                       </div>
                     )}
                   </div>
@@ -1567,13 +1610,39 @@ const Dashboard: React.FC = React.memo(() => {
                         {selectedPatientData.activity.consultationHistory.map((consultation: any, index: number) => (
                           <div key={index} className="consultation-item">
                             <div className="consultation-header">
-                              <h5>{consultation.title || 'Consultation'}</h5>
+                              <h5>{consultation.title || consultation.type || 'Consultation'}</h5>
                               <span className={`badge ${consultation.status}`}>{consultation.status}</span>
                             </div>
                             <div className="consultation-details">
-                              <p><strong>Date:</strong> {consultation.date}</p>
-                              <p><strong>Doctor:</strong> {consultation.doctor || 'Not specified'}</p>
-                              <p><strong>Notes:</strong> {consultation.notes || 'No notes available'}</p>
+                              <div className="detail-row">
+                                <span className="detail-label"><i className="fas fa-calendar"></i> Date:</span>
+                                <span className="detail-value">{new Date(consultation.date).toLocaleDateString('en-US', { 
+                                  weekday: 'long', 
+                                  year: 'numeric', 
+                                  month: 'long', 
+                                  day: 'numeric' 
+                                })}</span>
+                              </div>
+                              <div className="detail-row">
+                                <span className="detail-label"><i className="fas fa-user-md"></i> Doctor:</span>
+                                <span className="detail-value">{consultation.doctor || 'Not specified'}</span>
+                              </div>
+                              <div className="detail-row">
+                                <span className="detail-label"><i className="fas fa-stethoscope"></i> Type:</span>
+                                <span className="detail-value">{consultation.type || 'General consultation'}</span>
+                              </div>
+                              {consultation.notes && (
+                                <div className="detail-row">
+                                  <span className="detail-label"><i className="fas fa-notes-medical"></i> Notes:</span>
+                                  <span className="detail-value">{consultation.notes}</span>
+                                </div>
+                              )}
+                              {consultation.facility && (
+                                <div className="detail-row">
+                                  <span className="detail-label"><i className="fas fa-hospital"></i> Facility:</span>
+                                  <span className="detail-value">{consultation.facility}</span>
+                                </div>
+                              )}
                             </div>
                           </div>
                         ))}
@@ -1582,6 +1651,7 @@ const Dashboard: React.FC = React.memo(() => {
                       <div className="empty-state">
                         <i className="fas fa-history"></i>
                         <p>No consultation history available</p>
+                        <small>Patient has no previous consultation records.</small>
                       </div>
                     )}
                   </div>
@@ -1600,16 +1670,35 @@ const Dashboard: React.FC = React.memo(() => {
                         {selectedPatientData.activity.documents.map((document: any, index: number) => (
                           <div key={index} className="document-item">
                             <div className="document-icon">
-                              <i className="fas fa-file-medical"></i>
+                              <i className={`fas ${document.type?.startsWith('image/') ? 'fa-image' : 
+                                               document.type === 'application/pdf' ? 'fa-file-pdf' : 
+                                               'fa-file-medical'}`}></i>
                             </div>
                             <div className="document-info">
-                              <h5>{document.name}</h5>
-                              <p>{document.type}</p>
-                              <small>Uploaded: {document.uploadDate}</small>
+                              <h5>{document.name || document.originalName || 'Document'}</h5>
+                              <p>{document.type || 'Unknown type'}</p>
+                              <small>Uploaded: {new Date(document.uploadDate).toLocaleDateString()}</small>
+                              {document.size && (
+                                <small>Size: {(document.size / 1024 / 1024).toFixed(2)} MB</small>
+                              )}
                             </div>
-                            <button className="btn btn-outline btn-sm">
-                              <i className="fas fa-download"></i> Download
-                            </button>
+                            <div className="document-actions">
+                              <button 
+                                className="btn btn-outline btn-sm"
+                                onClick={() => window.open(document.url, '_blank')}
+                                title="View document"
+                              >
+                                <i className="fas fa-eye"></i> View
+                              </button>
+                              <a 
+                                href={document.url} 
+                                download={document.originalName || document.name}
+                                className="btn btn-primary btn-sm"
+                                title="Download document"
+                              >
+                                <i className="fas fa-download"></i> Download
+                              </a>
+                            </div>
                           </div>
                         ))}
                       </div>
@@ -1617,6 +1706,7 @@ const Dashboard: React.FC = React.memo(() => {
                       <div className="empty-state">
                         <i className="fas fa-file-medical"></i>
                         <p>No documents available</p>
+                        <small>Patient has not uploaded any medical documents yet.</small>
                       </div>
                     )}
                   </div>
@@ -1630,6 +1720,143 @@ const Dashboard: React.FC = React.memo(() => {
               </button>
               <button className="btn btn-primary">
                 <i className="fas fa-edit"></i> Edit Appointment
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* New Appointment Modal */}
+      {showNewAppointmentModal && (
+        <div className="modal" style={{ display: 'block' }}>
+          <div className="modal-content" style={{ maxWidth: '600px' }}>
+            <div className="modal-header">
+              <h3>Create New Appointment</h3>
+              <button className="close-btn" onClick={closeNewAppointmentModal}>
+                <i className="fas fa-times"></i>
+              </button>
+            </div>
+            
+            <div className="modal-body">
+              <div className="form-group">
+                <label htmlFor="patientUid">Patient UID *</label>
+                <input
+                  type="text"
+                  id="patientUid"
+                  value={newAppointmentForm.patientUid}
+                  onChange={(e) => handleNewAppointmentFormChange('patientUid', e.target.value)}
+                  placeholder="Enter patient UID (e.g., 7ib2p9tdrs0QzKlrfLqay5fiw2t2)"
+                  className={patientValidationError ? 'error' : ''}
+                />
+                {patientValidationError && (
+                  <div className="error-message">
+                    <i className="fas fa-exclamation-circle"></i>
+                    {patientValidationError}
+                  </div>
+                )}
+                <small className="form-help">
+                  <i className="fas fa-info-circle"></i>
+                  You can find the patient's UID in their profile in the PatientPortal.
+                </small>
+              </div>
+
+              <div className="form-row">
+                <div className="form-group">
+                  <label htmlFor="appointmentDate">Date *</label>
+                  <input
+                    type="date"
+                    id="appointmentDate"
+                    value={newAppointmentForm.date}
+                    onChange={(e) => handleNewAppointmentFormChange('date', e.target.value)}
+                    min={new Date().toISOString().split('T')[0]}
+                  />
+                </div>
+                
+                <div className="form-group">
+                  <label htmlFor="appointmentTime">Time *</label>
+                  <input
+                    type="time"
+                    id="appointmentTime"
+                    value={newAppointmentForm.time}
+                    onChange={(e) => handleNewAppointmentFormChange('time', e.target.value)}
+                  />
+                </div>
+              </div>
+
+              <div className="form-row">
+                <div className="form-group">
+                  <label htmlFor="doctor">Doctor</label>
+                  <input
+                    type="text"
+                    id="doctor"
+                    value={newAppointmentForm.doctor}
+                    onChange={(e) => handleNewAppointmentFormChange('doctor', e.target.value)}
+                    placeholder="Doctor's name"
+                  />
+                </div>
+                
+                <div className="form-group">
+                  <label htmlFor="appointmentType">Type</label>
+                  <select
+                    id="appointmentType"
+                    value={newAppointmentForm.type}
+                    onChange={(e) => handleNewAppointmentFormChange('type', e.target.value)}
+                  >
+                    <option value="consultation">Consultation</option>
+                    <option value="checkup">Check-up</option>
+                    <option value="emergency">Emergency</option>
+                    <option value="followup">Follow-up</option>
+                    <option value="surgery">Surgery</option>
+                    <option value="virtual">Virtual Consultation</option>
+                  </select>
+                </div>
+              </div>
+
+              <div className="form-group">
+                <label htmlFor="appointmentStatus">Status</label>
+                <select
+                  id="appointmentStatus"
+                  value={newAppointmentForm.status}
+                  onChange={(e) => handleNewAppointmentFormChange('status', e.target.value)}
+                >
+                  <option value="scheduled">Scheduled</option>
+                  <option value="confirmed">Confirmed</option>
+                  <option value="pending">Pending</option>
+                </select>
+              </div>
+
+              <div className="form-group">
+                <label htmlFor="appointmentNotes">Notes</label>
+                <textarea
+                  id="appointmentNotes"
+                  value={newAppointmentForm.notes}
+                  onChange={(e) => handleNewAppointmentFormChange('notes', e.target.value)}
+                  placeholder="Additional notes about the appointment..."
+                  rows={3}
+                />
+              </div>
+            </div>
+
+            <div className="modal-footer">
+              <button className="btn btn-secondary" onClick={closeNewAppointmentModal}>
+                Cancel
+              </button>
+              <button 
+                className="btn btn-primary" 
+                onClick={handleCreateAppointment}
+                disabled={isCreatingAppointment}
+              >
+                {isCreatingAppointment ? (
+                  <>
+                    <i className="fas fa-spinner fa-spin"></i>
+                    Creating...
+                  </>
+                ) : (
+                  <>
+                    <i className="fas fa-plus"></i>
+                    Create Appointment
+                  </>
+                )}
               </button>
             </div>
           </div>

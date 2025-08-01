@@ -184,17 +184,28 @@ const PartnerSignUp: React.FC = React.memo(() => {
     return Object.keys(errors).length === 0
   }, [currentStep, formData, emailRegex])
 
-  const nextStep = useCallback(() => {
-    if (validateCurrentStep()) {
-      setCurrentStep(prev => Math.min(prev + 1, 5))
-      setErrorMessage('')
-    }
-  }, [validateCurrentStep])
+  // Multi-step navigation (commented out for now - only showing step 1)
+  // const nextStep = useCallback(() => {
+  //   if (validateCurrentStep()) {
+  //     setCurrentStep(prev => Math.min(prev + 1, 5))
+  //     setErrorMessage('')
+  //   }
+  // }, [validateCurrentStep])
 
   const handleGoogleSignUp = useCallback(async () => {
     try {
       setIsGoogleSignUpInProgress(true)
       setErrorMessage('')
+      
+      // Validate required fields for Google sign-up
+      if (!formData.facilityName.trim()) {
+        setErrorMessage('Please enter a facility name before signing up with Google')
+        return
+      }
+      if (!formData.facilityType) {
+        setErrorMessage('Please select a facility type before signing up with Google')
+        return
+      }
       
       const provider = new GoogleAuthProvider()
       provider.addScope('email')
@@ -203,21 +214,63 @@ const PartnerSignUp: React.FC = React.memo(() => {
       const result = await signInWithPopup(auth, provider)
       
       if (result.user) {
+        console.log('Google sign-up successful:', result.user.email)
+        
         // Update user's display name to facility name
         await updateProfile(result.user, {
           displayName: formData.facilityName
         })
         
-        showNotification('Google sign-up successful! Please complete your facility profile.', 'success')
-        setCurrentStep(2)
+        // Create facility document in Firestore
+        try {
+          const { createFacilityDocument } = await import('../services/firestoredb.js')
+          await createFacilityDocument(result.user, {
+            facilityName: formData.facilityName,
+            facilityType: formData.facilityType,
+            email: formData.email || result.user.email,
+            phone: formData.phone,
+            authProvider: 'google'
+          })
+          console.log('Facility document created successfully')
+        } catch (error) {
+          console.error('Error creating facility document:', error)
+          // Continue with registration even if document creation fails
+        }
+        
+        showNotification('Facility registration successful! Welcome to LingapLink.', 'success')
+        
+        // Redirect to dashboard
+        setTimeout(() => {
+          navigate('/dashboard')
+        }, 2000)
       }
     } catch (error: any) {
       console.error('Google sign-up error:', error)
-      setErrorMessage(error.message || 'Google sign-up failed. Please try again.')
+      
+      let errorMsg = 'Google sign-up failed. Please try again.'
+      
+      switch (error.code) {
+        case 'auth/popup-closed-by-user':
+          errorMsg = 'Sign-up was cancelled. Please try again.'
+          break
+        case 'auth/popup-blocked':
+          errorMsg = 'Pop-up was blocked. Please allow pop-ups and try again.'
+          break
+        case 'auth/account-exists-with-different-credential':
+          errorMsg = 'An account already exists with this email using a different sign-in method.'
+          break
+        case 'auth/network-request-failed':
+          errorMsg = 'Network error. Please check your internet connection and try again.'
+          break
+        default:
+          errorMsg = error.message || errorMsg
+      }
+      
+      setErrorMessage(errorMsg)
     } finally {
       setIsGoogleSignUpInProgress(false)
     }
-  }, [formData])
+  }, [formData, navigate])
 
   const handleSubmit = useCallback(async () => {
     if (!validateCurrentStep()) {
@@ -239,6 +292,22 @@ const PartnerSignUp: React.FC = React.memo(() => {
       await updateProfile(userCredential.user, {
         displayName: formData.facilityName
       })
+
+      // Create facility document in Firestore
+      try {
+        const { createFacilityDocument } = await import('../services/firestoredb.js')
+        await createFacilityDocument(userCredential.user, {
+          facilityName: formData.facilityName,
+          facilityType: formData.facilityType,
+          email: formData.email,
+          phone: formData.phone,
+          authProvider: 'email'
+        })
+        console.log('Facility document created successfully')
+      } catch (error) {
+        console.error('Error creating facility document:', error)
+        // Continue with registration even if document creation fails
+      }
 
       // Send email verification
       await sendEmailVerification(userCredential.user)
@@ -342,9 +411,10 @@ const PartnerSignUp: React.FC = React.memo(() => {
         </div>
 
         <form ref={formRef} onSubmit={(e) => { e.preventDefault(); handleSubmit(); }} className="signup-form">
-          <div className="form-step">
-            <h2>Basic Information</h2>
-            <p>Tell us about your healthcare facility</p>
+          {currentStep === 1 && (
+            <div className="form-step">
+              <h2>Basic Information</h2>
+              <p>Tell us about your healthcare facility</p>
             
             <div className="form-group">
               <label htmlFor="facilityName">Facility Name *</label>
@@ -464,14 +534,15 @@ const PartnerSignUp: React.FC = React.memo(() => {
                 type="submit" 
                 className="btn btn-primary" 
                 disabled={isLoading}
-                onClick={(e) => {
-                  // Don't prevent default here, let the form handle it
+                onClick={() => {
+                  // Form submission is handled by onSubmit
                 }}
               >
                 {isLoading ? 'Creating Account...' : 'Complete Registration'}
               </button>
             </div>
           </div>
+          )}
         </form>
 
         <div className="social-signup">
@@ -498,7 +569,7 @@ const PartnerSignUp: React.FC = React.memo(() => {
       </div>
 
       <div className="signup-footer">
-        <p>Already have an account? <a href="/partner-signin">Sign in here</a></p>
+        <p>Already have an account? <a href="/partner-sign-in">Sign in here</a></p>
         <p>Need help? <a href="/help">Contact our support team</a></p>
       </div>
     </div>

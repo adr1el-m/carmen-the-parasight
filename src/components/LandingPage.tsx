@@ -3,6 +3,13 @@ import { useNavigate } from 'react-router-dom'
 import YearUpdater from './YearUpdater'
 import '../styles/index.css'
 
+// Import images
+import slmcImage from '../assets/img/SLMC.jpg'
+import tmcImage from '../assets/img/TMC.jpg'
+import ahmcImage from '../assets/img/AHMC.jpeg'
+import drWillieOngImage from '../assets/img/Dr. Willie Ong.jpg'
+import drAlvinFranciscoImage from '../assets/img/Dr. Alvin Francisco.jpg'
+
 const LandingPage: React.FC = () => {
   const navigate = useNavigate()
   const [searchTerm, setSearchTerm] = useState('')
@@ -70,7 +77,7 @@ const LandingPage: React.FC = () => {
     
     // Simulate search (replace with actual search implementation)
     setTimeout(() => {
-      console.log('Searching for:', { searchTerm, location })
+      // Search functionality would be implemented here
       
       showNotification(`Searching for "${searchTerm}" ${location ? `in ${location}` : 'nationwide'}...`, 'info')
       
@@ -126,7 +133,7 @@ const LandingPage: React.FC = () => {
     showNotification(`Redirecting to book appointment with ${facilityName}...`, 'info')
     
     setTimeout(() => {
-      navigate('/patient-signup')
+      navigate('/patient-sign-up')
     }, 1500)
   }
 
@@ -140,9 +147,32 @@ const LandingPage: React.FC = () => {
   const handleSocialLink = (platform: string) => {
     showNotification(`Opening ${platform}...`, 'info')
     // In production, these would link to actual social media pages
-    console.log(`Opening ${platform} social media page`)
+    // Social media links would be implemented here
   }
 
+  const handlePartnerSignup = () => {
+    showNotification('Redirecting to partner registration...', 'info')
+    // Redirect to partner sign-up
+    setTimeout(() => {
+      navigate('/partner-sign-up')
+    }, 1500)
+  }
+
+  const handlePartnerSignin = () => {
+    showNotification('Redirecting to partner login...', 'info')
+    // Redirect to partner sign-in
+    setTimeout(() => {
+      navigate('/partner-sign-in')
+    }, 1500)
+  }
+
+  const handleBusinessPortal = () => {
+    showNotification('Redirecting to business portal...', 'info')
+    // For now, redirect to dashboard as placeholder
+    setTimeout(() => {
+      navigate('/dashboard')
+    }, 1500)
+  }
 
 
   const showNotification = (message: string, type: string = 'info') => {
@@ -280,21 +310,21 @@ const LandingPage: React.FC = () => {
               <div className="online-stats">
                 <div className="doctor-avatars" role="img" aria-label="Healthcare professionals">
                   <div className="avatar">
-                    <img src="/src/assets/img/SLMC.jpg" 
+                    <img src={slmcImage} 
                          alt="St. Luke's Medical Center" 
                          loading="lazy"
                          width="50" 
                          height="50" />
                   </div>
                   <div className="avatar">
-                    <img src="/src/assets/img/TMC.jpg" 
+                    <img src={tmcImage} 
                          alt="The Medical City" 
                          loading="lazy"
                          width="50" 
                          height="50" />
                   </div>
                   <div className="avatar">
-                    <img src="/src/assets/img/AHMC.jpeg" 
+                    <img src={ahmcImage} 
                          alt="Asian Hospital and Medical Center" 
                          loading="lazy"
                          width="50" 
@@ -308,7 +338,7 @@ const LandingPage: React.FC = () => {
             <div className="hero-right">
               <div className="medical-team">
                 <picture className="doctor-main">
-                  <img src="/src/assets/img/Dr. Willie Ong.jpg" 
+                  <img src={drWillieOngImage} 
                        alt="Photo of Dr. Willie Ong" 
                        loading="eager"
                        width="400" 
@@ -316,7 +346,7 @@ const LandingPage: React.FC = () => {
                        decoding="async" />
                 </picture>
                 <picture className="doctor-secondary">
-                  <img src="/src/assets/img/Dr. Alvin Francisco.jpg" 
+                  <img src={drAlvinFranciscoImage} 
                        alt="Photo of Dr. Alvin Francisco" 
                        loading="lazy"
                        width="400" 
@@ -402,7 +432,7 @@ const LandingPage: React.FC = () => {
             <article className="facility-card" role="listitem">
               <div className="facility-profile">
                 <div className="facility-image">
-                  <img src="/src/assets/img/SLMC.jpg" 
+                  <img src={slmcImage} 
                        alt="St. Luke's Medical Center building exterior" 
                        loading="lazy"
                        width="80" 
@@ -440,7 +470,7 @@ const LandingPage: React.FC = () => {
             <article className="facility-card" role="listitem">
               <div className="facility-profile">
                 <div className="facility-image">
-                  <img src="/src/assets/img/TMC.jpg" 
+                  <img src={tmcImage} 
                        alt="The Medical City entrance" 
                        loading="lazy"
                        width="80" 
@@ -478,7 +508,7 @@ const LandingPage: React.FC = () => {
             <article className="facility-card" role="listitem">
               <div className="facility-profile">
                 <div className="facility-image">
-                  <img src="/src/assets/img/AHMC.jpeg" 
+                  <img src={ahmcImage} 
                        alt="Asian Hospital and Medical Center medical facility" 
                        loading="lazy"
                        width="80" 
@@ -566,7 +596,7 @@ const LandingPage: React.FC = () => {
             </div>
                           <div className="cta-action">
                 <button 
-                  onClick={() => navigate('/partner-signup')}
+                  onClick={handlePartnerSignup}
                   className="partner-btn"
                   aria-label="Register your healthcare practice with LingapLink"
                 >
@@ -594,7 +624,7 @@ const LandingPage: React.FC = () => {
               </div>
               <div className="cta-actions-section">
                                     <button 
-                      onClick={() => navigate('/partner-signup')}
+                      onClick={handlePartnerSignup}
                       className="cta-primary-btn"
                       aria-label="Register your healthcare facility"
                     >
@@ -602,7 +632,7 @@ const LandingPage: React.FC = () => {
                       Register Your Practice
                     </button>
                     <button 
-                      onClick={() => navigate('/partner-signin')}
+                      onClick={handlePartnerSignin}
                       className="cta-secondary-btn"
                       aria-label="Sign in to provider portal"
                     >
@@ -663,16 +693,16 @@ const LandingPage: React.FC = () => {
                 </h3>
                 <ul className="nav-list">
                   <li className="featured">
-                    <button onClick={() => navigate('/partner-signup')}>
+                    <button onClick={handlePartnerSignup}>
                       <i className="fas fa-star" aria-hidden="true"></i>
                       Join LingapLink
                     </button>
                   </li>
-                  <li><button onClick={() => navigate('/partner-signin')}>Provider Portal</button></li>
-                  <li><button onClick={() => navigate('/business-portal')}>Practice Tools</button></li>
-                  <li><button onClick={() => navigate('/business-portal')}>Patient Management</button></li>
-                  <li><button onClick={() => navigate('/business-portal')}>Analytics</button></li>
-                  <li><button onClick={() => navigate('/business-portal')}>Support</button></li>
+                  <li><button onClick={handlePartnerSignin}>Provider Portal</button></li>
+                  <li><button onClick={handleBusinessPortal}>Practice Tools</button></li>
+                  <li><button onClick={handleBusinessPortal}>Patient Management</button></li>
+                  <li><button onClick={handleBusinessPortal}>Analytics</button></li>
+                  <li><button onClick={handleBusinessPortal}>Support</button></li>
                 </ul>
               </nav>
 

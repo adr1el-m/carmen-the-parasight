@@ -4,6 +4,7 @@ export interface PatientData {
   uid: string;
   email: string;
   role: string;
+  uniquePatientId?: string;
   personalInfo: {
     firstName: string;
     lastName: string;
@@ -32,7 +33,61 @@ export interface PatientData {
   authProvider: string;
   activity?: {
     appointments?: AppointmentData[];
+    documents?: PatientDocument[];
   };
+}
+
+export interface FacilityData {
+  uid: string;
+  email: string;
+  role: string;
+  uniqueFacilityId: string;
+  facilityInfo: {
+    name: string;
+    type: string;
+    email: string;
+    phone: string;
+    address: string;
+    city: string;
+    province: string;
+    postalCode: string;
+    country: string;
+    website: string;
+    description: string;
+  };
+  operatingHours: {
+    monday: { open: string; close: string; closed: boolean };
+    tuesday: { open: string; close: string; closed: boolean };
+    wednesday: { open: string; close: string; closed: boolean };
+    thursday: { open: string; close: string; closed: boolean };
+    friday: { open: string; close: string; closed: boolean };
+    saturday: { open: string; close: string; closed: boolean };
+    sunday: { open: string; close: string; closed: boolean };
+  };
+  specialties: string[];
+  services: string[];
+  staff: {
+    totalStaff: number;
+    doctors: number;
+    nurses: number;
+    supportStaff: number;
+  };
+  capacity: {
+    bedCapacity: number;
+    consultationRooms: number;
+  };
+  licenseNumber: string;
+  accreditation: string[];
+  insuranceAccepted: string[];
+  languages: string[];
+  isActive: boolean;
+  isVerified: boolean;
+  profileComplete: boolean;
+  createdAt: any;
+  lastLoginAt: any;
+  updatedAt: any;
+  emailVerified: boolean;
+  authProvider: string;
 }
 
 export interface AppointmentData {
@@ -90,9 +145,11 @@ export interface PatientDocument {
   id: string;
   name: string;
   type: string;
-  url?: string;
-  uploadedAt: string;
-  size?: number;
+  url: string;
+  size: number;
+  originalName: string;
+  uploadDate: string;
+  createdAt: any;
 }
 
 export interface PatientStats {
@@ -111,6 +168,10 @@ export function onAuthStateChange(callback: (user: any) => void): () => void;
 export function getPatientData(userId: string): Promise<PatientData | null>;
 export function getCurrentPatientData(): Promise<PatientData | null>;
 export function createPatientDocument(user: any, additionalData?: any): Promise<PatientData>;
+export function createFacilityDocument(user: any, additionalData?: any): Promise<FacilityData>;
+
+export function generateUniquePatientId(): Promise<string>;
+export function generateUniqueFacilityId(): Promise<string>;
 
 export function updatePatientPersonalInfo(userId: string, personalInfo: PersonalInfo): Promise<boolean>;
 export function updatePatientMedicalInfo(userId: string, medicalInfo: MedicalInfo): Promise<boolean>;
@@ -122,7 +183,7 @@ export function removeMedicalCondition(userId: string, category: string, conditi
 export function addConsultationHistory(userId: string, consultation: ConsultationData): Promise<boolean>;
 export function getConsultationHistory(userId: string): Promise<ConsultationData[]>;
 
-export function addPatientDocument(userId: string, document: PatientDocument): Promise<boolean>;
+export function addPatientDocument(userId: string, file: File, documentName?: string): Promise<PatientDocument>;
 export function removePatientDocument(userId: string, documentId: string): Promise<boolean>;
 export function getPatientDocuments(userId: string): Promise<PatientDocument[]>;
 
@@ -136,4 +197,12 @@ export function listenToFacilityAppointments(facilityId: string, callback: (appo
 
 export function updateLastLogin(userId: string): Promise<boolean>;
 export function checkProfileComplete(userId: string): Promise<boolean>;
-export function getPatientStats(userId: string): Promise<PatientStats>; 
+export function getPatientStats(userId: string): Promise<PatientStats>;
+
+export function getAllFacilities(): Promise<FacilityData[]>;
+
+// Quota management functions
+export function isQuotaExceeded(): boolean;
+export function setQuotaExceeded(status: boolean): void;
+export function shouldCheckQuota(): boolean;
+export function updateQuotaCheckTime(): void; 

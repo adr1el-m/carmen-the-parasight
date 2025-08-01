@@ -1,48 +1,22 @@
-// Firebase configuration for LingapLink Healthcare System
+// Firebase configuration for Carmen Para Sight
 import { initializeApp } from 'firebase/app';
 import { getAuth } from 'firebase/auth';
 import { getFirestore } from 'firebase/firestore';
 import { getStorage } from 'firebase/storage';
-import configValidator from '../utils/config-validator.js';
 
-// Get validated Firebase configuration
-let firebaseConfig;
+// Your web app's Firebase configuration
+const firebaseConfig = {
+  apiKey: "AIzaSyADZIfbk0DqSxWwhNbFtU8bf-pX6qdVM6s",
+  authDomain: "carmen-para-sight-v2.firebaseapp.com",
+  projectId: "carmen-para-sight-v2",
+  storageBucket: "carmen-para-sight-v2.firebasestorage.app",
+  messagingSenderId: "99887505888",
+  appId: "1:99887505888:web:99bbf44ebf52d8edfccb85",
+  measurementId: "G-GSV3W1CH0V"
+};
 
-try {
-  const validatedConfig = configValidator.getValidatedConfig();
-  firebaseConfig = validatedConfig.firebase;
-  
-  // Log configuration status (without exposing sensitive data)
-  console.log(`✅ Firebase configuration loaded for ${validatedConfig.environment} environment`);
-  console.log(`📁 Project: ${firebaseConfig.projectId}`);
-  
-} catch (error) {
-  console.error('❌ Firebase configuration error:', error instanceof Error ? error.message : String(error));
-  
-  if (configValidator.isProduction) {
-    throw new Error('Firebase configuration is required in production. Please check your environment variables.');
-  } else {
-    // In development, use secure fallbacks
-    console.warn('⚠️ Using secure development fallbacks for Firebase configuration');
-    console.warn('📝 To enable Google Sign-In, create a .env file with your Firebase credentials:');
-    console.warn('   VITE_FIREBASE_API_KEY=your_actual_api_key');
-    console.warn('   VITE_FIREBASE_AUTH_DOMAIN=your_project.firebaseapp.com');
-    console.warn('   VITE_FIREBASE_PROJECT_ID=your_project_id');
-    console.warn('   VITE_FIREBASE_STORAGE_BUCKET=your_project.appspot.com');
-    console.warn('   VITE_FIREBASE_MESSAGING_SENDER_ID=your_sender_id');
-    console.warn('   VITE_FIREBASE_APP_ID=your_app_id');
-    
-    firebaseConfig = {
-      apiKey: configValidator.generateSecureFallback('firebase-api-key', 39),
-      authDomain: 'dev-project.firebaseapp.com',
-      projectId: 'dev-project-id',
-      storageBucket: 'dev-project.appspot.com',
-      messagingSenderId: '123456789012',
-      appId: '1:123456789012:web:abcdef1234567890',
-      measurementId: 'G-DEVXXXXXXXX'
-    };
-  }
-}
+console.log(`✅ Firebase configuration loaded for carmen-para-sight-v2`);
+console.log(`📁 Project: ${firebaseConfig.projectId}`);
 
 // Initialize Firebase
 const app = initializeApp(firebaseConfig);

@@ -746,6 +746,21 @@ body {
 
 .footer-brand .footer-logo {
   color: var(--primary-color);
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 1.5rem;
+  font-weight: 700;
+}
+
+.footer-brand .footer-logo .logo-badge {
+  background: var(--gradient-primary);
+  color: white;
+  padding: 0.2rem 0.4rem;
+  border-radius: 4px;
+  font-size: 0.7rem;
+  font-weight: 600;
+  margin-left: 0.25rem;
 }
 
 .footer-description {
@@ -779,6 +794,22 @@ body {
 }
 
 .footer-nav a:hover {
+  color: var(--primary-color);
+}
+
+.footer-nav button {
+  background: none;
+  border: none;
+  color: var(--text-secondary);
+  cursor: pointer;
+  padding: 0;
+  font-size: inherit;
+  font-family: inherit;
+  text-align: left;
+  transition: color 0.3s ease;
+}
+
+.footer-nav button:hover {
   color: var(--primary-color);
 }
 
@@ -951,6 +982,15 @@ body {
     transform: translateX(100%);
     opacity: 0;
   }
+}
+
+/* Toast Container */
+.toast-container {
+  position: fixed;
+  top: 20px;
+  right: 20px;
+  z-index: 10000;
+  pointer-events: none;
 }
 
 /* Notification animations */
@@ -1131,6 +1171,14 @@ body {
   gap: 0.5rem;
 }
 
+.footer-nav .featured button {
+  color: var(--primary-color);
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
 /* Contact methods */
 .contact-methods {
   margin-bottom: 1.5rem;
@@ -1147,6 +1195,17 @@ body {
 
 .contact-item:hover {
   color: var(--primary-color);
+}
+
+.footer-links-section {
+  margin-top: 1.5rem;
+}
+
+.footer-links-section h4 {
+  font-size: 1rem;
+  font-weight: 600;
+  margin-bottom: 0.75rem;
+  color: white;
 }
 
 .quick-links {
@@ -1170,7 +1229,22 @@ body {
   text-decoration: none;
 }
 
+.quick-links button {
+  background: none;
+  border: none;
+  color: var(--text-secondary);
+  cursor: pointer;
+  padding: 0;
+  font-size: 0.8rem;
+  transition: color 0.3s ease;
+  text-decoration: none;
+}
+
 .quick-links a:hover {
+  color: var(--primary-color);
+}
+
+.quick-links button:hover {
   color: var(--primary-color);
 }
 

@@ -121,27 +121,10 @@ const Dashboard: React.FC = React.memo(() => {
         setUser(user)
         setIsLoading(false)
         
-        console.log('🔍 User authenticated:', user.uid, user.email)
-        
         // Load facility data
         await loadFacilityData(user.uid)
         
-        // Check if user is actually a facility
-        try {
-          const { getFirestore, doc, getDoc } = await import('firebase/firestore')
-          const db = getFirestore()
-          const facilityDoc = await getDoc(doc(db, 'facilities', user.uid))
-          console.log('🔍 Is user a facility?', facilityDoc.exists())
-          if (facilityDoc.exists()) {
-            const facilityData = facilityDoc.data()
-            console.log('🔍 Facility data:', facilityData)
-          }
-        } catch (error) {
-          console.error('❌ Error checking if user is facility:', error)
-        }
-        
         // Load appointments for the current user (facility or patient)
-        console.log('🔍 Current user UID for appointments:', user.uid)
         loadUserAppointments(user.uid)
       } else {
         navigate('/')
@@ -156,7 +139,6 @@ const Dashboard: React.FC = React.memo(() => {
 
 
   const loadFacilityData = useCallback(async (userId: string) => {
-    console.log('🔍 Loading facility data for userId:', userId)
     setIsLoadingFacilityData(true)
     try {
       // Import the function dynamically to avoid TypeScript issues
@@ -166,10 +148,8 @@ const Dashboard: React.FC = React.memo(() => {
       
       if (facilityDoc.exists()) {
         const data = facilityDoc.data()
-        console.log('📋 Found facility data:', data)
         setFacilityData(data)
       } else {
-        console.log('❌ No facility data found for userId:', userId)
         setFacilityData(null)
       }
     } catch (error) {
@@ -181,7 +161,6 @@ const Dashboard: React.FC = React.memo(() => {
   }, [])
 
   const loadUserAppointments = useCallback(async (userId: string) => {
-    console.log('🔍 Loading appointments for userId:', userId)
     setIsLoadingAppointments(true)
     try {
       // First, check if user is a facility
@@ -191,17 +170,13 @@ const Dashboard: React.FC = React.memo(() => {
       
       if (facilityDoc.exists()) {
         // User is a facility - load facility appointments
-        console.log('🏥 User is a facility, loading facility appointments')
         const { getFacilityAppointments } = await import('../services/firestoredb.js')
         const appointments = await getFacilityAppointments(userId)
-        console.log('📋 Found facility appointments:', appointments)
         setFacilityAppointments(appointments)
       } else {
         // User is a patient - load patient appointments
-        console.log('👤 User is a patient, loading patient appointments')
         const { getPatientAppointments } = await import('../services/firestoredb.js')
         const appointments = await getPatientAppointments(userId)
-        console.log('📋 Found patient appointments:', appointments)
         setFacilityAppointments(appointments)
       }
     } catch (error) {
@@ -638,8 +613,7 @@ const Dashboard: React.FC = React.memo(() => {
   useEffect(() => {
     if (!user?.uid) return
     
-    console.log('🔍 Setting up real-time listener for appointments...')
-    console.log('🔍 Current user UID:', user.uid)
+    // Real-time listener for appointments (both facility and patient)
     
     const setupRealTimeListener = async () => {
       try {
@@ -648,15 +622,10 @@ const Dashboard: React.FC = React.memo(() => {
         const patientsRef = collection(db, 'patients')
         
         const unsubscribe = onSnapshot(patientsRef, (querySnapshot) => {
-          console.log('🔄 Real-time update received from Firestore')
-          console.log(`📊 Total patients in collection: ${querySnapshot.size}`)
-          
           const appointments: any[] = []
           querySnapshot.forEach((doc) => {
             const patientData = doc.data()
             const patientAppointments = patientData?.activity?.appointments || []
-            
-            console.log(`📋 Patient ${doc.id} has ${patientAppointments.length} appointments`)
             
             // Filter appointments based on user type
             let userAppointments: any[] = []
@@ -665,24 +634,15 @@ const Dashboard: React.FC = React.memo(() => {
             if (doc.id === user.uid) {
               // User is a patient - show their own appointments
               userAppointments = patientAppointments
-              console.log(`👤 User is patient, showing their appointments`)
             } else {
               // Check if any appointments belong to this facility
               userAppointments = patientAppointments.filter((appointment: any) => {
-                const isMatch = appointment.facilityId === user.uid
-                console.log(`🔍 Appointment ${appointment.id}: facilityId=${appointment.facilityId}, currentUser=${user.uid}, match=${isMatch}`)
-                if (appointment.facilityId === "p5MJlb5lkIXnzDzNJXpWdolgiES2") {
-                  console.log(`🎯 Found the appointment from the screenshot! facilityId=${appointment.facilityId}, currentUser=${user.uid}`)
-                }
-                return isMatch
+                return appointment.facilityId === user.uid
               })
             }
             
             appointments.push(...userAppointments)
           })
-          
-          console.log(`📋 Real-time update: Found ${appointments.length} appointments for user ${user.uid}`)
-          console.log('📋 Appointments:', appointments)
           
           // Update the state with fresh data
           setFacilityAppointments(appointments)
@@ -733,12 +693,11 @@ const Dashboard: React.FC = React.memo(() => {
       unsubscribe = unsub
     })
     
-    return () => {
-      if (unsubscribe) {
-        console.log('🔍 Cleaning up real-time listener...')
-        unsubscribe()
-      }
-    }
+            return () => {
+          if (unsubscribe) {
+            unsubscribe()
+          }
+        }
   }, [user?.uid]) // Removed facilityAppointments.length from dependencies to prevent infinite loop
 
   // Removed unused handleAction function
@@ -995,7 +954,7 @@ const Dashboard: React.FC = React.memo(() => {
                   <select className="date-dropdown">
                     <option>May'23</option>
                   </select>
-                  <button 
+                                    <button 
                     className="btn btn-outline" 
                     onClick={() => user && loadUserAppointments(user.uid)}
                     disabled={isLoadingAppointments}
@@ -1004,79 +963,9 @@ const Dashboard: React.FC = React.memo(() => {
                     <i className={`fas ${isLoadingAppointments ? 'fa-spinner fa-spin' : 'fa-sync-alt'}`}></i>
                     {isLoadingAppointments ? ' Refreshing...' : ' Refresh Appointments'}
                   </button>
-                  <button 
-                    className="btn btn-outline" 
-                    onClick={async () => {
-                      console.log('🔍 Force refresh appointments...')
-                      console.log('🔍 Current appointments in state:', facilityAppointments)
-                      console.log('🔍 Current user UID:', user?.uid)
-                      console.log('🔍 Expected facility ID from screenshot:', "p5MJlb5lkIXnzDzNJXpWdolgiES2")
-                      
-                      if (user?.uid) {
-                        await loadUserAppointments(user.uid)
-                      }
-                    }}
-                    title="Force refresh and debug"
-                  >
-                    <i className="fas fa-bug"></i> Force Refresh
+                  <button className="btn btn-primary" onClick={openNewAppointmentModal}>
+                    <i className="fas fa-plus"></i> New Appointment
                   </button>
-                  <button 
-                    className="btn btn-outline" 
-                    onClick={async () => {
-                      console.log('🔍 Testing with specific facility ID from screenshot...')
-                      try {
-                        const { getFacilityAppointments } = await import('../services/firestoredb.js')
-                        const appointments = await getFacilityAppointments("p5MJlb5lkIXnzDzNJXpWdolgiES2")
-                        console.log('📋 Appointments for facility p5MJlb5lkIXnzDzNJXpWdolgiES2:', appointments)
-                      } catch (error) {
-                        console.error('❌ Error testing with specific facility ID:', error)
-                      }
-                    }}
-                    title="Test with specific facility ID"
-                  >
-                    <i className="fas fa-search"></i> Test Facility ID
-                  </button>
-                  <button 
-                    className="btn btn-outline" 
-                    onClick={async () => {
-                      console.log('🔍 Searching all patients for the appointment from screenshot...')
-                      try {
-                        const { getFirestore, collection, getDocs } = await import('firebase/firestore')
-                        const db = getFirestore()
-                        const patientsRef = collection(db, 'patients')
-                        const querySnapshot = await getDocs(patientsRef)
-                        
-                        let foundAppointment = null
-                        querySnapshot.forEach((doc) => {
-                          const patientData = doc.data()
-                          const patientAppointments = patientData?.activity?.appointments || []
-                          
-                          const targetAppointment = patientAppointments.find((apt: any) => 
-                            apt.facilityId === "p5MJlb5lkIXnzDzNJXpWdolgiES2"
-                          )
-                          
-                          if (targetAppointment) {
-                            foundAppointment = { patientId: doc.id, appointment: targetAppointment }
-                            console.log('🎯 Found appointment in patient:', doc.id, targetAppointment)
-                          }
-                        })
-                        
-                        if (!foundAppointment) {
-                          console.log('❌ Appointment not found in any patient')
-                        }
-                      } catch (error) {
-                        console.error('❌ Error searching all patients:', error)
-                      }
-                    }}
-                    title="Search all patients for appointment"
-                  >
-                    <i className="fas fa-search-plus"></i> Search All Patients
-                  </button>
-                                      {facilityData && (
-                      <button className="btn btn-primary" onClick={openNewAppointmentModal}>
-                        <i className="fas fa-plus"></i> New Appointment
-                      </button>
-                    )}
                 </div>
               </div>
 
@@ -1130,11 +1019,9 @@ const Dashboard: React.FC = React.memo(() => {
                             'You can book appointments through the PatientPortal. Use the refresh button above to check for new appointments.'
                           }
                         </p>
-                        {facilityData && (
-                          <button className="btn btn-primary" onClick={openNewAppointmentModal}>
-                            <i className="fas fa-plus"></i> Schedule New Appointment
-                          </button>
-                        )}
+                        <button className="btn btn-primary" onClick={openNewAppointmentModal}>
+                          <i className="fas fa-plus"></i> Schedule New Appointment
+                        </button>
                       </>
                     )}
                   </div>

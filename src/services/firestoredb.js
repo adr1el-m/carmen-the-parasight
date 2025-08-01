@@ -1486,11 +1486,7 @@ export async function createFacilityDocument(user, additionalData = {}) {
             
             // Staff information
             staff: {
-                totalStaff: 0,
-                doctors: 0,
-                nurses: 0,
-                supportStaff: 0,
-                total: 1,
+                totalStaff: 1,
                 doctors: 1,
                 nurses: 0,
                 supportStaff: 0
@@ -1499,8 +1495,6 @@ export async function createFacilityDocument(user, additionalData = {}) {
             // Capacity
             capacity: {
                 bedCapacity: 0,
-                consultationRooms: 0,
-                beds: 0,
                 consultationRooms: 1
             },
 

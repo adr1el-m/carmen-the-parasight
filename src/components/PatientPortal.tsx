@@ -3439,21 +3439,6 @@ const PatientPortal: React.FC = () => {
               </div>
             </div>
             <div className="modal-footer">
-              <button 
-                onClick={() => handleOpenDocument(viewingDocument)}
-                className="btn btn-outline"
-              >
-                <i className="fas fa-external-link-alt"></i>
-                Open in New Tab
-              </button>
-              <a 
-                href={viewingDocument.url} 
-                download={viewingDocument.originalName}
-                className="btn btn-outline"
-              >
-                <i className="fas fa-download"></i>
-                Download
-              </a>
               <button className="btn-secondary" onClick={closeModal}>Close</button>
             </div>
           </div>

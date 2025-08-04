@@ -129,6 +129,10 @@ const Dashboard: React.FC = React.memo(() => {
   })
   const [isSavingProfile, setIsSavingProfile] = useState(false)
   
+  // Document viewer state
+  const [viewingDocument, setViewingDocument] = useState<any>(null)
+  const [showDocumentModal, setShowDocumentModal] = useState(false)
+  
   const sidebarRef = useRef<HTMLElement>(null)
   const sidebarOverlayRef = useRef<HTMLDivElement>(null)
   const mainContentRef = useRef<HTMLDivElement>(null)
@@ -427,6 +431,30 @@ const Dashboard: React.FC = React.memo(() => {
         sunday: { open: '09:00', close: '17:00', closed: true }
       }
     })
+  }, [])
+
+  // Document viewer functions
+  const openDocumentModal = useCallback((document: any) => {
+    setViewingDocument(document)
+    setShowDocumentModal(true)
+  }, [])
+
+  const closeDocumentModal = useCallback(() => {
+    setShowDocumentModal(false)
+    setViewingDocument(null)
+  }, [])
+
+  const handleOpenDocument = useCallback((document: any) => {
+    try {
+      if (document.url) {
+        window.open(document.url, '_blank', 'noopener,noreferrer')
+      } else {
+        alert('Document URL not available')
+      }
+    } catch (error) {
+      console.error('Error opening document:', error)
+      alert('Failed to open document. Please try downloading it instead.')
+    }
   }, [])
 
   const handleEditProfileFormChange = useCallback((field: string, value: string) => {
@@ -736,6 +764,9 @@ const Dashboard: React.FC = React.memo(() => {
         capacity: editProfileForm.capacity,
         operatingHours: editProfileForm.operatingHours
       })
+      
+      // Ensure facility is searchable
+      await firestoreModule.ensureFacilitySearchable(user.uid)
       
       showNotification('Profile updated successfully!', 'success')
       closeEditProfileModal()
@@ -2075,10 +2106,17 @@ const Dashboard: React.FC = React.memo(() => {
                             <div className="document-actions">
                               <button 
                                 className="btn btn-outline btn-sm"
-                                onClick={() => window.open(document.url, '_blank')}
-                                title="View document"
+                                onClick={() => openDocumentModal(document)}
+                                title="View document details"
                               >
-                                <i className="fas fa-eye"></i> View
+                                <i className="fas fa-eye"></i> View Details
+                              </button>
+                              <button 
+                                className="btn btn-outline btn-sm"
+                                onClick={() => handleOpenDocument(document)}
+                                title="Open document in new tab"
+                              >
+                                <i className="fas fa-external-link-alt"></i> Open
                               </button>
                               <a 
                                 href={document.url} 
@@ -2853,6 +2891,104 @@ const Dashboard: React.FC = React.memo(() => {
                   </>
                 )}
               </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Document Viewer Modal */}
+      {showDocumentModal && viewingDocument && (
+        <div className="modal" style={{ display: 'block' }}>
+          <div className="modal-content" style={{ maxWidth: '800px', maxHeight: '90vh' }}>
+            <div className="modal-header">
+              <h3>View Document: {viewingDocument.name || viewingDocument.originalName || 'Document'}</h3>
+              <button className="close-btn" onClick={closeDocumentModal}>
+                <i className="fas fa-times"></i>
+              </button>
+            </div>
+            
+            <div className="modal-body">
+              <div className="document-details">
+                <div className="document-info-grid">
+                  <div className="info-item">
+                    <label>File Name:</label>
+                    <span>{viewingDocument.name || viewingDocument.originalName || 'Unknown'}</span>
+                  </div>
+                  <div className="info-item">
+                    <label>Size:</label>
+                    <span>{viewingDocument.size ? `${(viewingDocument.size / 1024 / 1024).toFixed(2)} MB` : 'Unknown'}</span>
+                  </div>
+                  <div className="info-item">
+                    <label>Type:</label>
+                    <span>{viewingDocument.type || 'Unknown'}</span>
+                  </div>
+                  <div className="info-item">
+                    <label>Upload Date:</label>
+                    <span>{viewingDocument.uploadDate ? new Date(viewingDocument.uploadDate).toLocaleDateString() : 'Unknown'}</span>
+                  </div>
+                </div>
+
+                {viewingDocument.type === 'application/pdf' ? (
+                  <div className="pdf-viewer">
+                    <div className="pdf-preview">
+                      <div className="pdf-icon">
+                        <i className="fas fa-file-pdf"></i>
+                        <span>PDF</span>
+                      </div>
+                      <h4>{viewingDocument.name || viewingDocument.originalName}</h4>
+                      <p>PDF documents cannot be previewed directly in the browser for security reasons.</p>
+                      <div className="pdf-actions">
+                        <button 
+                          onClick={() => handleOpenDocument(viewingDocument)}
+                          className="btn btn-primary"
+                          style={{ marginRight: '1rem' }}
+                        >
+                          <i className="fas fa-external-link-alt"></i>
+                          Open in New Tab
+                        </button>
+                        <a 
+                          href={viewingDocument.url} 
+                          download={viewingDocument.originalName}
+                          className="btn btn-outline"
+                        >
+                          <i className="fas fa-download"></i>
+                          Download PDF
+                        </a>
+                      </div>
+                    </div>
+                  </div>
+                ) : viewingDocument.type?.startsWith('image/') ? (
+                  <div className="image-viewer">
+                    <img 
+                      src={viewingDocument.url} 
+                      alt={viewingDocument.name || 'Document'} 
+                      style={{ maxWidth: '100%', maxHeight: '400px', objectFit: 'contain' }}
+                    />
+                  </div>
+                ) : (
+                  <div className="text-viewer">
+                    <div className="unsupported-format">
+                      <i className="fas fa-file-alt"></i>
+                      <h4>Document Preview Not Available</h4>
+                      <p>This file type cannot be previewed in the browser.</p>
+                      <a 
+                        href={viewingDocument.url} 
+                        target="_blank" 
+                        rel="noopener noreferrer"
+                        className="btn btn-primary"
+                        download={viewingDocument.originalName}
+                      >
+                        <i className="fas fa-download"></i>
+                        Download Document
+                      </a>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+            
+            <div className="modal-footer">
+              <button className="btn btn-secondary" onClick={closeDocumentModal}>Close</button>
             </div>
           </div>
         </div>

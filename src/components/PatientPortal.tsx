@@ -204,6 +204,64 @@ interface FacilityData {
 const PatientPortal: React.FC = () => {
   const navigate = useNavigate()
   const [activeSection, setActiveSection] = useState<'dashboard' | 'profile' | 'help' | 'facilities'>('dashboard')
+  
+  // Utility functions for formatting time and dates
+  const formatTime = useCallback((timeString: string) => {
+    try {
+      // Handle different time formats
+      let time = timeString
+      
+      // If time is already in AM/PM format, return as is
+      if (timeString.includes('AM') || timeString.includes('PM')) {
+        return timeString
+      }
+      
+      // If time is in HH:MM format, convert to AM/PM
+      if (timeString.includes(':')) {
+        const [hours, minutes] = timeString.split(':')
+        const hour = parseInt(hours, 10)
+        const ampm = hour >= 12 ? 'PM' : 'AM'
+        const displayHour = hour % 12 || 12
+        return `${displayHour}:${minutes.padStart(2, '0')} ${ampm}`
+      }
+      
+      return timeString
+    } catch (error) {
+      console.warn('Error formatting time:', error)
+      return timeString
+    }
+  }, [])
+
+  const formatDate = useCallback((dateString: string) => {
+    try {
+      const date = new Date(dateString)
+      return date.toLocaleDateString('en-US', { 
+        month: 'short', 
+        day: 'numeric', 
+        year: 'numeric' 
+      })
+    } catch (error) {
+      console.warn('Error formatting date:', error)
+      return dateString
+    }
+  }, [])
+
+  const formatDateTime = useCallback((dateTimeString: string) => {
+    try {
+      const date = new Date(dateTimeString)
+      return date.toLocaleString('en-US', { 
+        month: 'short', 
+        day: 'numeric', 
+        year: 'numeric',
+        hour: 'numeric',
+        minute: '2-digit',
+        hour12: true
+      })
+    } catch (error) {
+      console.warn('Error formatting date time:', error)
+      return dateTimeString
+    }
+  }, [])
   const [activeTab, setActiveTab] = useState<'general' | 'consultation-history' | 'patient-documents'>('general')
   const [isLoading, setIsLoading] = useState(true)
   const [user, setUser] = useState<User | null>(null)
@@ -1732,51 +1790,58 @@ const PatientPortal: React.FC = () => {
       console.log('✅ Loaded facilities:', allFacilities)
       
       // Transform the facilities to match our FacilityData interface
-      const transformedFacilities: FacilityData[] = allFacilities.map(facility => ({
-        id: facility.uid,
-        uid: facility.uid,
-        email: facility.email || '',
-        role: 'facility',
-        uniqueFacilityId: facility.uid,
-        facilityInfo: {
-          name: facility.name,
-          type: facility.type,
-          email: facility.email,
-          phone: facility.phone,
-          address: facility.address,
-          city: facility.city,
-          province: facility.province,
-          postalCode: facility.postalCode,
-          country: facility.country,
-          website: facility.website,
-          description: facility.description
-        },
-        operatingHours: facility.operatingHours,
-        specialties: facility.specialties || [],
-        services: facility.services || [],
-        staff: {
-          totalStaff: facility.staff.total,
-          doctors: facility.staff.doctors,
-          nurses: facility.staff.nurses,
-          supportStaff: facility.staff.supportStaff
-        },
-        capacity: {
-          bedCapacity: facility.capacity.beds,
-          consultationRooms: facility.capacity.consultationRooms
-        },
-        licenseNumber: facility.licenseNumber,
-        accreditation: facility.accreditation || [],
-        insuranceAccepted: facility.insuranceAccepted || [],
-        languages: facility.languages || [],
-        isActive: facility.isActive,
-        isVerified: facility.isVerified || false,
-        profileComplete: facility.profileComplete || false,
-        createdAt: facility.createdAt,
-        lastLoginAt: facility.lastLoginAt,
-        updatedAt: facility.updatedAt,
-        emailVerified: facility.emailVerified || false,
-        authProvider: facility.authProvider || 'email'
-      }))
+      const transformedFacilities: FacilityData[] = allFacilities.map(facility => {
+        console.log('🔍 Processing facility:', facility.name, 'with data:', facility)
+        
+        const transformed = {
+          id: facility.uid,
+          uid: facility.uid,
+          email: facility.email || '',
+          role: 'facility',
+          uniqueFacilityId: facility.uid,
+          facilityInfo: {
+            name: facility.name,
+            type: facility.type,
+            email: facility.email,
+            phone: facility.phone,
+            address: facility.address,
+            city: facility.city,
+            province: facility.province,
+            postalCode: facility.postalCode,
+            country: facility.country,
+            website: facility.website,
+            description: facility.description
+          },
+          operatingHours: facility.operatingHours,
+          specialties: facility.specialties || [],
+          services: facility.services || [],
+          staff: {
+            totalStaff: facility.staff.totalStaff,
+            doctors: facility.staff.doctors,
+            nurses: facility.staff.nurses,
+            supportStaff: facility.staff.supportStaff
+          },
+          capacity: {
+            bedCapacity: facility.capacity.bedCapacity,
+            consultationRooms: facility.capacity.consultationRooms
+          },
+          licenseNumber: facility.licenseNumber,
+          accreditation: facility.accreditation || [],
+          insuranceAccepted: facility.insuranceAccepted || [],
+          languages: facility.languages || [],
+          isActive: facility.isActive,
+          isVerified: facility.isVerified || false,
+          profileComplete: facility.profileComplete || false,
+          createdAt: facility.createdAt,
+          lastLoginAt: facility.lastLoginAt,
+          updatedAt: facility.updatedAt,
+          emailVerified: facility.emailVerified || false,
+          authProvider: facility.authProvider || 'email'
+        }
+        
+        console.log('✅ Transformed facility:', transformed.facilityInfo.name, 'with staff:', transformed.staff, 'and capacity:', transformed.capacity)
+        return transformed
+      })
       
       setFacilities(transformedFacilities)
       
@@ -1796,6 +1861,39 @@ const PatientPortal: React.FC = () => {
   useEffect(() => {
     if (user && activeSection === 'facilities') {
       loadFacilities()
+      
+      // Set up real-time listener for facility updates
+      const setupFacilityListener = async () => {
+        try {
+          const { getFirestore, collection, onSnapshot } = await import('firebase/firestore')
+          const db = getFirestore()
+          const facilitiesRef = collection(db, 'facilities')
+          
+          const unsubscribe = onSnapshot(facilitiesRef, (querySnapshot) => {
+            console.log('🔄 Real-time facility update detected')
+            // Reload facilities when any facility document changes
+            loadFacilities()
+          })
+          
+          // Store the unsubscribe function to clean up later
+          return unsubscribe
+        } catch (error) {
+          console.error('❌ Error setting up facility listener:', error)
+          return () => {}
+        }
+      }
+      
+      let unsubscribe: (() => void) | null = null
+      setupFacilityListener().then((unsub) => {
+        unsubscribe = unsub
+      })
+      
+      // Cleanup function
+      return () => {
+        if (unsubscribe) {
+          unsubscribe()
+        }
+      }
     }
   }, [user, activeSection, loadFacilities])
 
@@ -2023,7 +2121,7 @@ const PatientPortal: React.FC = () => {
                           <div className="appointment-info">
                             <h4>{appointment.doctor || 'Doctor TBD'}</h4>
                             <p>{appointment.type || 'Consultation'}</p>
-                            <div className="appointment-time">{appointment.time}</div>
+                            <div className="appointment-time">{formatTime(appointment.time)}</div>
                             <div className="appointment-facility">{appointment.facilityName || 'Facility TBD'}</div>
                             
                             {/* Show modification indicator if appointment was modified by facility */}
@@ -2052,7 +2150,7 @@ const PatientPortal: React.FC = () => {
                                     </div>
                                   )}
                                   <small className="modification-time">
-                                    Updated: {new Date(appointment.updatedAt).toLocaleString()}
+                                    Updated: {formatDateTime(appointment.updatedAt)}
                                   </small>
                                 </div>
                               </div>
@@ -2350,12 +2448,7 @@ const PatientPortal: React.FC = () => {
                               } else if (consultationDate.toDateString() === yesterday.toDateString()) {
                                 dateGroup = 'Yesterday'
                               } else {
-                                dateGroup = consultationDate.toLocaleDateString('en-US', { 
-                                  weekday: 'long', 
-                                  year: 'numeric', 
-                                  month: 'long', 
-                                  day: 'numeric' 
-                                })
+                                dateGroup = formatDate(consultation.date)
                               }
 
                               return (
@@ -2381,7 +2474,7 @@ const PatientPortal: React.FC = () => {
                                     </div>
                                   </div>
                                   <div className="appointment-time-slot">
-                                    {consultation.time || '00:00'} - {dateGroup}
+                                    {formatTime(consultation.time || '00:00')} - {dateGroup}
                                   </div>
                                   <div className="appointment-details">
                                     <span className="appointment-type">{consultation.specialty || consultation.type || 'Consultation'}</span>
@@ -2465,7 +2558,7 @@ const PatientPortal: React.FC = () => {
                             <div className="card-footer">
                               <p className="document-title">{document.name}</p>
                               <p className="document-date">
-                                {new Date(document.uploadDate).toLocaleDateString()}
+                                {formatDate(document.uploadDate)}
                               </p>
                               <p className="document-size">
                                 {(document.size / 1024 / 1024).toFixed(2)} MB
@@ -2512,7 +2605,15 @@ const PatientPortal: React.FC = () => {
               <div className="section-header">
                 <h1>Healthcare Facilities</h1>
                 <p>Find and book appointments with healthcare providers near you</p>
-
+                <button 
+                  className="btn btn-outline btn-sm" 
+                  onClick={loadFacilities}
+                  disabled={isLoadingFacilities}
+                  style={{ marginTop: '10px' }}
+                >
+                  <i className={`fas ${isLoadingFacilities ? 'fa-spinner fa-spin' : 'fa-sync-alt'}`}></i>
+                  {isLoadingFacilities ? ' Refreshing...' : ' Refresh Facilities'}
+                </button>
               </div>
               
               <div className="facilities-search">
@@ -3373,7 +3474,7 @@ const PatientPortal: React.FC = () => {
                 <p><strong>File Name:</strong> {viewingDocument.originalName}</p>
                 <p><strong>Size:</strong> {(viewingDocument.size / 1024 / 1024).toFixed(2)} MB</p>
                 <p><strong>Type:</strong> {viewingDocument.type}</p>
-                <p><strong>Upload Date:</strong> {new Date(viewingDocument.uploadDate).toLocaleDateString()}</p>
+                <p><strong>Upload Date:</strong> {formatDate(viewingDocument.uploadDate)}</p>
               </div>
               
               <div className="document-content">
@@ -3568,6 +3669,220 @@ const PatientPortal: React.FC = () => {
               >
                 {isEditingAppointment ? 'Updating...' : 'Update Appointment'}
               </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* View Facility Details Modal */}
+      {showModal === 'viewFacility' && selectedFacility && (
+        <div className="modal" style={{ display: 'block' }}>
+          <div className="modal-content facility-details-modal">
+            <div className="modal-header">
+              <h3>Facility Details: {selectedFacility.facilityInfo.name}</h3>
+              <button className="close-btn" onClick={closeModal}>
+                <i className="fas fa-times"></i>
+              </button>
+            </div>
+            <div className="modal-body">
+              <div className="facility-details-content">
+                {/* Basic Information */}
+                <div className="facility-section">
+                  <h4><i className="fas fa-info-circle"></i> Basic Information</h4>
+                  <div className="info-grid">
+                    <div className="info-item">
+                      <label>Facility Type:</label>
+                      <span>{selectedFacility.facilityInfo.type}</span>
+                    </div>
+                    <div className="info-item">
+                      <label>Email:</label>
+                      <span>{selectedFacility.facilityInfo.email}</span>
+                    </div>
+                    <div className="info-item">
+                      <label>Phone:</label>
+                      <span>{selectedFacility.facilityInfo.phone}</span>
+                    </div>
+                    <div className="info-item">
+                      <label>Website:</label>
+                      <span>
+                        {selectedFacility.facilityInfo.website ? (
+                          <a href={selectedFacility.facilityInfo.website} target="_blank" rel="noopener noreferrer">
+                            {selectedFacility.facilityInfo.website}
+                          </a>
+                        ) : 'Not provided'}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Address */}
+                <div className="facility-section">
+                  <h4><i className="fas fa-map-marker-alt"></i> Address</h4>
+                  <p>{selectedFacility.facilityInfo.address}</p>
+                  <p>{selectedFacility.facilityInfo.city}, {selectedFacility.facilityInfo.province} {selectedFacility.facilityInfo.postalCode}</p>
+                  <p>{selectedFacility.facilityInfo.country}</p>
+                </div>
+
+                {/* Description */}
+                {selectedFacility.facilityInfo.description && (
+                  <div className="facility-section">
+                    <h4><i className="fas fa-align-left"></i> Description</h4>
+                    <p>{selectedFacility.facilityInfo.description}</p>
+                  </div>
+                )}
+
+                {/* Specialties */}
+                {selectedFacility.specialties && selectedFacility.specialties.length > 0 && (
+                  <div className="facility-section">
+                    <h4><i className="fas fa-stethoscope"></i> Specialties</h4>
+                    <div className="tags-container">
+                      {selectedFacility.specialties.map((specialty, index) => (
+                        <span key={index} className="tag specialty-tag">{specialty}</span>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Services */}
+                {selectedFacility.services && selectedFacility.services.length > 0 && (
+                  <div className="facility-section">
+                    <h4><i className="fas fa-medical-kit"></i> Services</h4>
+                    <div className="tags-container">
+                      {selectedFacility.services.map((service, index) => (
+                        <span key={index} className="tag service-tag">{service}</span>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Operating Hours */}
+                <div className="facility-section">
+                  <h4><i className="fas fa-clock"></i> Operating Hours</h4>
+                  <div className="hours-grid">
+                    <div className="hour-item">
+                      <span className="day">Monday - Friday:</span>
+                      <span className="time">
+                        {selectedFacility.operatingHours.monday.closed ? 'Closed' : 
+                         `${selectedFacility.operatingHours.monday.open} - ${selectedFacility.operatingHours.monday.close}`}
+                      </span>
+                    </div>
+                    <div className="hour-item">
+                      <span className="day">Saturday:</span>
+                      <span className="time">
+                        {selectedFacility.operatingHours.saturday.closed ? 'Closed' : 
+                         `${selectedFacility.operatingHours.saturday.open} - ${selectedFacility.operatingHours.saturday.close}`}
+                      </span>
+                    </div>
+                    <div className="hour-item">
+                      <span className="day">Sunday:</span>
+                      <span className="time">
+                        {selectedFacility.operatingHours.sunday.closed ? 'Closed' : 
+                         `${selectedFacility.operatingHours.sunday.open} - ${selectedFacility.operatingHours.sunday.close}`}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Staff Information */}
+                <div className="facility-section">
+                  <h4><i className="fas fa-users"></i> Staff Information</h4>
+                  <div className="staff-grid">
+                    <div className="staff-item">
+                      <span className="staff-type">Total Staff:</span>
+                      <span className="staff-count">{selectedFacility.staff.totalStaff}</span>
+                    </div>
+                    <div className="staff-item">
+                      <span className="staff-type">Doctors:</span>
+                      <span className="staff-count">{selectedFacility.staff.doctors}</span>
+                    </div>
+                    <div className="staff-item">
+                      <span className="staff-type">Nurses:</span>
+                      <span className="staff-count">{selectedFacility.staff.nurses}</span>
+                    </div>
+                    <div className="staff-item">
+                      <span className="staff-type">Support Staff:</span>
+                      <span className="staff-count">{selectedFacility.staff.supportStaff}</span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Capacity */}
+                <div className="facility-section">
+                  <h4><i className="fas fa-bed"></i> Capacity</h4>
+                  <div className="capacity-grid">
+                    <div className="capacity-item">
+                      <span className="capacity-type">Bed Capacity:</span>
+                      <span className="capacity-count">{selectedFacility.capacity.bedCapacity}</span>
+                    </div>
+                    <div className="capacity-item">
+                      <span className="capacity-type">Consultation Rooms:</span>
+                      <span className="capacity-count">{selectedFacility.capacity.consultationRooms}</span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Additional Information */}
+                <div className="facility-section">
+                  <h4><i className="fas fa-certificate"></i> Additional Information</h4>
+                  <div className="additional-info">
+                    <div className="info-item">
+                      <label>License Number:</label>
+                      <span>{selectedFacility.licenseNumber || 'Not provided'}</span>
+                    </div>
+                    
+                    {selectedFacility.accreditation && selectedFacility.accreditation.length > 0 && (
+                      <div className="info-item">
+                        <label>Accreditations:</label>
+                        <div className="tags-container">
+                          {selectedFacility.accreditation.map((acc, index) => (
+                            <span key={index} className="tag accreditation-tag">{acc}</span>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                    
+                    {selectedFacility.insuranceAccepted && selectedFacility.insuranceAccepted.length > 0 && (
+                      <div className="info-item">
+                        <label>Insurance Accepted:</label>
+                        <div className="tags-container">
+                          {selectedFacility.insuranceAccepted.map((insurance, index) => (
+                            <span key={index} className="tag insurance-tag">{insurance}</span>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                    
+                    {selectedFacility.languages && selectedFacility.languages.length > 0 && (
+                      <div className="info-item">
+                        <label>Languages:</label>
+                        <div className="tags-container">
+                          {selectedFacility.languages.map((language, index) => (
+                            <span key={index} className="tag language-tag">{language}</span>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div className="modal-footer">
+              <button 
+                className="btn btn-primary" 
+                onClick={() => {
+                  setAppointmentForm(prev => ({
+                    ...prev,
+                    facilityId: selectedFacility.uid,
+                    facilityName: selectedFacility.facilityInfo.name
+                  }))
+                  closeModal()
+                  openModal('bookAppointment')
+                }}
+              >
+                <i className="fas fa-calendar-plus"></i>
+                Book Appointment
+              </button>
+              <button className="btn-secondary" onClick={closeModal}>Close</button>
             </div>
           </div>
         </div>

@@ -533,7 +533,7 @@ body {
 .main-container {
     padding: 2rem;
     overflow-y: auto;
-    height: calc(100vh - 120px);
+    height: 100vh;
     position: relative;
     background-color: var(--background-light);
     flex: 1;
@@ -2288,7 +2288,7 @@ input:checked + .slider:before {
 
 @media (max-width: 768px) {
     .dashboard-layout {
-        height: calc(100vh - 60px);
+        height: 100vh;
     }
     
     .sidebar {
@@ -3764,4 +3764,282 @@ select option,
     display: flex;
     gap: 0.5rem;
     align-items: center;
+}
+
+/* Facility Details Modal Styles */
+.facility-details-modal {
+  max-width: 800px;
+  max-height: 90vh;
+  overflow-y: auto;
+}
+
+.facility-details-content {
+  display: flex;
+  flex-direction: column;
+  gap: 2rem;
+}
+
+.facility-section {
+  border-bottom: 1px solid #e9ecef;
+  padding-bottom: 1.5rem;
+}
+
+.facility-section:last-child {
+  border-bottom: none;
+  padding-bottom: 0;
+}
+
+.facility-section h4 {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  color: var(--primary-blue);
+  font-size: 1.1rem;
+  font-weight: 600;
+  margin-bottom: 1rem;
+  padding-bottom: 0.5rem;
+  border-bottom: 2px solid #e3f2fd;
+}
+
+.facility-section h4 i {
+  font-size: 1rem;
+  opacity: 0.8;
+}
+
+.info-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  gap: 1rem;
+}
+
+.info-item {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.info-item label {
+  font-weight: 600;
+  color: var(--text-medium);
+  font-size: 0.9rem;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.info-item span {
+  color: var(--text-dark);
+  font-size: 1rem;
+}
+
+.info-item a {
+  color: var(--primary-blue);
+  text-decoration: none;
+  word-break: break-all;
+}
+
+.info-item a:hover {
+  text-decoration: underline;
+}
+
+.tags-container {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.tag {
+  padding: 0.25rem 0.75rem;
+  border-radius: 20px;
+  font-size: 0.85rem;
+  font-weight: 500;
+  display: inline-block;
+}
+
+.specialty-tag {
+  background-color: #e3f2fd;
+  color: #1976d2;
+  border: 1px solid #bbdefb;
+}
+
+.service-tag {
+  background-color: #f3e5f5;
+  color: #7b1fa2;
+  border: 1px solid #e1bee7;
+}
+
+.accreditation-tag {
+  background-color: #e8f5e8;
+  color: #388e3c;
+  border: 1px solid #c8e6c9;
+}
+
+.insurance-tag {
+  background-color: #fff3e0;
+  color: #f57c00;
+  border: 1px solid #ffcc02;
+}
+
+.language-tag {
+  background-color: #fce4ec;
+  color: #c2185b;
+  border: 1px solid #f8bbd9;
+}
+
+.hours-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.hour-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.5rem 0;
+  border-bottom: 1px solid #f5f5f5;
+}
+
+.hour-item:last-child {
+  border-bottom: none;
+}
+
+.hour-item .day {
+  font-weight: 600;
+  color: var(--text-medium);
+  min-width: 120px;
+}
+
+.hour-item .time {
+  color: var(--text-dark);
+  font-weight: 500;
+}
+
+.staff-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 1rem;
+}
+
+.staff-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.75rem;
+  background-color: #f8f9fa;
+  border-radius: 8px;
+  border: 1px solid #e9ecef;
+}
+
+.staff-type {
+  font-weight: 600;
+  color: var(--text-medium);
+  font-size: 0.9rem;
+}
+
+.staff-count {
+  background-color: var(--primary-blue);
+  color: white;
+  padding: 0.25rem 0.75rem;
+  border-radius: 20px;
+  font-weight: 600;
+  font-size: 0.9rem;
+}
+
+.capacity-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 1rem;
+}
+
+.capacity-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.75rem;
+  background-color: #f8f9fa;
+  border-radius: 8px;
+  border: 1px solid #e9ecef;
+}
+
+.capacity-type {
+  font-weight: 600;
+  color: var(--text-medium);
+  font-size: 0.9rem;
+}
+
+.capacity-count {
+  background-color: #4caf50;
+  color: white;
+  padding: 0.25rem 0.75rem;
+  border-radius: 20px;
+  font-weight: 600;
+  font-size: 0.9rem;
+}
+
+.additional-info {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+/* Time input styling to fix black text on dark background */
+input[type="time"] {
+  background-color: white !important;
+  color: var(--text-dark) !important;
+  border: 1px solid #ddd !important;
+  padding: 0.5rem !important;
+  border-radius: 4px !important;
+  font-size: 0.9rem !important;
+  min-width: 120px !important;
+}
+
+input[type="time"]:focus {
+  outline: none !important;
+  border-color: var(--primary-blue) !important;
+  box-shadow: 0 0 0 3px rgba(0, 64, 231, 0.1) !important;
+}
+
+input[type="time"]::-webkit-calendar-picker-indicator {
+  filter: invert(0) !important;
+  cursor: pointer !important;
+}
+
+/* Ensure time inputs in modals are also properly styled */
+.modal input[type="time"] {
+  background-color: white !important;
+  color: var(--text-dark) !important;
+}
+
+/* Responsive adjustments for facility modal */
+@media (max-width: 768px) {
+  .facility-details-modal {
+    max-width: 95vw;
+    margin: 1rem;
+  }
+  
+  .info-grid {
+    grid-template-columns: 1fr;
+  }
+  
+  .staff-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+  
+  .capacity-grid {
+    grid-template-columns: 1fr;
+  }
+  
+  .hour-item {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.25rem;
+  }
+  
+  .hour-item .day {
+    min-width: auto;
+  }
+  
+  input[type="time"] {
+    min-width: 100% !important;
+  }
 }

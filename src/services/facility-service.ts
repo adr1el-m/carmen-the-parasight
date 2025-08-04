@@ -80,6 +80,7 @@ class FacilityService {
 
       querySnapshot.forEach((doc) => {
         const data = doc.data() as any
+        console.log('🔍 Raw facility data from Firestore:', doc.id, data)
         
         // Handle both old format (direct fields) and new format (under facilityInfo)
         const facilityData = {
@@ -133,6 +134,9 @@ class FacilityService {
         
         // Only include facilities that are searchable
         console.log('🔍 Facility searchable check:', facilityData.isSearchable, 'for facility:', facilityData.name)
+        console.log('🔍 Facility staff data:', facilityData.staff)
+        console.log('🔍 Facility capacity data:', facilityData.capacity)
+        
         if (facilityData.isSearchable !== false) {
           facilities.push(facilityData)
         } else {

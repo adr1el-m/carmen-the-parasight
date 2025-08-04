@@ -1652,6 +1652,38 @@ export async function cleanupTestFacilities() {
 }
 
 /**
+ * Ensure facility is searchable (utility function)
+ */
+export async function ensureFacilitySearchable(facilityId) {
+    try {
+        console.log('🔍 Ensuring facility is searchable:', facilityId);
+        
+        const facilityRef = doc(db, 'facilities', facilityId);
+        const facilityDoc = await getDoc(facilityRef);
+        
+        if (!facilityDoc.exists()) {
+            throw new Error('Facility not found');
+        }
+        
+        const currentData = facilityDoc.data();
+        
+        // If isSearchable is not set or is false, set it to true
+        if (currentData.isSearchable !== true) {
+            await updateDoc(facilityRef, {
+                isSearchable: true,
+                updatedAt: serverTimestamp()
+            });
+            console.log('✅ Facility marked as searchable:', facilityId);
+        } else {
+            console.log('ℹ️ Facility already searchable:', facilityId);
+        }
+    } catch (error) {
+        console.error('❌ Error ensuring facility is searchable:', error);
+        throw error;
+    }
+}
+
+/**
  * Update facility information
  */
 export async function updateFacilityInfo(facilityId, updateData) {
@@ -1666,6 +1698,9 @@ export async function updateFacilityInfo(facilityId, updateData) {
         if (!facilityDoc.exists()) {
             throw new Error('Facility not found');
         }
+        
+        // Get current facility data
+        const currentData = facilityDoc.data();
         
         // Prepare the update object
         const updates = {
@@ -1701,11 +1736,8 @@ export async function updateFacilityInfo(facilityId, updateData) {
             updates.operatingHours = updateData.operatingHours;
         }
         
-        // Preserve isSearchable field if it exists
-        const currentData = facilityDoc.data();
-        if (currentData.isSearchable !== undefined) {
-            updates.isSearchable = currentData.isSearchable;
-        }
+        // Always ensure facility is searchable when updated
+        updates.isSearchable = true;
         
         console.log('📦 Final updates object:', updates);
         console.log('🔍 Current facility data before update:', currentData);

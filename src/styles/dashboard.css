@@ -78,7 +78,7 @@ body {
 /* Dashboard Layout */
 .dashboard-layout {
     display: flex;
-    height: calc(100vh - 80px);
+    height: 100vh;
     overflow: hidden;
 }
 
@@ -317,7 +317,7 @@ body {
 .main-container {
     padding: 2rem;
     overflow-y: auto;
-    height: calc(100vh - 120px);
+    height: 100vh;
     position: relative;
 }
 
@@ -1450,6 +1450,162 @@ body {
     margin-left: 2.25rem;
 }
 
+/* Document viewer modal styles */
+.document-details {
+    padding: 1rem 0;
+}
+
+.document-info-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 1rem;
+    margin-bottom: 2rem;
+    padding: 1rem;
+    background: #f8f9fa;
+    border-radius: 8px;
+    border: 1px solid var(--border-light);
+}
+
+.document-info-grid .info-item {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+}
+
+.document-info-grid .info-item label {
+    font-weight: 600;
+    color: var(--text-dark);
+    font-size: 0.8rem;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.document-info-grid .info-item span {
+    color: var(--text-dark);
+    font-size: 0.9rem;
+}
+
+/* PDF viewer styles */
+.pdf-viewer {
+    text-align: center;
+    padding: 2rem;
+}
+
+.pdf-preview {
+    max-width: 400px;
+    margin: 0 auto;
+}
+
+.pdf-icon {
+    width: 80px;
+    height: 80px;
+    background: #dc3545;
+    border-radius: 8px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    margin: 0 auto 1rem;
+    color: white;
+    font-weight: bold;
+}
+
+.pdf-icon i {
+    font-size: 2rem;
+    margin-bottom: 0.5rem;
+}
+
+.pdf-icon span {
+    font-size: 0.8rem;
+}
+
+.pdf-preview h4 {
+    color: var(--text-dark);
+    margin-bottom: 1rem;
+    font-size: 1.1rem;
+}
+
+.pdf-preview p {
+    color: var(--text-light);
+    margin-bottom: 1.5rem;
+    font-size: 0.9rem;
+    line-height: 1.5;
+}
+
+.pdf-actions {
+    display: flex;
+    gap: 1rem;
+    justify-content: center;
+    flex-wrap: wrap;
+}
+
+/* Image viewer styles */
+.image-viewer {
+    text-align: center;
+    padding: 1rem;
+}
+
+.image-viewer img {
+    border-radius: 8px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+/* Text viewer styles */
+.text-viewer {
+    text-align: center;
+    padding: 2rem;
+}
+
+.unsupported-format {
+    max-width: 400px;
+    margin: 0 auto;
+}
+
+.unsupported-format i {
+    font-size: 3rem;
+    color: var(--text-light);
+    margin-bottom: 1rem;
+}
+
+.unsupported-format h4 {
+    color: var(--text-dark);
+    margin-bottom: 0.5rem;
+    font-size: 1.1rem;
+}
+
+.unsupported-format p {
+    color: var(--text-light);
+    margin-bottom: 1.5rem;
+    font-size: 0.9rem;
+}
+
+/* Document actions in grid */
+.document-actions {
+    display: flex;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+}
+
+.document-actions .btn {
+    font-size: 0.8rem;
+    padding: 0.4rem 0.8rem;
+}
+
+@media (max-width: 768px) {
+    .document-info-grid {
+        grid-template-columns: 1fr;
+    }
+    
+    .pdf-actions {
+        flex-direction: column;
+        align-items: center;
+    }
+    
+    .document-actions {
+        flex-direction: column;
+    }
+}
+
 /* Diseases Section */
 .diseases-section {
     display: flex;
@@ -2133,7 +2289,7 @@ input:checked + .slider:before {
 
 @media (max-width: 768px) {
     .dashboard-layout {
-        height: calc(100vh - 60px);
+        height: 100vh;
     }
     
     .sidebar {

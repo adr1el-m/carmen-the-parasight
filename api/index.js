@@ -1,3 +1,13 @@
+/**
+ * LingapLink PH API Server
+ * 
+ * Vercel Configuration:
+ * - This file is deployed as a serverless function
+ * - Function timeout: 30 seconds (Vercel default)
+ * - Environment: Production (NODE_ENV=production)
+ * - Routes: All /api/* requests are routed here
+ */
+
 const express = require('express');
 const cors = require('cors');
 const helmet = require('helmet');

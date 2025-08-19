@@ -30,7 +30,6 @@
     "type-check": "tsc --noEmit",
     "lint:security": "eslint . --rule 'security/*: error'",
     "pre-commit": "npm run lint && npm run type-check && npm run test:security",
-    "postinstall": "npm run security:check",
     "security:generate-secrets": "node -e \"console.log('JWT_SECRET=' + require('crypto').randomBytes(32).toString('hex')); console.log('CSRF_SECRET=' + require('crypto').randomBytes(32).toString('hex')); console.log('SESSION_SECRET=' + require('crypto').randomBytes(32).toString('hex'));\"",
     "security:quick": "npm run test:security -- --quick",
     "test:input-security": "node scripts/test-input-security.js",

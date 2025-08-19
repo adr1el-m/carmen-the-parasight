@@ -550,13 +550,16 @@ export async function removeMedicalCondition(userId, category, condition) {
 export async function addConsultationHistory(userId, consultation) {
     try {
         const consultationData = {
-            id: `consultation_${Date.now()}`,
+            id: consultation.id || `consultation_${Date.now()}`,
+            doctorName: consultation.doctorName || '',
+            specialty: consultation.specialty || '',
             date: consultation.date || new Date().toISOString(),
-            doctor: consultation.doctor || '',
+            time: consultation.time || '00:00',
             type: consultation.type || '',
             status: consultation.status || 'completed',
             notes: consultation.notes || '',
-            createdAt: new Date().toISOString() // Use regular date instead of serverTimestamp for array elements
+            facilityId: consultation.facilityId || '',
+            facilityName: consultation.facilityName || ''
         };
         
         const updates = {

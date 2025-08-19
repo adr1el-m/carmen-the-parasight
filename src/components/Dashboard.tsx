@@ -2046,7 +2046,7 @@ const Dashboard: React.FC = React.memo(() => {
                               </div>
                               <div className="detail-row">
                                 <span className="detail-label"><i className="fas fa-user-md"></i> Doctor:</span>
-                                <span className="detail-value">{consultation.doctor || 'Not specified'}</span>
+                                <span className="detail-value">{consultation.doctorName || consultation.doctor || 'Not specified'}</span>
                               </div>
                               <div className="detail-row">
                                 <span className="detail-label"><i className="fas fa-stethoscope"></i> Type:</span>

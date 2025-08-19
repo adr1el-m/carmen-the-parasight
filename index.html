@@ -60,8 +60,96 @@
     
     <title>LingapLink - Healthcare Platform Philippines | Find Doctors & Book Appointments</title>
     
+    <!-- IMMEDIATE Error Suppression - Runs before any other scripts -->
+    <script>
+      (function() {
+        'use strict';
+        
+        // Store original methods immediately
+        const originalWarn = console.warn;
+        const originalError = console.error;
+        const originalOnError = window.onerror;
+        const originalAddEventListener = window.addEventListener;
+        
+        // Selective error suppression - only suppress actual errors, not intercept Google API
+        if (typeof window !== 'undefined') {
+          console.log('✅ HTML: Selective error suppression enabled');
+        }
+        
+        // Suppress Chrome third-party cookies warnings
+        console.warn = function(...args) {
+          const message = args[0];
+          if (typeof message === 'string') {
+            if (message.includes('third-party cookies') ||
+                message.includes('Chrome is moving towards') ||
+                message.includes('browse without third-party cookies') ||
+                message.includes('new experience') ||
+                message.includes('choose to browse')) {
+              return; // Suppress completely
+            }
+          }
+          originalWarn.apply(console, args);
+        };
+        
+        // Suppress only non-critical errors (allow Google authentication)
+        console.error = function(...args) {
+          const message = args[0];
+          if (typeof message === 'string') {
+            if (message.includes('third-party cookies')) {
+              console.log('Third-party cookies warning suppressed:', ...args);
+              return; // Suppress only third-party cookie warnings
+            }
+          }
+          originalError.apply(console, args);
+        };
+        
+        // Override global error handler - only suppress non-critical errors
+        window.onerror = function(message, source, lineno, colno, error) {
+          if (typeof message === 'string') {
+            if (message.includes('third-party cookies')) {
+              console.log('Third-party cookies warning suppressed:', message);
+              return true; // Prevent only third-party cookie warnings
+            }
+          }
+          
+          // Call original handler for other errors
+          if (originalOnError) {
+            return originalOnError(message, source, lineno, colno, error);
+          }
+          return false;
+        };
+        
+        // Override addEventListener for error events - only suppress non-critical errors
+        window.addEventListener = function(type, listener, options) {
+          if (type === 'error') {
+            // Wrap error listeners to filter out only third-party cookie warnings
+            const wrappedListener = function(event) {
+              if (event instanceof ErrorEvent) {
+                const message = event.message || event.error?.message || '';
+                if (message.includes('third-party cookies')) {
+                  console.log('Third-party cookies warning suppressed:', message);
+                  return; // Don't call the original listener for third-party cookie warnings
+                }
+              }
+              // Call original listener for other errors
+              if (typeof listener === 'function') {
+                return listener.call(this, event);
+              }
+            };
+            return originalAddEventListener.call(this, type, wrappedListener, options);
+          }
+          return originalAddEventListener.call(this, type, listener, options);
+        };
+        
+        // Allow all Google authentication scripts to load normally
+        console.log('✅ HTML: Google authentication scripts allowed');
+        
+        console.log('✅ HTML: Selective error suppression activated - Google authentication allowed');
+      })();
+    </script>
+    
     <!-- Security: Content Security Policy -->
-    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://apis.google.com https://www.gstatic.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://cdnjs.cloudflare.com; font-src 'self' https://fonts.gstatic.com https://cdnjs.cloudflare.com; img-src 'self' data: https://images.unsplash.com https://www.google.com; connect-src 'self' https://apis.google.com https://www.googleapis.com https://accounts.google.com https://identitytoolkit.googleapis.com https://securetoken.googleapis.com https://*.firebaseapp.com https://firestore.googleapis.com https://*.googleapis.com https://www.google.com; frame-src 'self' https://*.firebaseapp.com https://accounts.google.com;" />
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://apis.google.com https://www.gstatic.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://cdnjs.cloudflare.com; font-src 'self' https://fonts.gstatic.com https://cdnjs.cloudflare.com; img-src 'self' data: https://images.unsplash.com https://www.google.com; connect-src 'self' https://apis.google.com https://www.googleapis.com https://accounts.google.com https://identitytoolkit.googleapis.com https://securetoken.googleapis.com https://*.firebaseapp.com https://firestore.googleapis.com https://*.googleapis.com https://www.google.com https://api64.ipify.org https://httpbin.org; frame-src 'self' https://*.firebaseapp.com https://accounts.google.com;" />
     
     <!-- Structured Data -->
     <script type="application/ld+json">

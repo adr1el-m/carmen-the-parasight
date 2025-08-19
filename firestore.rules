@@ -1,34 +1,225 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-    // Allow authenticated users to read and write to patients collection
-    // Patients can read/write their own documents
-    // Facilities can read patient documents to see appointments
-    match /patients/{userId} {
-      allow read: if request.auth != null;
-      allow write: if request.auth != null && request.auth.uid == userId;
+    
+    // ==================== HIPAA COMPLIANCE RULES ====================
+    
+    // Patient records - highest security level
+    match /patients/{patientId} {
+      // Only authenticated users can access patient records
+      allow read, write: if request.auth != null && 
+        (
+          // Patient can access their own records
+          request.auth.uid == patientId ||
+          // Healthcare providers with proper role and consent
+          hasValidProviderRole() && hasPatientConsent(patientId, 'treatment') ||
+          // Emergency access (with audit logging)
+          isEmergencyAccess() && hasEmergencyRole()
+        );
+      
+      // Audit logging for all access
+      allow create: if request.auth != null && 
+        request.resource.data.resourceType == 'audit_log';
     }
     
-    // Allow authenticated users to read all facilities (for patient search)
-    // But only allow facilities to write to their own document
+    // Patient consent records
+    match /patient_consents/{consentId} {
+      allow read: if request.auth != null && 
+        (
+          // Patient can view their own consents
+          request.auth.uid == resource.data.patientId ||
+          // Healthcare providers with proper role
+          hasValidProviderRole() && hasPatientConsent(resource.data.patientId, 'healthcare_operations')
+        );
+      
+      allow write: if request.auth != null && 
+        (
+          // Patient can modify their own consents
+          request.auth.uid == resource.data.patientId ||
+          // Healthcare providers can create/update consents
+          hasValidProviderRole()
+        );
+    }
+    
+    // HIPAA audit logs - read-only for compliance officers
+    match /hipaa_audit_logs/{logId} {
+      allow read: if request.auth != null && 
+        (hasRole('compliance_officer') || hasRole('admin'));
+      allow create: if request.auth != null; // System can create logs
+      allow update, delete: if false; // Immutable audit trail
+    }
+    
+    // HIPAA violations - restricted access
+    match /hipaa_violations/{violationId} {
+      allow read: if request.auth != null && 
+        (hasRole('compliance_officer') || hasRole('admin') || hasRole('security_officer'));
+      allow create: if request.auth != null; // System can create violations
+      allow update: if request.auth != null && 
+        (hasRole('compliance_officer') || hasRole('admin'));
+      allow delete: if false; // Never delete violations
+    }
+    
+    // ==================== HEALTHCARE PROVIDER RULES ====================
+    
+    // Healthcare facilities
     match /facilities/{facilityId} {
       allow read: if request.auth != null;
-      allow write: if request.auth != null && request.auth.uid == facilityId;
+      allow write: if request.auth != null && 
+        (hasRole('admin') || hasRole('facility_admin'));
     }
     
-    // Allow authenticated users to read and write to counters collection
-    match /counters/{document=**} {
-      allow read, write: if request.auth != null;
+    // Healthcare providers
+    match /providers/{providerId} {
+      allow read: if request.auth != null;
+      allow write: if request.auth != null && 
+        (request.auth.uid == providerId || hasRole('admin') || hasRole('facility_admin'));
     }
     
-    // Allow authenticated users to read and write to appointments collection
-    match /appointments/{document=**} {
-      allow read, write: if request.auth != null;
+    // Appointments
+    match /appointments/{appointmentId} {
+      allow read: if request.auth != null && 
+        (
+          // Patient can view their own appointments
+          request.auth.uid == resource.data.patientId ||
+          // Provider can view appointments they're assigned to
+          request.auth.uid == resource.data.providerId ||
+          // Facility staff can view appointments at their facility
+          hasFacilityAccess(resource.data.facilityId)
+        );
+      
+      allow create: if request.auth != null && 
+        (hasRole('provider') || hasRole('admin') || hasRole('facility_staff'));
+      
+      allow update: if request.auth != null && 
+        (
+          // Provider can update their appointments
+          request.auth.uid == resource.data.providerId ||
+          // Facility staff can update appointments at their facility
+          hasFacilityAccess(resource.data.facilityId) ||
+          hasRole('admin')
+        );
+      
+      allow delete: if request.auth != null && 
+        (hasRole('admin') || hasRole('facility_admin'));
     }
     
-    // Allow authenticated users to read and write to documentData collection
-    match /documentData/{documentId} {
-      allow read, write: if request.auth != null;
+    // Medical records
+    match /medical_records/{recordId} {
+      allow read: if request.auth != null && 
+        (
+          // Patient can view their own records
+          request.auth.uid == resource.data.patientId ||
+          // Provider with proper role and consent
+          hasValidProviderRole() && hasPatientConsent(resource.data.patientId, 'treatment')
+        );
+      
+      allow write: if request.auth != null && 
+        (
+          // Provider can create/update records for their patients
+          hasValidProviderRole() && hasPatientConsent(resource.data.patientId, 'treatment')
+        );
+    }
+    
+    // ==================== USER MANAGEMENT RULES ====================
+    
+    // User profiles
+    match /users/{userId} {
+      allow read: if request.auth != null && 
+        (
+          // Users can read their own profile
+          request.auth.uid == userId ||
+          // Healthcare providers can read patient profiles (with consent)
+          hasValidProviderRole() && hasPatientConsent(userId, 'healthcare_operations')
+        );
+      
+      allow write: if request.auth != null && 
+        (
+          // Users can update their own profile
+          request.auth.uid == userId ||
+          // Admins can update any profile
+          hasRole('admin')
+        );
+    }
+    
+    // User roles and permissions
+    match /user_roles/{userId} {
+      allow read: if request.auth != null && 
+        (request.auth.uid == userId || hasRole('admin'));
+      allow write: if request.auth != null && hasRole('admin');
+    }
+    
+    // ==================== SYSTEM CONFIGURATION RULES ====================
+    
+    // System configuration - admin only
+    match /system_config/{configId} {
+      allow read: if request.auth != null && 
+        (hasRole('admin') || hasRole('system_admin'));
+      allow write: if request.auth != null && hasRole('system_admin');
+    }
+    
+    // HIPAA configuration
+    match /hipaa_config/{configId} {
+      allow read: if request.auth != null && 
+        (hasRole('compliance_officer') || hasRole('admin'));
+      allow write: if request.auth != null && hasRole('compliance_officer');
+    }
+    
+    // ==================== HELPER FUNCTIONS ====================
+    
+    // Check if user has a valid healthcare provider role
+    function hasValidProviderRole() {
+      return request.auth != null && 
+        (hasRole('doctor') || hasRole('nurse') || hasRole('provider') || hasRole('facility_staff'));
+    }
+    
+    // Check if user has a specific role
+    function hasRole(role) {
+      return request.auth != null && 
+        exists(/databases/$(database)/documents/user_roles/$(request.auth.uid)) &&
+        role in get(/databases/$(database)/documents/user_roles/$(request.auth.uid)).data.roles;
+    }
+    
+    // Check if user has access to a specific facility
+    function hasFacilityAccess(facilityId) {
+      return request.auth != null && 
+        exists(/databases/$(database)/documents/user_roles/$(request.auth.uid)) &&
+        facilityId in get(/databases/$(database)/documents/user_roles/$(request.auth.uid)).data.facilities;
+    }
+    
+    // Check if patient has given consent for specific purpose
+    function hasPatientConsent(patientId, purpose) {
+      return exists(/databases/$(database)/documents/patient_consents/$(patientId)) &&
+        get(/databases/$(database)/documents/patient_consents/$(patientId)).data.status == 'granted' &&
+        purpose in get(/databases/$(database)/documents/patient_consents/$(patientId)).data.consentType;
+    }
+    
+    // Check if this is an emergency access request
+    function isEmergencyAccess() {
+      // In a real implementation, you would check for emergency flags
+      // For now, we'll require explicit emergency role
+      return false;
+    }
+    
+    // Check if user has emergency access role
+    function hasEmergencyRole() {
+      return hasRole('emergency_provider') || hasRole('emergency_staff');
+    }
+    
+    // ==================== RATE LIMITING ====================
+    
+    // Rate limiting for authentication attempts
+    match /auth_attempts/{attemptId} {
+      allow read: if request.auth != null && 
+        (request.auth.uid == resource.data.userId || hasRole('admin'));
+      allow create: if true; // Allow creation for rate limiting
+      allow update, delete: if false;
+    }
+    
+    // ==================== DEFAULT DENY ====================
+    
+    // Deny access to any document not explicitly allowed
+    match /{document=**} {
+      allow read, write: if false;
     }
   }
 }

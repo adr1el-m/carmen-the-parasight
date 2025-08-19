@@ -1562,6 +1562,17 @@ app.post('/api/patient',
   }
 );
 
+// Health check endpoint for Vercel
+app.get('/api/health', (req, res) => {
+  res.json({ 
+    status: 'healthy',
+    message: 'LingapLink PH API is running',
+    timestamp: new Date().toISOString(),
+    environment: process.env.NODE_ENV || 'development',
+    version: '1.0.0'
+  });
+});
+
 // Apply the comprehensive error handling middleware
 app.use(errorHandler);
 

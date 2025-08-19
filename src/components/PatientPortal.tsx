@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react'
+import React, { useState, useEffect, useRef, useCallback, useMemo, lazy, Suspense } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { auth } from '../config/firebase'
 import { signOut } from 'firebase/auth'
@@ -7,6 +7,18 @@ import '../styles/patientPortal.css'
 import '../styles/csp-utilities.css'
 
 import QuotaStatusBanner from './QuotaStatusBanner'
+
+// Lazy load components for better performance
+const DashboardSection = lazy(() => import('./DashboardSection'))
+const ProfileSection = lazy(() => import('./ProfileSection'))
+const Sidebar = lazy(() => import('./Sidebar'))
+const TopBar = lazy(() => import('./TopBar'))
+const LoadingOverlay = lazy(() => import('./LoadingOverlay'))
+const NotificationSystem = lazy(() => import('./NotificationSystem'))
+const VirtualScrollingList = lazy(() => import('./VirtualScrollingList'))
+
+// Import utility functions
+import { formatTime, formatDate, formatDateTime } from '../utils/dateUtils'
 
 // Define types locally to avoid import issues
 interface PatientData {
@@ -30,9 +42,7 @@ interface PatientData {
       [category: string]: string[];
     };
   };
-  settings?: {
-    notificationsEnabled?: boolean;
-  };
+
   profileComplete: boolean;
   createdAt: any;
   lastLoginAt: any;
@@ -92,9 +102,7 @@ interface MedicalInfo {
   };
 }
 
-interface PatientSettings {
-  notificationsEnabled?: boolean;
-}
+
 
 // Types for better type safety
 interface User {
@@ -205,69 +213,13 @@ const PatientPortal: React.FC = () => {
   const navigate = useNavigate()
   const [activeSection, setActiveSection] = useState<'dashboard' | 'profile' | 'help' | 'facilities'>('dashboard')
   
-  // Utility functions for formatting time and dates
-  const formatTime = useCallback((timeString: string) => {
-    try {
-      // Handle different time formats
-      let time = timeString
-      
-      // If time is already in AM/PM format, return as is
-      if (timeString.includes('AM') || timeString.includes('PM')) {
-        return timeString
-      }
-      
-      // If time is in HH:MM format, convert to AM/PM
-      if (timeString.includes(':')) {
-        const [hours, minutes] = timeString.split(':')
-        const hour = parseInt(hours, 10)
-        const ampm = hour >= 12 ? 'PM' : 'AM'
-        const displayHour = hour % 12 || 12
-        return `${displayHour}:${minutes.padStart(2, '0')} ${ampm}`
-      }
-      
-      return timeString
-    } catch (error) {
-      console.warn('Error formatting time:', error)
-      return timeString
-    }
-  }, [])
-
-  const formatDate = useCallback((dateString: string) => {
-    try {
-      const date = new Date(dateString)
-      return date.toLocaleDateString('en-US', { 
-        month: 'short', 
-        day: 'numeric', 
-        year: 'numeric' 
-      })
-    } catch (error) {
-      console.warn('Error formatting date:', error)
-      return dateString
-    }
-  }, [])
-
-  const formatDateTime = useCallback((dateTimeString: string) => {
-    try {
-      const date = new Date(dateTimeString)
-      return date.toLocaleString('en-US', { 
-        month: 'short', 
-        day: 'numeric', 
-        year: 'numeric',
-        hour: 'numeric',
-        minute: '2-digit',
-        hour12: true
-      })
-    } catch (error) {
-      console.warn('Error formatting date time:', error)
-      return dateTimeString
-    }
-  }, [])
   const [activeTab, setActiveTab] = useState<'general' | 'consultation-history' | 'patient-documents'>('general')
+  const [activeAppointmentsTab, setActiveAppointmentsTab] = useState<'upcoming' | 'completed' | 'cancelled'>('upcoming')
   const [isLoading, setIsLoading] = useState(true)
   const [user, setUser] = useState<User | null>(null)
 
   const [showModal, setShowModal] = useState<string | null>(null)
-  const [notificationsEnabled, setNotificationsEnabled] = useState(true)
+
   const [isSidebarOpen, setIsSidebarOpen] = useState(false)
   const [isBookingAppointment, setIsBookingAppointment] = useState(false)
   const [appointmentForm, setAppointmentForm] = useState({
@@ -379,6 +331,35 @@ const PatientPortal: React.FC = () => {
       status: 'upcoming'
     }
   ], [])
+
+  // Filter appointments based on active tab
+  const filteredAppointments = useMemo(() => {
+    if (!patientData?.activity?.appointments?.length) return []
+    
+    const now = new Date()
+    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate())
+    
+    return patientData.activity.appointments.filter(appointment => {
+      const appointmentDate = new Date(appointment.date)
+      const appointmentDateTime = new Date(appointmentDate.getFullYear(), appointmentDate.getMonth(), appointmentDate.getDate())
+      
+      switch (activeAppointmentsTab) {
+        case 'upcoming':
+          return appointmentDateTime >= today && 
+                 ['scheduled', 'confirmed', 'pending'].includes(appointment.status)
+        case 'completed':
+          return appointment.status === 'completed'
+        case 'cancelled':
+          return appointment.status === 'cancelled'
+        default:
+          return true
+      }
+    }).sort((a, b) => {
+      const dateA = new Date(a.date)
+      const dateB = new Date(b.date)
+      return activeAppointmentsTab === 'completed' ? dateB.getTime() - dateA.getTime() : dateA.getTime() - dateB.getTime()
+    })
+  }, [patientData?.activity?.appointments, activeAppointmentsTab])
 
   const activities: Activity[] = useMemo(() => [
     {
@@ -500,9 +481,7 @@ const PatientPortal: React.FC = () => {
             medicalInfo: {
               conditions: {}
             },
-            settings: {
-              notificationsEnabled: true
-            },
+
             profileComplete: false,
             createdAt: new Date(),
             lastLoginAt: new Date(),
@@ -634,6 +613,10 @@ const PatientPortal: React.FC = () => {
     setActiveTab(tab)
   }, [])
 
+  const handleAppointmentsTabClick = useCallback((tab: 'upcoming' | 'completed' | 'cancelled') => {
+    setActiveAppointmentsTab(tab)
+  }, [])
+
   const openModal = useCallback((modalType: string) => {
     console.log('🔘 openModal called with:', modalType)
     console.log('Current showModal state before:', showModal)
@@ -699,75 +682,13 @@ const PatientPortal: React.FC = () => {
     setIsUploadingDocument(false)
   }, [])
 
-  // Notification functions
-  const getNotificationIcon = useCallback((type: string) => {
-    switch (type) {
-      case 'success': return 'check-circle'
-      case 'error': return 'exclamation-circle'
-      case 'warning': return 'exclamation-triangle'
-      case 'info': return 'info-circle'
-      default: return 'info-circle'
-    }
-  }, [])
-
-  const getNotificationColor = useCallback((type: string) => {
-    switch (type) {
-      case 'success': return '#22c55e'
-      case 'error': return '#ef4444'
-      case 'warning': return '#f59e0b'
-      case 'info': return '#3b82f6'
-      default: return '#3b82f6'
-    }
-  }, [])
-
+  // Notification function - simplified since we moved the complex logic to NotificationSystem
   const showNotification = useCallback((message: string, type: 'success' | 'error' | 'info' = 'info') => {
-    // Remove existing notifications
-    const existingNotifications = document.querySelectorAll('.notification')
-    existingNotifications.forEach(notification => notification.remove())
-    
-    // Create notification
-    const notification = document.createElement('div')
-    notification.className = `notification notification-${type}`
-    notification.innerHTML = `
-      <div class="notification-content">
-        <i class="fas fa-${getNotificationIcon(type)}"></i>
-        <span>${message}</span>
-        <button class="notification-close">&times;</button>
-      </div>
-    `
-    
-    // Add styles
-    notification.style.cssText = `
-      position: fixed;
-      top: 20px;
-      right: 20px;
-      background: ${getNotificationColor(type)};
-      color: white;
-      padding: 16px 20px;
-      border-radius: 8px;
-      box-shadow: 0 4px 12px rgba(0,0,0,0.15);
-      z-index: 10000;
-      font-family: 'Inter', sans-serif;
-      font-size: 14px;
-      max-width: 350px;
-      animation: slideIn 0.3s ease-out;
-    `
-    
-    // Add close functionality
-    const closeBtn = notification.querySelector('.notification-close')
-    closeBtn?.addEventListener('click', () => notification.remove())
-    
-    // Add to page
-    document.body.appendChild(notification)
-    
-    // Auto remove after 5 seconds
-    setTimeout(() => {
-      if (notification.parentNode) {
-        notification.style.animation = 'slideOut 0.3s ease-in'
-        setTimeout(() => notification.remove(), 300)
-      }
-    }, 5000)
-  }, [getNotificationIcon, getNotificationColor])
+    // This will be handled by the NotificationSystem component
+    if (typeof window !== 'undefined' && (window as any).showNotification) {
+      (window as any).showNotification(message, type)
+    }
+  }, [])
 
   // Check for appointment modifications and show notifications
   const checkForAppointmentModifications = useCallback((appointments: any[]) => {
@@ -803,7 +724,7 @@ const PatientPortal: React.FC = () => {
     
     if (!user) {
       console.error('❌ No user found')
-      alert('Please sign in to book an appointment')
+      showNotification('Please sign in to book an appointment', 'error')
       return
     }
     
@@ -821,7 +742,7 @@ const PatientPortal: React.FC = () => {
     
     if (missingFields.length > 0) {
       console.error('❌ Missing required fields:', missingFields)
-      alert(`Please fill in all required fields: ${missingFields.join(', ')}`)
+      showNotification(`Please fill in all required fields: ${missingFields.join(', ')}`, 'error')
       return
     }
 
@@ -829,7 +750,7 @@ const PatientPortal: React.FC = () => {
     const selectedDate = new Date(appointmentForm.date + 'T' + appointmentForm.time)
     const now = new Date()
     if (selectedDate <= now) {
-      alert('Please select a future date and time for your appointment')
+      showNotification('Please select a future date and time for your appointment', 'error')
       return
     }
 
@@ -838,7 +759,7 @@ const PatientPortal: React.FC = () => {
     
     try {
       console.log('📦 Importing firestoredb...')
-      const { addAppointment } = await import('../services/firestoredb.js')
+      const { addAppointment, getPatientData } = await import('../services/firestoredb.js')
       console.log('✅ addAppointment imported successfully')
       
       const appointmentData = {
@@ -863,15 +784,55 @@ const PatientPortal: React.FC = () => {
       
       // Refresh patient data to show the new appointment
       try {
-        const { getCurrentPatientData } = await import('../services/firestoredb.js')
-        const updatedPatientData = await getCurrentPatientData()
-        setPatientData(updatedPatientData)
-        console.log('✅ Patient data refreshed with new appointment')
+        console.log('🔄 Refreshing patient data...')
+        const updatedPatientData = await getPatientData(user.uid)
+        if (updatedPatientData) {
+          setPatientData(updatedPatientData)
+          console.log('✅ Patient data refreshed with new appointment')
+          
+          // Update localStorage
+          try {
+            localStorage.setItem(`patientData_${user.uid}`, JSON.stringify(updatedPatientData))
+            console.log('✅ Updated localStorage with fresh data')
+          } catch (localStorageError) {
+            console.warn('⚠️ localStorage update failed:', localStorageError)
+          }
+        } else {
+          console.warn('⚠️ Could not get updated patient data')
+        }
       } catch (refreshError) {
         console.warn('⚠️ Could not refresh patient data:', refreshError)
+        // Try to update local state manually
+        if (patientData) {
+          const newAppointment = {
+            id: typeof result === 'object' && result?.id ? result.id : `appointment_${Date.now()}`,
+            patientId: user.uid,
+            patientName: appointmentData.patientName,
+            patientEmail: appointmentData.patientEmail,
+            date: appointmentData.date,
+            time: appointmentData.time,
+            doctor: appointmentData.doctor,
+            type: appointmentData.type,
+            status: appointmentData.status,
+            notes: appointmentData.notes,
+            facilityId: appointmentData.facilityId,
+            facilityName: appointmentData.facilityName,
+            createdAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString()
+          }
+          setPatientData(prev => prev ? {
+            ...prev,
+            activity: {
+              ...(prev.activity || {}),
+              appointments: [...(prev.activity?.appointments || []), newAppointment]
+            },
+            updatedAt: new Date().toISOString()
+          } : null)
+          console.log('✅ Updated local state manually with new appointment')
+        }
       }
       
-      alert('Appointment booked successfully! Check the Dashboard "My Consults" section to see your appointment.')
+      showNotification('Appointment booked successfully! Check the Dashboard "My Consults" section to see your appointment.', 'success')
       closeModal()
       
     } catch (error: any) {
@@ -892,7 +853,7 @@ const PatientPortal: React.FC = () => {
         errorMessage = `Booking failed: ${error.message}`
       }
       
-      alert(errorMessage)
+      showNotification(errorMessage, 'error')
     } finally {
       setIsBookingAppointment(false)
     }
@@ -908,7 +869,7 @@ const PatientPortal: React.FC = () => {
     // Validate required fields
     if (!editProfileForm.firstName.trim() || !editProfileForm.lastName.trim() || !editProfileForm.fullName.trim()) {
       console.error('❌ Missing required fields')
-      alert('Please fill in all required fields (First Name, Last Name, and Full Name)')
+      showNotification('Please fill in all required fields (First Name, Last Name, and Full Name)', 'error')
       return
     }
     
@@ -995,22 +956,22 @@ const PatientPortal: React.FC = () => {
           await updatePatientPersonalInfo(user.uid, personalInfo)
           
           console.log('✅ Firebase update successful!')
-          alert('Profile updated successfully! Changes saved to server.')
+          showNotification('Profile updated successfully! Changes saved to server.', 'success')
         } catch (firebaseError: any) {
           console.warn('⚠️ Firebase update failed:', firebaseError)
           
           // Show a simple error message without quota references
-          alert('Profile updated locally! Server sync failed. Your changes are saved.')
+          showNotification('Profile updated locally! Server sync failed. Your changes are saved.', 'info')
         }
       } else {
         // No user logged in - local only
-        alert('Profile updated locally! Sign in to sync with server.')
+        showNotification('Profile updated locally! Sign in to sync with server.', 'info')
       }
       
       closeModal()
     } catch (error: any) {
       console.error('❌ Error saving profile:', error)
-      alert('Profile update failed. Please try again.')
+      showNotification('Profile update failed. Please try again.', 'error')
     } finally {
       setIsSavingProfile(false)
     }
@@ -1023,7 +984,7 @@ const PatientPortal: React.FC = () => {
     
     if (!addConditionForm.category || !addConditionForm.condition.trim()) {
       console.error('❌ Missing required fields')
-      alert('Please fill in both category and condition')
+      showNotification('Please fill in both category and condition', 'error')
       return
     }
     
@@ -1033,7 +994,7 @@ const PatientPortal: React.FC = () => {
     const existingConditions = patientData?.medicalInfo?.conditions?.[addConditionForm.category] || []
     if (existingConditions.includes(trimmedCondition)) {
       console.error('❌ Condition already exists')
-      alert('This condition already exists in the selected category')
+      showNotification('This condition already exists in the selected category', 'error')
       return
     }
     
@@ -1103,11 +1064,11 @@ const PatientPortal: React.FC = () => {
           ])
           
           console.log('✅ Firebase update successful!')
-          alert('Medical condition added successfully! Changes saved to server.')
+          showNotification('Medical condition added successfully! Changes saved to server.', 'success')
         } catch (firebaseError: any) {
           console.warn('⚠️ Firebase update failed:', firebaseError)
           console.warn('This might be due to quota limits. Changes saved locally.')
-          alert('Medical condition added locally! Note: Server sync failed due to quota limits.')
+          showNotification('Medical condition added locally! Note: Server sync failed due to quota limits.', 'info')
         }
       }
       
@@ -1116,7 +1077,7 @@ const PatientPortal: React.FC = () => {
       closeModal()
     } catch (error: any) {
       console.error('❌ Error adding condition:', error)
-      alert('Failed to add condition. Please try again.')
+      showNotification('Failed to add condition. Please try again.', 'error')
     } finally {
       setIsAddingCondition(false)
     }
@@ -1129,7 +1090,7 @@ const PatientPortal: React.FC = () => {
     
     if (!consultationHistoryForm.date || !consultationHistoryForm.doctor.trim()) {
       console.error('❌ Missing required fields')
-      alert('Please fill in the date and doctor name')
+      showNotification('Please fill in the date and doctor name', 'error')
       return
     }
     
@@ -1140,12 +1101,13 @@ const PatientPortal: React.FC = () => {
       // Update local state immediately
       const newConsultation = {
         id: `consultation_${Date.now()}`,
+        doctorName: consultationHistoryForm.doctor.trim(),
+        specialty: consultationHistoryForm.type,
         date: consultationHistoryForm.date,
-        doctor: consultationHistoryForm.doctor.trim(),
+        time: '00:00',
         type: consultationHistoryForm.type,
         status: consultationHistoryForm.status,
-        notes: consultationHistoryForm.notes.trim(),
-        createdAt: new Date().toISOString()
+        notes: consultationHistoryForm.notes.trim()
       }
       
       setConsultationHistory(prev => [newConsultation, ...prev])
@@ -1169,10 +1131,10 @@ const PatientPortal: React.FC = () => {
           })
           
           console.log('✅ Firebase update successful!')
-          alert('Consultation history added successfully!')
+          showNotification('Consultation history added successfully!', 'success')
         } catch (firebaseError: any) {
           console.warn('⚠️ Firebase update failed:', firebaseError)
-          alert('Consultation history added locally! Note: Server sync failed.')
+          showNotification('Consultation history added locally! Note: Server sync failed.', 'info')
         }
       }
       
@@ -1187,7 +1149,7 @@ const PatientPortal: React.FC = () => {
       closeModal()
     } catch (error: any) {
       console.error('❌ Error adding consultation history:', error)
-      alert('Failed to add consultation history. Please try again.')
+      showNotification('Failed to add consultation history. Please try again.', 'error')
     } finally {
       setIsAddingConsultation(false)
     }
@@ -1223,16 +1185,16 @@ const PatientPortal: React.FC = () => {
         }
       })
       
-      alert('Medical condition removed successfully!')
+      showNotification('Medical condition removed successfully!', 'success')
     } catch (error: any) {
       console.error('Error removing condition:', error)
-      alert(`Failed to remove condition: ${error.message}`)
+      showNotification(`Failed to remove condition: ${error.message}`, 'error')
     }
   }, [user])
 
   const handleUploadDocument = useCallback(async () => {
     if (!user || !selectedFile) {
-      alert('Please select a file to upload')
+      showNotification('Please select a file to upload', 'error')
       return
     }
     
@@ -1277,12 +1239,12 @@ const PatientPortal: React.FC = () => {
       setDocumentName('')
       setUploadProgress(0)
       
-      alert('Document uploaded successfully!')
+      showNotification('Document uploaded successfully!', 'success')
       closeModal()
       
     } catch (error: any) {
       console.error('❌ Error uploading document:', error)
-      alert(`Failed to upload document: ${error.message}`)
+      showNotification(`Failed to upload document: ${error.message}`, 'error')
     } finally {
       setIsUploadingDocument(false)
       setUploadProgress(0)
@@ -1324,7 +1286,7 @@ const PatientPortal: React.FC = () => {
       
     } catch (error) {
       console.error('❌ Error opening document:', error)
-      alert('Failed to open document. Please try downloading it instead.')
+      showNotification('Failed to open document. Please try downloading it instead.', 'error')
     }
   }, [])
 
@@ -1359,10 +1321,10 @@ const PatientPortal: React.FC = () => {
         }
       })
       
-      alert('Document removed successfully!')
+      showNotification('Document removed successfully!', 'success')
     } catch (error: any) {
       console.error('❌ Error removing document:', error)
-      alert(`Failed to remove document: ${error.message}`)
+      showNotification(`Failed to remove document: ${error.message}`, 'error')
     }
   }, [user])
 
@@ -1374,7 +1336,7 @@ const PatientPortal: React.FC = () => {
     
     if (!user || !editingAppointment) {
       console.error('❌ No user or appointment to edit')
-      alert('Please select an appointment to edit')
+      showNotification('Please select an appointment to edit', 'error')
       return
     }
     
@@ -1392,7 +1354,7 @@ const PatientPortal: React.FC = () => {
     
     if (missingFields.length > 0) {
       console.error('❌ Missing required fields:', missingFields)
-      alert(`Please fill in all required fields: ${missingFields.join(', ')}`)
+      showNotification(`Please fill in all required fields: ${missingFields.join(', ')}`, 'error')
       return
     }
 
@@ -1400,7 +1362,7 @@ const PatientPortal: React.FC = () => {
     const selectedDate = new Date(editAppointmentForm.date + 'T' + editAppointmentForm.time)
     const now = new Date()
     if (selectedDate <= now) {
-      alert('Please select a future date and time for your appointment')
+      showNotification('Please select a future date and time for your appointment', 'error')
       return
     }
 
@@ -1442,7 +1404,7 @@ const PatientPortal: React.FC = () => {
         console.warn('⚠️ Could not refresh patient data:', refreshError)
       }
       
-      alert('Appointment updated successfully!')
+      showNotification('Appointment updated successfully!', 'success')
       closeModal()
       
     } catch (error: any) {
@@ -1463,7 +1425,7 @@ const PatientPortal: React.FC = () => {
         errorMessage = `Update failed: ${error.message}`
       }
       
-      alert(errorMessage)
+      showNotification(errorMessage, 'error')
     } finally {
       setIsEditingAppointment(false)
     }
@@ -1480,63 +1442,7 @@ const PatientPortal: React.FC = () => {
     }
   }, [documentName])
 
-  const handleUpdateSettings = useCallback(async () => {
-    if (!user) return
-    
-    try {
-      const { updatePatientSettings } = await import('../services/firestoredb.js')
-      
-      await updatePatientSettings(user.uid, { notificationsEnabled })
-      
-      // Update local state
-      setPatientData(prev => prev ? {
-        ...prev,
-        settings: {
-          ...prev.settings,
-          notificationsEnabled
-        }
-      } : null)
-      
-      console.log('Settings updated successfully')
-    } catch (error: any) {
-      console.error('Error updating settings:', error)
-      
-      // Handle the case where the patient document doesn't exist yet
-      if (error.message?.includes('Missing or insufficient permissions') || 
-          error.code === 'permission-denied' || 
-          error.code === 'not-found') {
-        console.log('Patient document may not exist yet, updating local state only')
-        
-        // Update local state only
-        setPatientData(prev => prev ? {
-          ...prev,
-          settings: {
-            ...prev.settings,
-            notificationsEnabled
-          }
-        } : null)
-        
-        // Save to localStorage
-        try {
-          const updatedData = {
-            ...patientData,
-            settings: {
-              ...patientData?.settings,
-              notificationsEnabled
-            }
-          }
-          localStorage.setItem(`patientData_${user.uid}`, JSON.stringify(updatedData))
-        } catch (localError) {
-          console.warn('Failed to save to localStorage:', localError)
-        }
-        
-        return // Don't show error alert for this case
-      }
-      
-      // For other errors, show the alert
-      alert(`Failed to update settings: ${error.message}`)
-    }
-  }, [user, notificationsEnabled, patientData])
+
 
   const loadConsultationHistory = useCallback(async () => {
     if (!user) return
@@ -1579,14 +1485,14 @@ const PatientPortal: React.FC = () => {
         await firestoredb.removePatientConsultation(user.uid, consultationId)
         
         console.log('✅ Firestore removal successful!')
-        alert('Consultation removed successfully!')
+        showNotification('Consultation removed successfully!', 'success')
       } catch (firebaseError: any) {
         console.warn('⚠️ Firestore removal failed:', firebaseError)
-        alert('Consultation removal failed. Please try again.')
+        showNotification('Consultation removal failed. Please try again.', 'error')
       }
     } catch (error: any) {
       console.error('❌ Error removing consultation:', error)
-      alert(`Failed to remove consultation: ${error.message}`)
+      showNotification(`Failed to remove consultation: ${error.message}`, 'error')
     }
   }, [user])
 
@@ -1594,33 +1500,11 @@ const PatientPortal: React.FC = () => {
 
 
 
-  const getUserInitials = useCallback(() => {
-    if (patientData?.personalInfo?.fullName) {
-      return patientData.personalInfo.fullName.split(' ').map(n => n[0]).join('').toUpperCase()
-    }
-    if (user?.displayName) {
-      return user.displayName.split(' ').map(n => n[0]).join('').toUpperCase()
-    }
-    return 'U'
-  }, [patientData?.personalInfo?.fullName, user?.displayName])
 
-  const getUserDisplayName = useCallback(() => {
-    // Use the patient's actual name from their profile
-    if (patientData?.personalInfo?.fullName && patientData.personalInfo.fullName.trim()) {
-      return patientData.personalInfo.fullName
-    }
-    if (patientData?.personalInfo?.firstName && patientData.personalInfo.lastName) {
-      return `${patientData.personalInfo.firstName} ${patientData.personalInfo.lastName}`
-    }
-    if (user?.displayName) {
-      return user.displayName
-    }
-    return 'Patient'
-  }, [patientData?.personalInfo?.fullName, patientData?.personalInfo?.firstName, patientData?.personalInfo?.lastName, user?.displayName])
 
-  const getUserEmail = useCallback(() => {
-    return patientData?.email || user?.email || ''
-  }, [patientData?.email, user?.email])
+
+
+
 
   const getPatientAge = useCallback(() => {
     if (patientData?.personalInfo?.age) {
@@ -1698,24 +1582,13 @@ const PatientPortal: React.FC = () => {
   useEffect(() => {
     if (user) {
       localStorage.setItem('patientPortal_preferences', JSON.stringify({
-        notificationsEnabled,
         lastActiveSection: activeSection,
         lastActiveTab: activeTab
       }))
     }
-  }, [user, notificationsEnabled, activeSection, activeTab])
+  }, [user, activeSection, activeTab])
 
-  // Update settings when notifications change
-  useEffect(() => {
-    if (user && patientData && patientData.uid) {
-      // Only update settings if we have a complete patient data object
-      // and the settings have actually changed from what's stored
-      const currentSettings = patientData.settings?.notificationsEnabled
-      if (currentSettings !== notificationsEnabled) {
-        handleUpdateSettings()
-      }
-    }
-  }, [notificationsEnabled, user, patientData])
+
 
   // Load user preferences and local data on mount
   useEffect(() => {
@@ -1723,7 +1596,6 @@ const PatientPortal: React.FC = () => {
     if (savedPreferences) {
       try {
         const preferences = JSON.parse(savedPreferences)
-        setNotificationsEnabled(preferences.notificationsEnabled ?? true)
         setActiveSection(preferences.lastActiveSection ?? 'dashboard')
         setActiveTab(preferences.lastActiveTab ?? 'general')
       } catch (error) {
@@ -1926,15 +1798,12 @@ const PatientPortal: React.FC = () => {
 
     if (isLoading || isLoadingPatientData) {
     return (
-      <div className="loading-overlay">
-        <div className="loading-content">
-          <div className="loading-spinner"></div>
-          <p className="loading-message">Loading your health dashboard...</p>
-          <p style={{ fontSize: '12px', color: '#666', marginTop: '10px' }}>
-            {isLoading ? 'Checking authentication...' : 'Loading patient data...'}
-          </p>
-        </div>
-      </div>
+      <Suspense fallback={<div className="loading-spinner">Loading...</div>}>
+        <LoadingOverlay
+          isLoading={isLoading}
+          isLoadingPatientData={isLoadingPatientData}
+        />
+      </Suspense>
     )
   }
   
@@ -1943,80 +1812,23 @@ const PatientPortal: React.FC = () => {
       {/* Quota Status Banner */}
       <QuotaStatusBanner />
       
+      {/* Notification System */}
+      <Suspense fallback={null}>
+        <NotificationSystem showNotification={showNotification} />
+      </Suspense>
+      
       {/* Sidebar */}
-      <aside className={`sidebar ${isSidebarOpen ? 'active' : ''}`} ref={sidebarRef} role="navigation" aria-label="Main navigation">
-        <div className="sidebar-header">
-          <div className="logo">
-            <i className="fas fa-heart-pulse" aria-hidden="true"></i>
-            <span>LingapLink</span>
-          </div>
-        </div>
+      <Suspense fallback={<div className="loading-spinner">Loading sidebar...</div>}>
+        <Sidebar
+          isSidebarOpen={isSidebarOpen}
+          activeSection={activeSection}
+          onNavClick={handleNavClick}
+          onLogout={handleLogout}
+          sidebarRef={sidebarRef}
+        />
+      </Suspense>
         
-        <nav className="sidebar-nav">
-          <ul className="nav-items" role="menubar">
-            <li className={`nav-item ${activeSection === 'dashboard' ? 'active' : ''}`} role="none">
-              <button 
-                className="nav-link" 
-                onClick={(e) => { e.preventDefault(); handleNavClick('dashboard'); }}
-                role="menuitem"
-                aria-current={activeSection === 'dashboard' ? 'page' : undefined}
-                aria-label="Navigate to Dashboard"
-              >
-                <i className="fas fa-th-large" aria-hidden="true"></i>
-                <span>Dashboard</span>
-              </button>
-            </li>
 
-            <li className={`nav-item ${activeSection === 'profile' ? 'active' : ''}`} role="none">
-              <button 
-                className="nav-link" 
-                onClick={(e) => { e.preventDefault(); handleNavClick('profile'); }}
-                role="menuitem"
-                aria-current={activeSection === 'profile' ? 'page' : undefined}
-                aria-label="Navigate to Profile"
-              >
-                <i className="fas fa-user" aria-hidden="true"></i>
-                <span>Profile</span>
-              </button>
-            </li>
-            <li className={`nav-item ${activeSection === 'facilities' ? 'active' : ''}`} role="none">
-              <button 
-                className="nav-link" 
-                onClick={(e) => { e.preventDefault(); handleNavClick('facilities'); }}
-                role="menuitem"
-                aria-current={activeSection === 'facilities' ? 'page' : undefined}
-                aria-label="Navigate to Healthcare Facilities"
-              >
-                <i className="fas fa-hospital" aria-hidden="true"></i>
-                <span>Facilities</span>
-              </button>
-            </li>
-            <li className={`nav-item ${activeSection === 'help' ? 'active' : ''}`} role="none">
-              <button 
-                className="nav-link" 
-                onClick={(e) => { e.preventDefault(); handleNavClick('help'); }}
-                role="menuitem"
-                aria-current={activeSection === 'help' ? 'page' : undefined}
-                aria-label="Navigate to Help"
-              >
-                <i className="fas fa-question-circle" aria-hidden="true"></i>
-                <span>Help</span>
-              </button>
-            </li>
-          </ul>
-        </nav>
-        
-        <div className="sidebar-footer">
-          <button 
-            className="logout-btn" 
-            onClick={handleLogout}
-            aria-label="Sign out of your account"
-          >
-            <i className="fas fa-sign-out-alt" aria-hidden="true"></i>
-            <span>Logout</span>
-          </button>
-        </div>
-      </aside>
       
       {/* Sidebar Overlay for Mobile */}
       <div className={`sidebar-overlay ${isSidebarOpen ? 'active' : ''}`} ref={sidebarOverlayRef} onClick={closeSidebar}></div>
@@ -2024,580 +1836,57 @@ const PatientPortal: React.FC = () => {
       {/* Main Content */}
       <main className="main-content" ref={mainContentRef}>
         {/* Top Bar */}
-        <div className="top-bar">
-          <button 
-            className="mobile-menu-toggle" 
-            onClick={toggleSidebar}
-            aria-label="Toggle navigation menu"
-            aria-expanded={isSidebarOpen}
-            aria-controls="sidebar-navigation"
-          >
-            <i className="fas fa-bars" aria-hidden="true"></i>
-          </button>
-          
-
-        </div>
+        <Suspense fallback={<div className="loading-spinner">Loading top bar...</div>}>
+          <TopBar
+            onToggleSidebar={toggleSidebar}
+            isSidebarOpen={isSidebarOpen}
+          />
+        </Suspense>
         
         <div className="main-container">
           {/* Dashboard Section */}
           {activeSection === 'dashboard' && (
-            <section className="content-section active">
-              {/* Greeting Section */}
-              <div className="greeting">
-                <h1>Hi, <span>{getUserDisplayName()}!</span></h1>
-                <h2>Welcome to your personal health dashboard</h2>
-              </div>
-            
-              <div className="stats-grid">
-                <div className="stat-card">
-                  <div className="stat-icon">
-                    <i className="fas fa-calendar-check"></i>
-                  </div>
-                  <div className="stat-info">
-                    <h3>{patientData?.activity?.appointments?.filter(apt => apt.status === 'scheduled').length || 0}</h3>
-                    <p>Upcoming Appointments</p>
-                  </div>
-                </div>
-                
-                <div className="stat-card">
-                  <div className="stat-icon">
-                    <i className="fas fa-file-medical"></i>
-                  </div>
-                  <div className="stat-info">
-                    <h3>{patientData?.activity?.appointments?.length || 0}</h3>
-                    <p>Total Appointments</p>
-                  </div>
-                </div>
-                
-                <div className="stat-card">
-                  <div className="stat-icon">
-                    <i className="fas fa-pills"></i>
-                  </div>
-                  <div className="stat-info">
-                    <h3>{patientData?.medicalInfo?.conditions ? Object.values(patientData.medicalInfo.conditions).flat().length : 0}</h3>
-                    <p>Medical Conditions</p>
-                  </div>
-                </div>
-                
-                <div className="stat-card">
-                  <div className="stat-icon">
-                    <i className="fas fa-heartbeat"></i>
-                  </div>
-                  <div className="stat-info">
-                    <h3>{patientData?.profileComplete ? 'Complete' : 'Incomplete'}</h3>
-                    <p>Profile Status</p>
-                  </div>
-                </div>
-              </div>
-
-              <div className="quick-actions">
-                <h3>Quick Actions</h3>
-                <div className="action-buttons">
-                  <button className="action-btn" onClick={() => {
-                    console.log('🔘 Book Appointment button clicked in Quick Actions!')
-                    openModal('bookAppointment')
-                  }}>
-                    <i className="fas fa-calendar-plus"></i>
-                    <span>Book Appointment</span>
-                  </button>
-                </div>
-              </div>
-
-
-
-              <div className="dashboard-section">
-                <h3>Upcoming Appointments</h3>
-                <div className="appointments-list">
-                  {patientData?.activity?.appointments && patientData.activity.appointments.length > 0 ? (
-                    patientData.activity.appointments
-                      .sort((a, b) => new Date(a.date + 'T' + a.time).getTime() - new Date(b.date + 'T' + b.time).getTime())
-                      .slice(0, 3) // Show only first 3
-                      .map((appointment) => (
-                        <div key={appointment.id} className={`appointment-card ${appointment.updatedBy === 'facility' ? 'has-modifications' : ''}`}>
-                          <div className="appointment-date">
-                            <span className="date">{new Date(appointment.date).getDate()}</span>
-                            <span className="month">{new Date(appointment.date).toLocaleDateString('en-US', { month: 'short' })}</span>
-                          </div>
-                          <div className="appointment-info">
-                            <h4>{appointment.doctor || 'Doctor TBD'}</h4>
-                            <p>{appointment.type || 'Consultation'}</p>
-                            <div className="appointment-time">{formatTime(appointment.time)}</div>
-                            <div className="appointment-facility">{appointment.facilityName || 'Facility TBD'}</div>
-                            
-                            {/* Show modification indicator if appointment was modified by facility */}
-                            {appointment.updatedBy === 'facility' && appointment.modificationHistory && appointment.modificationHistory.length > 0 && (
-                              <div className="appointment-modification-info">
-                                <div className="modification-indicator">
-                                  <i className="fas fa-edit"></i>
-                                  <span>Modified by {appointment.facilityName || 'Healthcare Facility'}</span>
-                                </div>
-                                <div className="modification-details">
-                                  {appointment.modificationHistory[appointment.modificationHistory.length - 1]?.changes && (
-                                    <div className="changes-list">
-                                      {Object.entries(appointment.modificationHistory[appointment.modificationHistory.length - 1].changes).map(([field, change]: [string, any]) => {
-                                        if (change && change.from !== change.to) {
-                                          return (
-                                            <div key={field} className="change-item">
-                                              <span className="change-field">{field.charAt(0).toUpperCase() + field.slice(1)}:</span>
-                                              <span className="change-from">{change.from}</span>
-                                              <i className="fas fa-arrow-right"></i>
-                                              <span className="change-to">{change.to}</span>
-                                            </div>
-                                          )
-                                        }
-                                        return null
-                                      })}
-                                    </div>
-                                  )}
-                                  <small className="modification-time">
-                                    Updated: {formatDateTime(appointment.updatedAt)}
-                                  </small>
-                                </div>
-                              </div>
-                            )}
-                          </div>
-                          <div className="appointment-actions">
-                            <div className={`status ${appointment.status}`}>
-                              {appointment.status === 'confirmed' ? 'Confirmed' : 
-                               appointment.status === 'pending' ? 'Pending' : 
-                               appointment.status === 'scheduled' ? 'Scheduled' : 
-                               appointment.status === 'completed' ? 'Completed' : 
-                               appointment.status === 'cancelled' ? 'Cancelled' : appointment.status}
-                            </div>
-                            <button 
-                              className="btn btn-outline btn-sm"
-                              onClick={() => {
-                                setEditingAppointment(appointment)
-                                setEditAppointmentForm({
-                                  facilityId: appointment.facilityId || '',
-                                  facilityName: appointment.facilityName || '',
-                                  doctor: appointment.doctor || '',
-                                  date: appointment.date || '',
-                                  time: appointment.time || '',
-                                  type: appointment.type || '',
-                                  notes: appointment.notes || ''
-                                })
-                                openModal('editAppointment')
-                              }}
-                              title="Edit appointment"
-                            >
-                              <i className="fas fa-edit"></i>
-                              Edit
-                            </button>
-                          </div>
-                        </div>
-                      ))
-                  ) : (
-                    <div className="no-appointments">
-                      <p>No upcoming appointments</p>
-                      <button 
-                        className="btn-primary" 
-                        onClick={() => openModal('bookAppointment')}
-                      >
-                        <i className="fas fa-calendar-plus"></i>
-                        Book Appointment
-                      </button>
-                                              
-                    </div>
-                  )}
-                </div>
-              </div>
-            </section>
+            <Suspense fallback={<div className="loading-spinner">Loading dashboard...</div>}>
+              <DashboardSection
+                patientData={patientData}
+                activeAppointmentsTab={activeAppointmentsTab}
+                onAppointmentsTabClick={handleAppointmentsTabClick}
+                onOpenModal={openModal}
+                onEditAppointment={(appointment) => {
+                  setEditingAppointment(appointment)
+                  setEditAppointmentForm({
+                    facilityId: appointment.facilityId || '',
+                    facilityName: appointment.facilityName || '',
+                    doctor: appointment.doctor || '',
+                    date: appointment.date || '',
+                    time: appointment.time || '',
+                    type: appointment.type || '',
+                    notes: appointment.notes || ''
+                  })
+                  openModal('editAppointment')
+                }}
+              />
+            </Suspense>
           )}
 
 
 
           {/* Profile Section */}
           {activeSection === 'profile' && (
-            <section className="content-section active">
-              <div className="section-header">
-                <h1>Profile</h1>
-              </div>
-
-              {/* Profile Tabs */}
-              <div className="profile-tabs">
-                <div className="tab-nav">
-                  <button 
-                    className={`tab-button ${activeTab === 'general' ? 'active' : ''}`} 
-                    onClick={() => handleTabClick('general')}
-                  >
-                    General
-                  </button>
-                  <button 
-                    className={`tab-button ${activeTab === 'consultation-history' ? 'active' : ''}`} 
-                    onClick={() => handleTabClick('consultation-history')}
-                  >
-                    Consultation History
-                  </button>
-                  <button 
-                    className={`tab-button ${activeTab === 'patient-documents' ? 'active' : ''}`} 
-                    onClick={() => handleTabClick('patient-documents')}
-                  >
-                    Patient Documents
-                  </button>
-                </div>
-
-                {/* General Tab Content */}
-                {activeTab === 'general' && (
-                  <div className="tab-content active">
-                    {/* Profile Header */}
-                    <div className="profile-header">
-                      <div className="profile-info">
-                        <div className="profile-avatar">
-                          <div className="profile-avatar-placeholder">
-                            <span>{getUserInitials()}</span>
-                          </div>
-                        </div>
-                        <div className="profile-details">
-                          <h3 className="profile-name">{getUserDisplayName()} <span className="gender-tag">(Patient)</span></h3>
-                          <p className="profile-role">Patient</p>
-                          <p className="profile-id" style={{ fontFamily: 'monospace', fontWeight: 'bold', color: '#0040e7', fontSize: '14px', marginTop: '4px' }}>
-                            ID: {getUniquePatientId()}
-                          </p>
-                          <p className="profile-location">{getUserEmail()}</p>
-                        </div>
-                      </div>
-                      <button 
-                        className="btn btn-primary" 
-                        onClick={() => openModal('editProfile')}
-                        aria-label="Edit profile information"
-                      >
-                        <i className="fas fa-edit"></i>
-                        Edit Profile
-                      </button>
-                    </div>
-
-                    {/* Personal Information */}
-                    <div className="info-section">
-                      <div className="section-header">
-                        <h3>Personal Information</h3>
-                        <button 
-                          className="btn btn-outline" 
-                          onClick={() => {
-                            console.log('🔘 Edit Personal Information button clicked');
-                            openModal('editProfile');
-                          }}
-                          aria-label="Edit personal information"
-                        >
-                          <i className="fas fa-edit"></i>
-                          Edit
-                        </button>
-                      </div>
-                      
-                      <div className="info-grid">
-                        <div className="info-item">
-                          <label>Patient ID</label>
-                          <span style={{ fontFamily: 'monospace', fontWeight: 'bold', color: '#0040e7' }}>{getUniquePatientId()}</span>
-                        </div>
-                        <div className="info-item">
-                          <label>Name</label>
-                          <span>{getUserDisplayName()}</span>
-                        </div>
-                        <div className="info-item">
-                          <label>Date Of Birth</label>
-                          <span>{getPatientDateOfBirth()}</span>
-                        </div>
-                        <div className="info-item">
-                          <label>Age</label>
-                          <span>{getPatientAge()}</span>
-                        </div>
-                        <div className="info-item">
-                          <label>Gender</label>
-                          <span>{getPatientGender()}</span>
-                        </div>
-                        <div className="info-item">
-                          <label>Phone Number</label>
-                          <span>{getPatientPhone()}</span>
-                        </div>
-                        <div className="info-item">
-                          <label>Email Address</label>
-                          <span>{getUserEmail()}</span>
-                        </div>
-                        <div className="info-item">
-                          <label>Address</label>
-                          <span>{getPatientAddress()}</span>
-                        </div>
-                        <div className="info-item">
-                          <label>Bio</label>
-                          <span>{getPatientBio()}</span>
-                        </div>
-                      </div>
-                      
-                      {!patientData?.personalInfo?.firstName || !patientData?.personalInfo?.lastName ? (
-                        <div style={{ 
-                          marginTop: '20px', 
-                          padding: '15px', 
-                          backgroundColor: '#fff3cd', 
-                          border: '1px solid #ffeaa7', 
-                          borderRadius: '8px',
-                          color: '#856404'
-                        }}>
-                          <i className="fas fa-exclamation-triangle" style={{ marginRight: '8px' }}></i>
-                          <strong>Profile Incomplete:</strong> Please complete your profile information for better healthcare services.
-                        </div>
-                      ) : null}
-                    </div>
-
-                    {/* Pre-existing Diseases */}
-                    <div className="info-section">
-                      <div className="section-header">
-                        <h3>Pre-existing Conditions</h3>
-                        <button 
-                          className="btn btn-outline"
-                          onClick={() => openModal('addCondition')}
-                          aria-label="Add new medical condition"
-                        >
-                          <i className="fas fa-plus"></i>
-                          Add Condition
-                        </button>
-                      </div>
-                      
-                      <div className="diseases-section">
-                        {patientData?.medicalInfo?.conditions && Object.keys(patientData.medicalInfo.conditions).length > 0 ? (
-                          Object.entries(patientData.medicalInfo.conditions).map(([category, conditions]) => (
-                            <div key={category} className="disease-category">
-                              <h4>{category}</h4>
-                              <div className="disease-tags">
-                                {conditions.map((condition, index) => (
-                                  <span 
-                                    key={index} 
-                                    className="disease-tag"
-                                    onClick={() => handleRemoveCondition(category, condition)}
-                                    style={{ cursor: 'pointer' }}
-                                  >
-                                    {condition} <i className="fas fa-times"></i>
-                                  </span>
-                                ))}
-                              </div>
-                            </div>
-                          ))
-                        ) : (
-                          <p style={{ color: '#666', fontStyle: 'italic' }}>No medical conditions recorded yet.</p>
-                        )}
-                      </div>
-                    </div>
-
-                    {/* General Settings */}
-                    <div className="info-section">
-                      <div className="section-header">
-                        <h3>Settings</h3>
-                      </div>
-                      
-                      <div className="settings-section">
-                        <div className="setting-item">
-                          <div className="setting-info">
-                            <label>Change Password</label>
-                            <p>Update your account password</p>
-                          </div>
-                          <button className="btn-outline">Change</button>
-                        </div>
-                        
-                        <div className="setting-item">
-                          <div className="setting-info">
-                            <label>Notifications</label>
-                            <p>Manage your notification preferences</p>
-                          </div>
-                          <div className="toggle-switch">
-                            <label className="switch">
-                              <input 
-                                type="checkbox" 
-                                checked={notificationsEnabled}
-                                onChange={(e) => setNotificationsEnabled(e.target.checked)}
-                              />
-                              <span className="slider"></span>
-                            </label>
-                            <span className="toggle-label">{notificationsEnabled ? 'Enabled' : 'Disabled'}</span>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                )}
-
-                {/* Consultation History Tab Content */}
-                {activeTab === 'consultation-history' && (
-                  <div className="tab-content active">
-                    <div className="history-container">
-                      <div className="history-header">
-                        <h2>Consultation History</h2>
-                        <div className="history-controls">
-                          <button className="btn btn-primary" onClick={() => openModal('addConsultationHistory')}>
-                            <i className="fas fa-plus"></i> Add Consultation
-                          </button>
-                        </div>
-                      </div>
-
-                      {isLoadingConsultationHistory ? (
-                        <div className="loading-state">
-                          <div className="loading-spinner"></div>
-                          <p>Loading consultation history...</p>
-                        </div>
-                      ) : consultationHistory && consultationHistory.length > 0 ? (
-                        <div className="consultation-history">
-                          {consultationHistory
-                            .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
-                            .map((consultation) => {
-                              const consultationDate = new Date(consultation.date)
-                              const today = new Date()
-                              const yesterday = new Date(today)
-                              yesterday.setDate(yesterday.getDate() - 1)
-                              
-                              let dateGroup = ''
-                              if (consultationDate.toDateString() === today.toDateString()) {
-                                dateGroup = 'Today'
-                              } else if (consultationDate.toDateString() === yesterday.toDateString()) {
-                                dateGroup = 'Yesterday'
-                              } else {
-                                dateGroup = formatDate(consultation.date)
-                              }
-
-                              return (
-                                <div key={consultation.id} className="appointment-card-h">
-                                  <div className="appointment-main">
-                                    <div className="appointment-info">
-                                      <div className="appointment-avatar-placeholder">
-                                        {(consultation.doctorName || consultation.doctor) ? 
-                                          (consultation.doctorName || consultation.doctor).split(' ').map((n: string) => n[0]).join('').toUpperCase() : 'DR'}
-                                      </div>
-                                      <span className="appointment-name">
-                                        {consultation.doctorName || consultation.doctor || 'Doctor TBD'}
-                                      </span>
-                                    </div>
-                                    <div className="consultation-actions">
-                                      <button 
-                                        className="delete-consultation-btn" 
-                                        onClick={() => handleRemoveConsultation(consultation.id)}
-                                        title="Delete consultation"
-                                      >
-                                        <i className="fas fa-trash"></i>
-                                      </button>
-                                    </div>
-                                  </div>
-                                  <div className="appointment-time-slot">
-                                    {formatTime(consultation.time || '00:00')} - {dateGroup}
-                                  </div>
-                                  <div className="appointment-details">
-                                    <span className="appointment-type">{consultation.specialty || consultation.type || 'Consultation'}</span>
-                                    <span className={`appointment-status status-${consultation.status}`}>
-                                      {consultation.status}
-                                    </span>
-                                  </div>
-                                  {(consultation.notes && consultation.notes.trim()) && (
-                                    <div className="consultation-notes">
-                                      <div className="notes-label">Notes:</div>
-                                      <div className="notes-content">{consultation.notes}</div>
-                                    </div>
-                                  )}
-                                </div>
-                              )
-                            })}
-                        </div>
-                      ) : (
-                        <div className="no-consultations">
-                          <div className="empty-state">
-                            <i className="fas fa-calendar-times"></i>
-                            <h3>No Consultation History</h3>
-                            <p>You haven't added any consultation history yet. Add your first consultation to get started.</p>
-                            <button 
-                              className="btn btn-primary" 
-                              onClick={() => openModal('addConsultationHistory')}
-                            >
-                              <i className="fas fa-plus"></i>
-                              Add Your First Consultation
-                            </button>
-                          </div>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                )}
-
-                {/* Patient Documents Tab Content */}
-                {activeTab === 'patient-documents' && (
-                  <div className="tab-content active">
-                    <div className="documents-header">
-                      <h2>Documents</h2>
-                      <button 
-                        className="btn btn-primary" 
-                        onClick={() => {
-                          console.log('🔘 Upload Document button clicked!')
-                          openModal('uploadDocument')
-                        }}
-                      >
-                        <i className="fas fa-upload"></i>
-                        Upload Document
-                      </button>
-                    </div>
-                    <div className="documents-grid">
-                      {patientData?.activity?.documents && patientData.activity.documents.length > 0 ? (
-                        patientData.activity.documents.map((document: any) => (
-                          <div key={document.id} className="document-card">
-                            <div className="card-header">
-                              <i className="far fa-file-alt"></i>
-                              <button 
-                                className="delete-btn"
-                                onClick={() => handleRemoveDocument(document.id)}
-                                title="Delete document"
-                              >
-                                <i className="fas fa-trash"></i>
-                              </button>
-                            </div>
-                            <div className="document-preview">
-                              {document.type.startsWith('image/') ? (
-                                <img 
-                                  src={document.url} 
-                                  alt={document.name}
-                                  style={{ width: '100%', height: '100px', objectFit: 'cover', borderRadius: '4px' }}
-                                />
-                              ) : (
-                                <div className="file-icon">
-                                  <i className="fas fa-file-pdf"></i>
-                                </div>
-                              )}
-                            </div>
-                            <div className="card-footer">
-                              <p className="document-title">{document.name}</p>
-                              <p className="document-date">
-                                {formatDate(document.uploadDate)}
-                              </p>
-                              <p className="document-size">
-                                {(document.size / 1024 / 1024).toFixed(2)} MB
-                              </p>
-                              <button 
-                                onClick={() => handleViewDocument(document)}
-                                className="btn btn-outline btn-sm"
-                              >
-                                <i className="fas fa-eye"></i>
-                                View
-                              </button>
-                            </div>
-                          </div>
-                        ))
-                      ) : (
-                        <div className="no-documents">
-                          <div className="empty-state">
-                            <i className="fas fa-file-medical"></i>
-                            <h3>No Documents Available</h3>
-                            <p>You haven't uploaded any medical documents yet. Upload your first document to get started.</p>
-                            <button 
-                              className="btn btn-primary"
-                              onClick={() => {
-                                console.log('🔘 Upload Document button clicked (empty state)!')
-                                openModal('uploadDocument')
-                              }}
-                            >
-                              <i className="fas fa-upload"></i>
-                              Upload Document
-                            </button>
-                          </div>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                )}
-              </div>
-            </section>
+            <Suspense fallback={<div className="loading-spinner">Loading profile...</div>}>
+              <ProfileSection
+                patientData={patientData}
+                user={user}
+                onOpenModal={openModal}
+                onRemoveCondition={handleRemoveCondition}
+                consultationHistory={consultationHistory}
+              />
+            </Suspense>
           )}
+
+
+
+
 
           {/* Facilities Section */}
           {activeSection === 'facilities' && (
@@ -2865,13 +2154,7 @@ const PatientPortal: React.FC = () => {
                     <p>Join video calls and online consultations</p>
                   </div>
                   
-                  <div className="help-category">
-                    <div className="category-icon">
-                      <i className="fas fa-user-cog"></i>
-                    </div>
-                    <h4>Profile Settings</h4>
-                    <p>Update your personal information and preferences</p>
-                  </div>
+
                 </div>
               </div>
 

@@ -229,7 +229,17 @@ const PatientPortal: React.FC = () => {
     date: '',
     time: '',
     type: '',
-    notes: ''
+    notes: '',
+    // New fields for booking for different people
+    isBookingForOther: false,
+    patientForAppointment: {
+      name: '',
+      relationship: '',
+      age: '',
+      gender: '',
+      phone: '',
+      email: ''
+    }
   })
   
   // Patient data state
@@ -623,6 +633,12 @@ const PatientPortal: React.FC = () => {
     setShowModal(modalType)
     console.log('Setting showModal to:', modalType)
     
+    // Load facilities if opening Book Appointment modal (regardless of current section)
+    if (modalType === 'bookAppointment' && user) {
+      console.log('🔍 Loading facilities for Book Appointment modal...')
+      loadFacilities()
+    }
+    
     // Initialize forms when opening modals
     if (modalType === 'editProfile' && patientData?.personalInfo) {
       console.log('📝 Initializing edit profile form with:', patientData.personalInfo)
@@ -643,7 +659,7 @@ const PatientPortal: React.FC = () => {
       console.log('📝 Initializing add condition form')
       setAddConditionForm({ category: '', condition: '' })
     }
-  }, [patientData])
+  }, [patientData, user])
 
   const closeModal = useCallback(() => {
     setShowModal(null)
@@ -654,7 +670,17 @@ const PatientPortal: React.FC = () => {
       date: '',
       time: '',
       type: '',
-      notes: ''
+      notes: '',
+      // Reset new fields for booking for different people
+      isBookingForOther: false,
+      patientForAppointment: {
+        name: '',
+        relationship: '',
+        age: '',
+        gender: '',
+        phone: '',
+        email: ''
+      }
     })
     // Reset edit appointment form
     setEditAppointmentForm({
@@ -765,14 +791,23 @@ const PatientPortal: React.FC = () => {
       const appointmentData = {
         facilityId: appointmentForm.facilityId,
         facilityName: appointmentForm.facilityName,
-        patientName: user.displayName || patientData?.personalInfo?.fullName || 'Patient',
+        patientName: appointmentForm.isBookingForOther ? appointmentForm.patientForAppointment.name : (user.displayName || patientData?.personalInfo?.fullName || 'Patient'),
         patientEmail: user.email || patientData?.email || '',
         doctor: appointmentForm.doctor || 'TBD',
         date: appointmentForm.date,
         time: appointmentForm.time,
         type: appointmentForm.type,
         notes: appointmentForm.notes || '',
-        status: 'scheduled'
+        status: 'scheduled',
+        // New fields for booking for different people
+        isBookingForOther: appointmentForm.isBookingForOther,
+        patientForAppointment: appointmentForm.isBookingForOther ? appointmentForm.patientForAppointment : null,
+        bookedBy: {
+          uid: user.uid,
+          name: user.displayName || patientData?.personalInfo?.fullName || 'Patient',
+          email: user.email || patientData?.email || '',
+          relationship: appointmentForm.isBookingForOther ? appointmentForm.patientForAppointment.relationship : 'self'
+        }
       }
       
       console.log('📋 Appointment data:', appointmentData)
@@ -2439,7 +2474,7 @@ const PatientPortal: React.FC = () => {
       {/* Book Appointment Modal */}
       {showModal === 'bookAppointment' && (
         <div className="modal" style={{ display: 'block' }}>
-          <div className="modal-content">
+          <div className="modal-content" style={{ maxWidth: '900px', width: '90vw' }}>
             <div className="modal-header">
               <h3>Book Appointment</h3>
               <button className="close-btn" onClick={closeModal}>
@@ -2448,6 +2483,165 @@ const PatientPortal: React.FC = () => {
             </div>
             <div className="modal-body">
               <form onSubmit={(e) => { e.preventDefault(); handleBookAppointment(); }}>
+                {/* Patient Selection Section */}
+                <div className="form-section">
+                  <h4><i className="fas fa-user"></i> Patient Information</h4>
+                  
+                  <div className="form-group">
+                    <label className="checkbox-label">
+                      <input 
+                        type="checkbox" 
+                        checked={appointmentForm.isBookingForOther}
+                        onChange={(e) => setAppointmentForm(prev => ({ 
+                          ...prev, 
+                          isBookingForOther: e.target.checked 
+                        }))}
+                      />
+                      Book appointment for someone else (family member, dependent, etc.)
+                    </label>
+                  </div>
+
+                  {appointmentForm.isBookingForOther && (
+                    <div className="patient-for-appointment-fields">
+                      <div className="form-row">
+                        <div className="form-group">
+                          <label htmlFor="patientName">Patient Name *</label>
+                          <input 
+                            type="text" 
+                            id="patientName"
+                            required={appointmentForm.isBookingForOther}
+                            placeholder="Enter patient's full name"
+                            value={appointmentForm.patientForAppointment.name}
+                            onChange={(e) => setAppointmentForm(prev => ({
+                              ...prev,
+                              patientForAppointment: {
+                                ...prev.patientForAppointment,
+                                name: e.target.value
+                              }
+                            }))}
+                          />
+                        </div>
+                        <div className="form-group">
+                          <label htmlFor="relationship">Relationship *</label>
+                          <select 
+                            id="relationship"
+                            required={appointmentForm.isBookingForOther}
+                            value={appointmentForm.patientForAppointment.relationship}
+                            onChange={(e) => setAppointmentForm(prev => ({
+                              ...prev,
+                              patientForAppointment: {
+                                ...prev.patientForAppointment,
+                                relationship: e.target.value
+                              }
+                            }))}
+                          >
+                            <option value="">Select relationship</option>
+                            <option value="son">Son</option>
+                            <option value="daughter">Daughter</option>
+                            <option value="spouse">Spouse</option>
+                            <option value="parent">Parent</option>
+                            <option value="sibling">Sibling</option>
+                            <option value="grandchild">Grandchild</option>
+                            <option value="other">Other</option>
+                          </select>
+                        </div>
+                      </div>
+
+                      <div className="form-row">
+                        <div className="form-group">
+                          <label htmlFor="patientAge">Age</label>
+                          <input 
+                            type="number" 
+                            id="patientAge"
+                            min="0"
+                            max="120"
+                            placeholder="Enter age"
+                            value={appointmentForm.patientForAppointment.age}
+                            onChange={(e) => setAppointmentForm(prev => ({
+                              ...prev,
+                              patientForAppointment: {
+                                ...prev.patientForAppointment,
+                                age: e.target.value
+                              }
+                            }))}
+                          />
+                        </div>
+                        <div className="form-group">
+                          <label htmlFor="patientGender">Gender</label>
+                          <select 
+                            id="patientGender"
+                            value={appointmentForm.patientForAppointment.gender}
+                            onChange={(e) => setAppointmentForm(prev => ({
+                              ...prev,
+                              patientForAppointment: {
+                                ...prev.patientForAppointment,
+                                gender: e.target.value
+                              }
+                            }))}
+                          >
+                            <option value="">Select gender</option>
+                            <option value="Male">Male</option>
+                            <option value="Female">Female</option>
+                            <option value="Other">Other</option>
+                            <option value="Prefer not to say">Prefer not to say</option>
+                          </select>
+                        </div>
+                      </div>
+
+                      <div className="form-row">
+                        <div className="form-group">
+                          <label htmlFor="patientPhone">Patient Phone (Optional)</label>
+                          <input 
+                            type="tel" 
+                            id="patientPhone"
+                            pattern="[0-9+\-\s\(\)]+"
+                            placeholder="+63 912 345 6789"
+                            value={appointmentForm.patientForAppointment.phone}
+                            onChange={(e) => setAppointmentForm(prev => ({
+                              ...prev,
+                              patientForAppointment: {
+                                ...prev.patientForAppointment,
+                                phone: e.target.value
+                              }
+                            }))}
+                          />
+                        </div>
+                        <div className="form-group">
+                          <label htmlFor="patientEmail">Patient Email (Optional)</label>
+                          <input 
+                            type="email" 
+                            id="patientEmail"
+                            placeholder="patient@email.com"
+                            value={appointmentForm.patientForAppointment.email}
+                            onChange={(e) => setAppointmentForm(prev => ({
+                              ...prev,
+                              patientForAppointment: {
+                                ...prev.patientForAppointment,
+                                email: e.target.value
+                              }
+                            }))}
+                          />
+                        </div>
+                      </div>
+
+                      <div className="alert alert-info">
+                        <i className="fas fa-info-circle"></i>
+                        <strong>Note:</strong> You are booking this appointment for {appointmentForm.patientForAppointment.name || 'this person'}. 
+                        The healthcare facility will contact them directly using their phone/email for any updates or changes. 
+                        However, all appointment changes will still be reflected in your patient portal since you made the booking.
+                      </div>
+                    </div>
+                  )}
+
+                  {!appointmentForm.isBookingForOther && (
+                    <div className="alert alert-info">
+                      <i className="fas fa-info-circle"></i>
+                      <strong>Booking for yourself:</strong> This appointment will be booked under your account name: 
+                      <strong> {user?.displayName || patientData?.personalInfo?.fullName || 'Patient'}</strong>
+                    </div>
+                  )}
+                </div>
+
                 <div className="form-group">
                   <label htmlFor="appointmentFacility">Healthcare Facility *</label>
                   <select 
@@ -2466,15 +2660,26 @@ const PatientPortal: React.FC = () => {
                     }}
                   >
                     <option value="">Select Facility</option>
-                    {facilities.map(facility => (
-                      <option key={facility.uid} value={facility.uid}>
-                        {facility.facilityInfo.name}
-                      </option>
-                    ))}
+                    {isLoadingFacilities ? (
+                      <option value="" disabled>Loading facilities...</option>
+                    ) : facilities.length > 0 ? (
+                      facilities.map(facility => (
+                        <option key={facility.uid} value={facility.uid}>
+                          {facility.facilityInfo.name}
+                        </option>
+                      ))
+                    ) : (
+                      <option value="" disabled>No facilities available</option>
+                    )}
                   </select>
-                  {facilities.length === 0 && (
+                  {!isLoadingFacilities && facilities.length === 0 && (
                     <small style={{ color: '#dc3545', fontSize: '12px' }}>
                       No facilities available. Please check back later.
+                    </small>
+                  )}
+                  {isLoadingFacilities && (
+                    <small style={{ color: '#666', fontSize: '12px' }}>
+                      <i className="fas fa-spinner fa-spin"></i> Loading healthcare facilities...
                     </small>
                   )}
                 </div>

@@ -29,6 +29,10 @@ interface FormData {
   address: string
   countryCode: string
   remember: boolean
+  termsAccepted: boolean
+  dataSharingAccepted: boolean
+  dpaComplianceAccepted: boolean
+  communicationAccepted: boolean
 }
 
 interface ValidationErrors {
@@ -41,6 +45,10 @@ interface ValidationErrors {
   lastName?: string
   address?: string
   general?: string
+  termsAccepted?: string
+  dataSharingAccepted?: string
+  dpaComplianceAccepted?: string
+  communicationAccepted?: string
 }
 
 // Removed unused AuthError interface
@@ -94,7 +102,8 @@ const PatientSignUp: React.FC = React.memo(() => {
   const navigate = useNavigate()
   const [formData, setFormData] = useState<FormData>({
     email: '', phone: '', password: '', confirmPassword: '', birthDate: '',
-    firstName: '', lastName: '', address: '', countryCode: '+63', remember: false
+    firstName: '', lastName: '', address: '', countryCode: '+63', remember: false,
+    termsAccepted: false, dataSharingAccepted: false, dpaComplianceAccepted: false, communicationAccepted: false
   })
   const [isLoading, setIsLoading] = useState(false)
   const [showPassword, setShowPassword] = useState(false)
@@ -106,6 +115,8 @@ const PatientSignUp: React.FC = React.memo(() => {
   const [isFormValid, setIsFormValid] = useState(false)
   // Removed unused lastActivity state
   const [formProgress, setFormProgress] = useState(0)
+  const [showTermsModal, setShowTermsModal] = useState(false)
+  const [showPrivacyModal, setShowPrivacyModal] = useState(false)
 
   const emailInputRef = useRef<HTMLInputElement>(null)
   const passwordInputRef = useRef<HTMLInputElement>(null)
@@ -168,7 +179,7 @@ const PatientSignUp: React.FC = React.memo(() => {
     setIsFormValid(Object.keys(errors).length === 0 && isFormComplete)
     
     // Calculate form progress
-    const totalFields = 8 // email, phone, password, confirmPassword, birthDate, firstName, lastName, address
+    const totalFields = 12 // email, phone, password, confirmPassword, birthDate, firstName, lastName, address, termsAccepted, dataSharingAccepted, dpaComplianceAccepted, communicationAccepted
     const filledFields = [
       formData.email.trim(),
       formData.phone.trim(),
@@ -177,7 +188,11 @@ const PatientSignUp: React.FC = React.memo(() => {
       formData.birthDate,
       formData.firstName.trim(),
       formData.lastName.trim(),
-      formData.address.trim()
+      formData.address.trim(),
+      formData.termsAccepted,
+      formData.dataSharingAccepted,
+      formData.dpaComplianceAccepted,
+      formData.communicationAccepted
     ].filter(Boolean).length
     
     setFormProgress(Math.round((filledFields / totalFields) * 100))
@@ -357,6 +372,19 @@ const PatientSignUp: React.FC = React.memo(() => {
       errors.address = 'Address is required'
     }
 
+    if (!formData.termsAccepted) {
+      errors.termsAccepted = 'You must accept the Terms of Service and Privacy Policy to proceed.'
+    }
+    if (!formData.dataSharingAccepted) {
+      errors.dataSharingAccepted = 'You must consent to data sharing with healthcare facilities.'
+    }
+    if (!formData.dpaComplianceAccepted) {
+      errors.dpaComplianceAccepted = 'You must acknowledge DPA compliance.'
+    }
+    if (!formData.communicationAccepted) {
+      errors.communicationAccepted = 'You must agree to receive communications.'
+    }
+
     return errors
   }, [formData, emailRegex, phoneRegex, nameRegex])
 
@@ -483,6 +511,12 @@ const PatientSignUp: React.FC = React.memo(() => {
 
   const handleGoogleSignUp = useCallback(async () => {
     if (isGoogleSignUpInProgress) return
+    
+    // Check if all terms and conditions are accepted (only the consent checkboxes)
+    if (!formData.termsAccepted || !formData.dataSharingAccepted || !formData.dpaComplianceAccepted || !formData.communicationAccepted) {
+      showError('Please accept all terms and conditions before proceeding with Google sign-up.')
+      return
+    }
     
     setIsGoogleSignUpInProgress(true)
     setErrorMessage('')
@@ -662,7 +696,7 @@ const PatientSignUp: React.FC = React.memo(() => {
         setIsGoogleSignUpInProgress(false)
       }, 2000)
     }
-  }, [isGoogleSignUpInProgress, showError, showSuccess, navigate, formData.firstName, formData.lastName])
+  }, [isGoogleSignUpInProgress, showError, showSuccess, navigate, formData.firstName, formData.lastName, formData.termsAccepted, formData.dataSharingAccepted, formData.dpaComplianceAccepted, formData.communicationAccepted])
 
 
 
@@ -1018,6 +1052,124 @@ const PatientSignUp: React.FC = React.memo(() => {
                 )}
               </div>
 
+              {/* Terms and Conditions Section */}
+              <div className="form-group terms-section">
+                <div className="terms-header">
+                  <h3>Terms and Conditions</h3>
+                  <p className="terms-subtitle">Please read and accept the following terms before proceeding with your registration.</p>
+                </div>
+                
+                <div className="terms-content">
+                  <div className="terms-checkbox-group">
+                    <input 
+                      type="checkbox" 
+                      id="termsAccepted" 
+                      name="termsAccepted"
+                      checked={formData.termsAccepted}
+                      onChange={handleInputChange}
+                      disabled={isLoading}
+                      required
+                      aria-describedby="terms-error"
+                      aria-invalid={!!validationErrors.termsAccepted}
+                    />
+                    <label htmlFor="termsAccepted" className="terms-label">
+                      I have read and agree to the <button 
+                        type="button" 
+                        className="terms-link" 
+                        onClick={() => setShowTermsModal(true)}
+                        disabled={isLoading}
+                      >
+                        Terms of Service
+                      </button> and <button 
+                        type="button" 
+                        className="terms-link" 
+                        onClick={() => setShowPrivacyModal(true)}
+                        disabled={isLoading}
+                      >
+                        Privacy Policy
+                      </button>
+                    </label>
+                    {validationErrors.termsAccepted && (
+                      <div id="terms-error" className="field-error" role="alert">
+                        {validationErrors.termsAccepted}
+                      </div>
+                    )}
+                  </div>
+
+                  <div className="terms-checkbox-group">
+                    <input 
+                      type="checkbox" 
+                      id="dataSharingAccepted" 
+                      name="dataSharingAccepted"
+                      checked={formData.dataSharingAccepted}
+                      onChange={handleInputChange}
+                      disabled={isLoading}
+                      required
+                      aria-describedby="data-sharing-error"
+                      aria-invalid={!!validationErrors.dataSharingAccepted}
+                    />
+                    <label htmlFor="dataSharingAccepted" className="terms-label">
+                      I consent to share my personal and medical information with healthcare facilities I appoint for consultations and treatments. I understand this is necessary for proper medical care and treatment.
+                    </label>
+                    {validationErrors.dataSharingAccepted && (
+                      <div id="data-sharing-error" className="field-error" role="alert">
+                        {validationErrors.dataSharingAccepted}
+                      </div>
+                    )}
+                  </div>
+
+                  <div className="terms-checkbox-group">
+                    <input 
+                      type="checkbox" 
+                      id="dpaComplianceAccepted" 
+                      name="dpaComplianceAccepted"
+                      checked={formData.dpaComplianceAccepted}
+                      onChange={handleInputChange}
+                      disabled={isLoading}
+                      required
+                      aria-describedby="dpa-compliance-error"
+                      aria-invalid={!!validationErrors.dpaComplianceAccepted}
+                    />
+                    <label htmlFor="dpaComplianceAccepted" className="terms-label">
+                      I acknowledge that LingapLink complies with the Philippine Data Privacy Act of 2012 (Republic Act No. 10173) and I understand my rights regarding the collection, use, and protection of my personal information.
+                    </label>
+                    {validationErrors.dpaComplianceAccepted && (
+                      <div id="dpa-compliance-error" className="field-error" role="alert">
+                        {validationErrors.dpaComplianceAccepted}
+                      </div>
+                    )}
+                  </div>
+
+                  <div className="terms-checkbox-group">
+                    <input 
+                      type="checkbox" 
+                      id="communicationAccepted" 
+                      name="communicationAccepted"
+                      checked={formData.communicationAccepted}
+                      onChange={handleInputChange}
+                      disabled={isLoading}
+                      aria-describedby="communication-error"
+                      aria-invalid={!!validationErrors.communicationAccepted}
+                    />
+                    <label htmlFor="communicationAccepted" className="terms-label">
+                      I agree to receive communications from LingapLink regarding my account, appointments, and healthcare services. I can opt out of marketing communications at any time.
+                    </label>
+                    {validationErrors.communicationAccepted && (
+                      <div id="communication-error" className="field-error" role="alert">
+                        {validationErrors.communicationAccepted}
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                <div className="terms-footer">
+                  <p className="terms-note">
+                    <strong>Important:</strong> By checking these boxes, you acknowledge that your personal and medical information will be processed in accordance with the Philippine Data Privacy Act of 2012. 
+                    You have the right to access, correct, and delete your personal information at any time through your account settings.
+                  </p>
+                </div>
+              </div>
+
               <button 
                 type="submit" 
                 className="signup-btn" 
@@ -1067,7 +1219,7 @@ const PatientSignUp: React.FC = React.memo(() => {
                 type="button" 
                 className="social-btn google-btn" 
                 onClick={handleGoogleSignUp}
-                disabled={isLoading || isGoogleSignUpInProgress}
+                disabled={isLoading || isGoogleSignUpInProgress || !(formData.termsAccepted && formData.dataSharingAccepted && formData.dpaComplianceAccepted && formData.communicationAccepted)}
                 aria-label="Sign up with Google"
                 aria-describedby="google-signup-help"
               >
@@ -1081,6 +1233,11 @@ const PatientSignUp: React.FC = React.memo(() => {
               <div id="google-signup-help" className="sr-only">
                 Sign up using your Google account
               </div>
+              {!(formData.termsAccepted && formData.dataSharingAccepted && formData.dpaComplianceAccepted && formData.communicationAccepted) && (
+                <div className="google-signup-note">
+                  <p>Please accept all terms and conditions to enable Google sign-up</p>
+                </div>
+              )}
             </div>
 
             {errorMessage && (
@@ -1101,6 +1258,132 @@ const PatientSignUp: React.FC = React.memo(() => {
             )}
           </div>
         </div>
+
+        {/* Terms of Service Modal */}
+        {showTermsModal && (
+          <div className="modal-overlay" onClick={() => setShowTermsModal(false)}>
+            <div className="modal-content" onClick={(e) => e.stopPropagation()}>
+              <div className="modal-header">
+                <h2>Terms of Service</h2>
+                <button 
+                  type="button" 
+                  className="modal-close" 
+                  onClick={() => setShowTermsModal(false)}
+                  aria-label="Close terms of service"
+                >
+                  ×
+                </button>
+              </div>
+              <div className="modal-body">
+                <h3>LingapLink Terms of Service</h3>
+                <p><strong>Effective Date:</strong> December 19, 2024</p>
+                
+                <h4>1. Acceptance of Terms</h4>
+                <p>By accessing and using LingapLink, you accept and agree to be bound by the terms and provision of this agreement.</p>
+                
+                <h4>2. Description of Service</h4>
+                <p>LingapLink is a digital healthcare platform that connects patients with healthcare facilities in the Philippines. Our services include appointment booking, medical consultation, and healthcare information management.</p>
+                
+                <h4>3. User Responsibilities</h4>
+                <ul>
+                  <li>Provide accurate and complete information</li>
+                  <li>Maintain the security of your account</li>
+                  <li>Use the service for lawful purposes only</li>
+                  <li>Respect the privacy and rights of other users</li>
+                </ul>
+                
+                <h4>4. Healthcare Disclaimer</h4>
+                <p>LingapLink is a platform for connecting patients with healthcare providers. We do not provide medical advice, diagnosis, or treatment. Always consult with qualified healthcare professionals for medical concerns.</p>
+                
+                <h4>5. Limitation of Liability</h4>
+                <p>LingapLink shall not be liable for any indirect, incidental, special, consequential, or punitive damages resulting from your use of the service.</p>
+                
+                <h4>6. Modifications</h4>
+                <p>We reserve the right to modify these terms at any time. Continued use of the service constitutes acceptance of modified terms.</p>
+              </div>
+              <div className="modal-footer">
+                <button 
+                  type="button" 
+                  className="modal-btn" 
+                  onClick={() => setShowTermsModal(false)}
+                >
+                  I Understand
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Privacy Policy Modal */}
+        {showPrivacyModal && (
+          <div className="modal-overlay" onClick={() => setShowPrivacyModal(false)}>
+            <div className="modal-content" onClick={(e) => e.stopPropagation()}>
+              <div className="modal-header">
+                <h2>Privacy Policy</h2>
+                <button 
+                  type="button" 
+                  className="modal-close" 
+                  onClick={() => setShowPrivacyModal(false)}
+                  aria-label="Close privacy policy"
+                >
+                  ×
+                </button>
+              </div>
+              <div className="modal-body">
+                <h3>LingapLink Privacy Policy</h3>
+                <p><strong>Effective Date:</strong> December 19, 2024</p>
+                
+                <h4>1. Information We Collect</h4>
+                <ul>
+                  <li><strong>Personal Information:</strong> Name, email, phone number, address, birth date</li>
+                  <li><strong>Medical Information:</strong> Health conditions, medical history, appointment records</li>
+                  <li><strong>Usage Data:</strong> How you interact with our platform</li>
+                </ul>
+                
+                <h4>2. How We Use Your Information</h4>
+                <ul>
+                  <li>Provide healthcare services and appointment booking</li>
+                  <li>Connect you with healthcare facilities</li>
+                  <li>Send important notifications about your health</li>
+                  <li>Improve our services and user experience</li>
+                </ul>
+                
+                <h4>3. Information Sharing</h4>
+                <p>Your personal and medical information will be shared with healthcare facilities you appoint for consultations and treatments. This sharing is necessary for proper medical care and is done with your explicit consent.</p>
+                
+                <h4>4. Philippine Data Privacy Act of 2012 Compliance</h4>
+                <p>LingapLink fully complies with Republic Act No. 10173 (Data Privacy Act of 2012). You have the following rights:</p>
+                <ul>
+                  <li><strong>Right to Access:</strong> View your personal information</li>
+                  <li><strong>Right to Correction:</strong> Update inaccurate information</li>
+                  <li><strong>Right to Erasure:</strong> Delete your personal information</li>
+                  <li><strong>Right to Data Portability:</strong> Transfer your data</li>
+                  <li><strong>Right to Object:</strong> Object to data processing</li>
+                </ul>
+                
+                <h4>5. Data Security</h4>
+                <p>We implement appropriate technical and organizational measures to protect your personal information against unauthorized access, alteration, disclosure, or destruction.</p>
+                
+                <h4>6. Data Retention</h4>
+                <p>We retain your personal information only for as long as necessary to provide our services and comply with legal obligations.</p>
+                
+                <h4>7. Contact Information</h4>
+                <p>For privacy-related inquiries, contact our Data Protection Officer at:</p>
+                <p>Email: privacy@lingaplink.ph<br/>
+                Address: Makati City, Philippines</p>
+              </div>
+              <div className="modal-footer">
+                <button 
+                  type="button" 
+                  className="modal-btn" 
+                  onClick={() => setShowPrivacyModal(false)}
+                >
+                  I Understand
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </PatientSignUpErrorBoundary>
   )

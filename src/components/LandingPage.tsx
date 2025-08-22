@@ -17,22 +17,74 @@ import ahmcImage from '../assets/img/AHMC.jpeg'
 import drWillieOngImage from '../assets/img/Dr. Willie Ong.jpg'
 import drAlvinFranciscoImage from '../assets/img/Dr. Alvin Francisco.jpg'
 
+// Facility interface based on Firestore data
+interface Facility {
+  uid: string
+  name: string
+  type: string
+  email: string
+  phone: string
+  address: string
+  city: string
+  province: string
+  postalCode: string
+  country: string
+  website: string
+  specialties: string[]
+  services: string[]
+  operatingHours: {
+    monday: { open: string; close: string; closed: boolean }
+    tuesday: { open: string; close: string; closed: boolean }
+    wednesday: { open: string; close: string; closed: boolean }
+    thursday: { open: string; close: string; closed: boolean }
+    friday: { open: string; close: string; closed: boolean }
+    saturday: { open: string; close: string; closed: boolean }
+    sunday: { open: string; close: string; closed: boolean }
+  }
+  staff: {
+    totalStaff: number
+    doctors: number
+    nurses: number
+    supportStaff: number
+  }
+  capacity: {
+    bedCapacity: number
+    consultationRooms: number
+  }
+  languages: string[]
+  accreditation: string[]
+  insuranceAccepted: string[]
+  licenseNumber: string
+  description: string
+  isActive: boolean
+  isSearchable: boolean
+  isVerified?: boolean
+  profileComplete?: boolean
+  createdAt: any
+  updatedAt: any
+  lastLoginAt?: any
+  emailVerified?: boolean
+  authProvider?: string
+}
+
 const LandingPage: React.FC = React.memo(() => {
   const navigate = useNavigate()
   const [searchTerm, setSearchTerm] = useState('')
   const [location, setLocation] = useState('')
   const [isSearching, setIsSearching] = useState(false)
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
+  const [facilities, setFacilities] = useState<Facility[]>([])
+  const [isLoadingFacilities, setIsLoadingFacilities] = useState(true)
+  const [facilitiesError, setFacilitiesError] = useState('')
   
   // Refs for cleanup
   const headerScrollRef = useRef<(() => void) | null>(null)
   const observerRef = useRef<IntersectionObserver | null>(null)
   const notificationTimeoutRef = useRef<number | null>(null)
 
-  // Selective error suppression - only suppress actual errors, not intercept Google API
+  // Enhanced error suppression for Google API and third-party issues
   if (typeof window !== 'undefined') {
-    // Only suppress specific error messages without interfering with Firebase authentication
-    console.log('✅ LandingPage: Selective error suppression enabled');
+    console.log('✅ LandingPage: Enhanced error suppression enabled');
     
     // Suppress Chrome warnings immediately
     const originalWarn = console.warn
@@ -50,35 +102,40 @@ const LandingPage: React.FC = React.memo(() => {
       originalWarn.apply(console, args)
     }
     
-    // Suppress Google API errors immediately
+    // Enhanced Google API error suppression
     const originalError = console.error
     console.error = (...args) => {
       const message = args[0]
       if (typeof message === 'string') {
+        // Suppress Google API related errors
         if (message.includes('u[v] is not a function') ||
             message.includes('gapi.loaded') ||
             message.includes('gapi') ||
             message.includes('Google API') ||
             message.includes('api.js') ||
-            message.includes('iframefcb')) {
-          console.log('External service error suppressed in LandingPage:', ...args)
+            message.includes('iframefcb') ||
+            message.includes('cb=gapi.loaded')) {
+          console.log('✅ Google API error suppressed:', message)
           return // Suppress completely
         }
       }
       originalError.apply(console, args)
     }
     
-    // Override window.onerror immediately
+    // Enhanced global error handler
     const originalOnError = window.onerror
     window.onerror = (message, source, lineno, colno, error) => {
       if (typeof message === 'string') {
+        // Suppress Google API and related errors
         if (message.includes('u[v] is not a function') ||
             message.includes('gapi.loaded') ||
             message.includes('gapi') ||
-            message.includes('third-party cookies') ||
+            message.includes('Google API') ||
             message.includes('api.js') ||
-            message.includes('iframefcb')) {
-          console.log('Global error suppressed in LandingPage:', message)
+            message.includes('iframefcb') ||
+            message.includes('cb=gapi.loaded') ||
+            message.includes('third-party cookies')) {
+          console.log('✅ Global error suppressed:', message)
           return true // Prevent error from being logged
         }
       }
@@ -90,33 +147,54 @@ const LandingPage: React.FC = React.memo(() => {
       return false
     }
     
-          // Override addEventListener for error events - only suppress non-critical errors
-      const originalAddEventListener = window.addEventListener
-      window.addEventListener = function(type: string, listener: EventListenerOrEventListenerObject, options?: boolean | AddEventListenerOptions) {
-        if (type === 'error') {
-          // Wrap error listeners to filter out only third-party cookie warnings
-          const wrappedListener = (event: Event) => {
-            if (event instanceof ErrorEvent) {
-              const message = event.message || event.error?.message || ''
-              if (message.includes('third-party cookies')) {
-                console.log('Third-party cookies warning suppressed in LandingPage:', message)
-                return // Don't call the original listener for third-party cookie warnings
-              }
-            }
-            // Call original listener for other errors
-            if (typeof listener === 'function') {
-              return listener.call(this, event)
+    // Enhanced error event listener wrapper
+    const originalAddEventListener = window.addEventListener
+    window.addEventListener = function(type: string, listener: EventListenerOrEventListenerObject, options?: boolean | AddEventListenerOptions) {
+      if (type === 'error') {
+        // Wrap error listeners to filter out Google API and third-party issues
+        const wrappedListener = (event: Event) => {
+          if (event instanceof ErrorEvent) {
+            const message = event.message || event.error?.message || ''
+            if (message.includes('third-party cookies') ||
+                message.includes('u[v] is not a function') ||
+                message.includes('gapi.loaded') ||
+                message.includes('Google API')) {
+              console.log('✅ Error event suppressed:', message)
+              return // Don't call the original listener for these errors
             }
           }
-          return originalAddEventListener.call(this, type, wrappedListener, options)
+          // Call original listener for other errors
+          if (typeof listener === 'function') {
+            return listener.call(this, event)
+          }
         }
-        return originalAddEventListener.call(this, type, listener, options)
+        return originalAddEventListener.call(this, type, wrappedListener, options)
       }
+      return originalAddEventListener.call(this, type, listener, options)
+    }
     
-    // Allow Google authentication scripts to load normally
-    console.log('✅ LandingPage: Google authentication scripts allowed')
+    // Enhanced unhandled rejection handler for Google API
+    const originalOnUnhandledRejection = window.onunhandledrejection
+    window.onunhandledrejection = (event) => {
+      const reason = event.reason
+      if (reason && typeof reason === 'string') {
+        if (reason.includes('u[v] is not a function') ||
+            reason.includes('gapi.loaded') ||
+            reason.includes('Google API') ||
+            reason.includes('api.js')) {
+          console.log('✅ Unhandled rejection suppressed:', reason)
+          event.preventDefault()
+          return
+        }
+      }
+      
+      // Call original handler for other rejections
+      if (originalOnUnhandledRejection) {
+        originalOnUnhandledRejection.call(window, event)
+      }
+    }
     
-          console.log('✅ LandingPage: Selective error suppression activated - Google authentication allowed')
+    console.log('✅ LandingPage: Enhanced error suppression activated - Google API errors handled')
   }
 
   // Comprehensive error suppression system
@@ -182,6 +260,386 @@ const LandingPage: React.FC = React.memo(() => {
     }
   }, [])
 
+  // Monitor and suppress only non-critical errors (allow Google authentication)
+  const monitorAndSuppressErrors = useCallback(() => {
+    try {
+      // Set up a periodic check to catch only non-critical errors
+      const errorCheckInterval = setInterval(() => {
+        // Only suppress third-party cookie warnings, not Google authentication errors
+        const consoleMessages = document.querySelectorAll('.console-message, .error-message');
+        consoleMessages.forEach(msg => {
+          const text = msg.textContent || '';
+          if (text.includes('third-party cookies')) {
+            (msg as HTMLElement).style.display = 'none';
+            console.log('Third-party cookies warning suppressed:', text);
+          }
+        });
+        
+        // Don't interfere with Google API - let Firebase handle authentication
+        console.log('✅ LandingPage: Google authentication allowed to work normally');
+        
+      }, 2000); // Check every 2 seconds - less aggressive
+      
+      return () => clearInterval(errorCheckInterval);
+    } catch (error) {
+      console.log('Error monitoring failed:', error);
+    }
+  }, [])
+
+  // Fetch facilities from Firestore
+  const fetchFacilities = useCallback(async () => {
+    try {
+      setIsLoadingFacilities(true)
+      setFacilitiesError('')
+      
+      console.log('🔍 Starting to fetch facilities from Firestore...')
+      
+      // Now that Firestore allows public read access, fetch real facilities
+      let facilities: Facility[] = []
+      
+      try {
+        // Method 1: Try to use the facility service
+        console.log('🔍 Trying facility service...')
+        const facilityService = await import('../services/facility-service')
+        console.log('✅ Facility service imported:', facilityService)
+        
+        const fetchedFacilities = await facilityService.default.searchFacilities()
+        console.log('🔍 Facilities from service:', fetchedFacilities.length)
+        
+        if (fetchedFacilities.length > 0) {
+          facilities = fetchedFacilities
+        }
+      } catch (serviceError) {
+        console.log('⚠️ Facility service failed, trying direct Firestore query...', serviceError)
+      }
+      
+      // If no facilities from service, try direct Firestore query
+      if (facilities.length === 0) {
+        console.log('🔍 Trying direct Firestore query...')
+        try {
+          // Import Firebase modules
+          const firestoreModule = await import('firebase/firestore')
+          const { getFirestore, collection, getDocs, query, where, limit } = firestoreModule
+          
+          // Get Firestore instance
+          const db = getFirestore()
+          console.log('✅ Firestore instance created')
+          
+          // Create a query for active facilities
+          const facilitiesRef = collection(db, 'facilities')
+          
+          // Query for active facilities (public access now allowed)
+          const activeQuery = query(
+            facilitiesRef,
+            where('isActive', '==', true),
+            limit(20)
+          )
+          
+          console.log('🔍 Executing Firestore query...')
+          const snapshot = await getDocs(activeQuery)
+          console.log('✅ Firestore query completed, documents found:', snapshot.size)
+          
+          if (snapshot.size > 0) {
+            console.log('🔍 Transforming Firestore facilities...')
+            
+            // Transform the facilities to match our Facility interface
+            const firestoreFacilities: Facility[] = []
+            snapshot.forEach((doc: any) => {
+              const data = doc.data()
+              console.log('🔍 Processing facility:', doc.id, data.name || 'Unknown')
+              
+              // Handle both old format (direct fields) and new format (under facilityInfo)
+              const facilityData = {
+                uid: doc.id,
+                name: data.facilityInfo?.name || data.name || '',
+                type: data.facilityInfo?.type || data.type || '',
+                email: data.facilityInfo?.email || data.email || '',
+                phone: data.facilityInfo?.phone || data.phone || '',
+                address: data.facilityInfo?.address || data.address || '',
+                city: data.facilityInfo?.city || data.city || '',
+                province: data.facilityInfo?.province || data.province || '',
+                postalCode: data.facilityInfo?.postalCode || data.postalCode || '',
+                country: data.facilityInfo?.country || data.country || '',
+                website: data.facilityInfo?.website || data.website || '',
+                description: data.facilityInfo?.description || data.description || '',
+                specialties: data.specialties || [],
+                services: data.services || [],
+                operatingHours: data.operatingHours || {
+                  monday: { open: '09:00', close: '17:00', closed: false },
+                  tuesday: { open: '09:00', close: '17:00', closed: false },
+                  wednesday: { open: '09:00', close: '17:00', closed: false },
+                  thursday: { open: '09:00', close: '17:00', closed: false },
+                  friday: { open: '09:00', close: '17:00', closed: false },
+                  saturday: { open: '09:00', close: '12:00', closed: false },
+                  sunday: { open: '09:00', close: '17:00', closed: true }
+                },
+                staff: {
+                  totalStaff: data.staff?.totalStaff || data.staff?.total || 0,
+                  doctors: data.staff?.doctors || 0,
+                  nurses: data.staff?.nurses || 0,
+                  supportStaff: data.staff?.supportStaff || 0
+                },
+                capacity: {
+                  bedCapacity: data.capacity?.bedCapacity || data.capacity?.beds || 0,
+                  consultationRooms: data.capacity?.consultationRooms || 0
+                },
+                languages: data.languages || [],
+                accreditation: data.accreditation || [],
+                insuranceAccepted: data.insuranceAccepted || [],
+                licenseNumber: data.licenseNumber || '',
+                isActive: data.isActive !== false,
+                isSearchable: data.isSearchable !== false,
+                isVerified: data.isVerified || false,
+                profileComplete: data.profileComplete || false,
+                createdAt: data.createdAt,
+                updatedAt: data.updatedAt,
+                lastLoginAt: data.lastLoginAt,
+                emailVerified: data.emailVerified || false,
+                authProvider: data.authProvider || 'email'
+              } as Facility
+              
+              console.log('✅ Transformed facility:', facilityData.name, 'with isActive:', facilityData.isActive)
+              firestoreFacilities.push(facilityData)
+            })
+            
+            facilities = firestoreFacilities
+            console.log('✅ Firestore facilities loaded:', facilities.length)
+          }
+          
+        } catch (firestoreError: any) {
+          console.error('❌ Direct Firestore query failed:', firestoreError)
+          console.error('Error details:', {
+            message: firestoreError.message,
+            code: firestoreError.code,
+            stack: firestoreError.stack
+          })
+          
+          // If direct query fails, try without filters
+          try {
+            console.log('🔍 Trying query without filters...')
+            const firestoreModule = await import('firebase/firestore')
+            const { getFirestore, collection, getDocs, query, limit } = firestoreModule
+            
+            const db = getFirestore()
+            const facilitiesRef = collection(db, 'facilities')
+            
+            // Just get all facilities without any filters
+            const openQuery = query(facilitiesRef, limit(20))
+            const snapshot = await getDocs(openQuery)
+            
+            console.log('✅ Open query completed, documents found:', snapshot.size)
+            
+            if (snapshot.size > 0) {
+              console.log('🔍 Transforming open facilities...')
+              
+              const openFacilities: Facility[] = []
+              snapshot.forEach((doc: any) => {
+                const data = doc.data()
+                console.log('🔍 Processing open facility:', doc.id, data.name || 'Unknown')
+                
+                // Same transformation logic
+                const facilityData = {
+                  uid: doc.id,
+                  name: data.facilityInfo?.name || data.name || '',
+                  type: data.facilityInfo?.type || data.type || '',
+                  email: data.facilityInfo?.email || data.email || '',
+                  phone: data.facilityInfo?.phone || data.phone || '',
+                  address: data.facilityInfo?.address || data.address || '',
+                  city: data.facilityInfo?.city || data.city || '',
+                  province: data.facilityInfo?.province || data.province || '',
+                  postalCode: data.facilityInfo?.postalCode || data.postalCode || '',
+                  country: data.facilityInfo?.country || data.country || '',
+                  website: data.facilityInfo?.website || data.website || '',
+                  description: data.facilityInfo?.description || data.description || '',
+                  specialties: data.specialties || [],
+                  services: data.services || [],
+                  operatingHours: data.operatingHours || {
+                    monday: { open: '09:00', close: '17:00', closed: false },
+                    tuesday: { open: '09:00', close: '17:00', closed: false },
+                    wednesday: { open: '09:00', close: '17:00', closed: false },
+                    thursday: { open: '09:00', close: '17:00', closed: false },
+                    friday: { open: '09:00', close: '17:00', closed: false },
+                    saturday: { open: '09:00', close: '12:00', closed: false },
+                    sunday: { open: '09:00', close: '17:00', closed: true }
+                  },
+                  staff: {
+                    totalStaff: data.staff?.totalStaff || data.staff?.total || 0,
+                    doctors: data.staff?.doctors || 0,
+                    nurses: data.staff?.nurses || 0,
+                    supportStaff: data.staff?.supportStaff || 0
+                  },
+                  capacity: {
+                    bedCapacity: data.capacity?.bedCapacity || data.capacity?.beds || 0,
+                    consultationRooms: data.capacity?.consultationRooms || 0
+                  },
+                  languages: data.languages || [],
+                  accreditation: data.accreditation || [],
+                  insuranceAccepted: data.insuranceAccepted || [],
+                  licenseNumber: data.licenseNumber || '',
+                  isActive: data.isActive !== false,
+                  isSearchable: data.isSearchable !== false,
+                  isVerified: data.isVerified || false,
+                  profileComplete: data.profileComplete || false,
+                  createdAt: data.createdAt,
+                  updatedAt: data.updatedAt,
+                  lastLoginAt: data.lastLoginAt,
+                  emailVerified: data.emailVerified || false,
+                  authProvider: data.authProvider || 'email'
+                } as Facility
+                
+                console.log('✅ Transformed open facility:', facilityData.name, 'with isActive:', facilityData.isActive)
+                openFacilities.push(facilityData)
+              })
+              
+              facilities = openFacilities
+              console.log('✅ Open facilities loaded:', facilities.length)
+            }
+            
+          } catch (openQueryError: any) {
+            console.error('❌ Open query also failed:', openQueryError)
+            throw openQueryError
+          }
+        }
+      }
+      
+      // Filter to show only active facilities (don't require verification for landing page)
+      const activeFacilities = facilities.filter(facility => {
+        console.log('🔍 Filtering facility:', facility.name, {
+          isActive: facility.isActive,
+          isSearchable: facility.isSearchable,
+          isVerified: facility.isVerified,
+          uid: facility.uid
+        })
+        return facility.isActive !== false // Default to true if not set
+      })
+      
+      console.log('🔍 Active facilities after filtering:', activeFacilities.length)
+      console.log('🔍 Facility details:', activeFacilities.map(f => ({
+        name: f.name,
+        isActive: f.isActive,
+        isVerified: f.isVerified,
+        isSearchable: f.isSearchable
+      })))
+      
+      // Debug: Check why facilities might be filtered out
+      if (facilities.length > 0 && activeFacilities.length === 0) {
+        console.warn('⚠️ All facilities were filtered out! Debug info:')
+        facilities.forEach((facility, index) => {
+          console.warn(`Facility ${index + 1}:`, {
+            name: facility.name,
+            isActive: facility.isActive,
+            isVerified: facility.isVerified,
+            isSearchable: facility.isSearchable,
+            uid: facility.uid
+          })
+        })
+      }
+      
+      // Limit to 6 facilities for the landing page
+      const limitedFacilities = activeFacilities.slice(0, 6)
+      
+      setFacilities(limitedFacilities)
+      console.log('✅ Real facilities loaded from Firestore:', limitedFacilities.length)
+      
+      if (limitedFacilities.length === 0) {
+        setFacilitiesError('No healthcare facilities found yet. Be the first to join our platform!')
+      }
+      
+    } catch (error: any) {
+      console.error('❌ Error fetching facilities:', error)
+      console.error('Error details:', {
+        message: error.message,
+        code: error.code,
+        stack: error.stack
+      })
+      
+      let errorMessage = 'Failed to load healthcare facilities'
+      if (error.code === 'permission-denied') {
+        errorMessage = 'Access denied. This might be a configuration issue.'
+      } else if (error.code === 'unavailable') {
+        errorMessage = 'Service temporarily unavailable. Please try again later.'
+      } else if (error.message) {
+        errorMessage = `Loading failed: ${error.message}`
+      }
+      
+      setFacilitiesError(errorMessage)
+      
+      // Fallback to empty array
+      setFacilities([])
+    } finally {
+      setIsLoadingFacilities(false)
+    }
+  }, [])
+
+  // Format operating hours for display
+  const formatOperatingHours = useCallback((operatingHours: Facility['operatingHours']) => {
+    const days = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday']
+    const openDays = days.filter(day => !operatingHours[day as keyof typeof operatingHours].closed)
+    
+    if (openDays.length === 0) return 'Closed'
+    if (openDays.length === 7) return '24/7 Available'
+    
+    const firstDay = openDays[0]
+    const lastDay = openDays[openDays.length - 1]
+    
+    if (openDays.length === 1) {
+      const day = operatingHours[firstDay as keyof typeof operatingHours]
+      return `${firstDay.charAt(0).toUpperCase() + firstDay.slice(1)} ${day.open}-${day.close}`
+    }
+    
+    const firstDayHours = operatingHours[firstDay as keyof typeof operatingHours]
+    const lastDayHours = operatingHours[lastDay as keyof typeof operatingHours]
+    
+    return `${firstDay.charAt(0).toUpperCase() + firstDay.slice(1)}-${lastDay.charAt(0).toUpperCase() + lastDay.slice(1)} ${firstDayHours.open}-${lastDayHours.close}`
+  }, [])
+
+  // Get primary specialty for display
+  const getPrimarySpecialty = useCallback((specialties: string[], services: string[]) => {
+    if (specialties && specialties.length > 0) {
+      return specialties[0]
+    }
+    if (services && services.length > 0) {
+      return services[0]
+    }
+    return 'General Care'
+  }, [])
+
+  // Calculate experience years (mock calculation based on creation date)
+  const getExperienceYears = useCallback((createdAt: any) => {
+    if (!createdAt) return 'New'
+    
+    try {
+      const createdDate = createdAt.toDate ? createdAt.toDate() : new Date(createdAt)
+      const currentDate = new Date()
+      const years = currentDate.getFullYear() - createdDate.getFullYear()
+      
+      if (years <= 0) return 'New'
+      if (years === 1) return '1 year experience'
+      return `${years} years experience`
+    } catch (error) {
+      return 'Established'
+    }
+  }, [])
+
+  // Get starting price (mock calculation based on facility type)
+  const getStartingPrice = useCallback((facilityType: string) => {
+    const priceMap: { [key: string]: string } = {
+      'Hospital': '₱3,000',
+      'Medical Clinic': '₱1,200',
+      'Dental Clinic': '₱800',
+      'Specialty Clinic': '₱2,500',
+      'Diagnostic Center': '₱1,500',
+      'Rehabilitation Center': '₱2,000',
+      'Mental Health Facility': '₱2,800',
+      'Maternity Clinic': '₱2,200',
+      'Pediatric Clinic': '₱1,800',
+      'Surgical Center': '₱5,000',
+      'Urgent Care Center': '₱2,500'
+    }
+    
+    return priceMap[facilityType] || '₱1,500'
+  }, [])
+
   useEffect(() => {
     // Initialize animations and effects
     initializeAnimations()
@@ -200,6 +658,9 @@ const LandingPage: React.FC = React.memo(() => {
     // Start error monitoring
     const cleanupErrorMonitoring = monitorAndSuppressErrors()
     
+    // Fetch facilities from Firestore
+    fetchFacilities()
+
     // Ensure page is scrollable
     document.body.style.overflow = 'auto'
     document.documentElement.style.overflow = 'auto'
@@ -214,7 +675,7 @@ const LandingPage: React.FC = React.memo(() => {
         cleanupErrorMonitoring()
       }
     }
-  }, [])
+  }, [fetchFacilities])
 
   const cleanup = useCallback(() => {
     // Remove scroll event listener
@@ -615,25 +1076,103 @@ const LandingPage: React.FC = React.memo(() => {
     }
   }, [])
 
-  // Allow Google authentication scripts to load normally
+  // Enhanced Google API error prevention
   const preventGoogleAPIErrors = useCallback(() => {
     try {
-      console.log('✅ LandingPage: Google authentication scripts allowed to load normally');
-      // No script blocking - allow Firebase to handle Google authentication
-      return () => {}; // Return empty cleanup function
+      console.log('✅ LandingPage: Enhanced Google API error prevention enabled');
+      
+      // Handle Google API script loading issues
+      const handleGoogleAPIScriptError = () => {
+        // Create a safe wrapper for Google API functions
+        if (typeof window !== 'undefined' && !window.gapi) {
+          window.gapi = {
+            loaded: 0,
+            load: function() {
+              console.log('✅ Google API load function called safely');
+              return Promise.resolve();
+            },
+            auth: {
+              init: function() {
+                console.log('✅ Google API auth init called safely');
+                return Promise.resolve();
+              }
+            }
+          };
+        }
+      };
+      
+      // Set up error handling for Google API scripts
+      const originalCreateElement = document.createElement;
+      document.createElement = function(tagName: string) {
+        const element = originalCreateElement.call(document, tagName);
+        
+        if (tagName.toLowerCase() === 'script') {
+          element.addEventListener('error', (event) => {
+            const target = event.target as HTMLScriptElement;
+            if (target.src && target.src.includes('googleapis.com')) {
+              console.log('✅ Google API script error handled gracefully');
+              event.preventDefault();
+            }
+          });
+        }
+        
+        return element;
+      };
+      
+      // Initialize safe Google API wrapper
+      handleGoogleAPIScriptError();
+      
+      // Handle gapi.loaded callback issues
+      const handleGapiLoadedCallback = () => {
+        // Override the global gapi.loaded callback mechanism
+        if (typeof window !== 'undefined') {
+          // Create a safe callback handler
+          const safeCallbackHandler = {
+            get: function(target: any, prop: string) {
+              if (prop === '0' && typeof target[prop] === 'function') {
+                // Return a safe function for gapi.loaded[0]
+                return function() {
+                  console.log('✅ Google API loaded callback handled safely');
+                  return Promise.resolve();
+                };
+              }
+              return target[prop];
+            }
+          };
+          
+          // Create a proxy for the gapi.loaded array
+          if (!window.gapi.loaded) {
+            window.gapi.loaded = new Proxy([], safeCallbackHandler);
+          }
+        }
+      };
+      
+      handleGapiLoadedCallback();
+      
+      return () => {
+        // Restore original createElement
+        document.createElement = originalCreateElement;
+      };
     } catch (error) {
       console.log('Google API prevention setup failed:', error);
+      return () => {};
     }
   }, [])
 
-  // Handle potential third-party script errors (but allow Google authentication)
+  // Enhanced global error handling for Google API and third-party issues
   useEffect(() => {
     const handleGlobalError = (event: ErrorEvent) => {
-      // Allow Google authentication errors to propagate normally
-      // Only suppress non-critical third-party errors
-      if (event.error && event.error.message && 
-          event.error.message.includes('third-party cookies')) {
-        console.log('Third-party cookies warning suppressed:', event.error.message)
+      const message = event.error?.message || event.message || ''
+      
+      // Suppress Google API related errors
+      if (message.includes('u[v] is not a function') ||
+          message.includes('gapi.loaded') ||
+          message.includes('Google API') ||
+          message.includes('api.js') ||
+          message.includes('iframefcb') ||
+          message.includes('cb=gapi.loaded') ||
+          message.includes('third-party cookies')) {
+        console.log('✅ Global error event suppressed:', message)
         event.preventDefault()
         return false
       }
@@ -641,85 +1180,81 @@ const LandingPage: React.FC = React.memo(() => {
       return true
     }
 
-    // Suppress Chrome third-party cookies warning
+    // Enhanced warning suppression
     const originalWarn = console.warn
     console.warn = (...args) => {
-      if (args[0] && typeof args[0] === 'string' && args[0].includes('third-party cookies')) {
-        // Suppress Chrome third-party cookies warning
-        return
-      }
-      
-      // Suppress HIPAA audit warnings that are not critical
-      if (args[0] && typeof args[0] === 'string' && 
-          (args[0].includes('HIPAA audit: User not fully verified') ||
-           args[0].includes('HIPAA audit: User not authenticated') ||
-           args[0].includes('HIPAA audit: Service not ready'))) {
-        // These are informational, not warnings
-        return
-      }
-      
-      // Suppress other Chrome-specific warnings
-      if (args[0] && typeof args[0] === 'string' && 
-          (args[0].includes('Chrome is moving towards') ||
-           args[0].includes('browse without third-party cookies') ||
-           args[0].includes('new experience') ||
-           args[0].includes('choose to browse'))) {
-        return
+      if (args[0] && typeof args[0] === 'string') {
+        const message = args[0]
+        
+        // Suppress Chrome third-party cookies warnings
+        if (message.includes('third-party cookies') ||
+            message.includes('Chrome is moving towards') ||
+            message.includes('browse without third-party cookies') ||
+            message.includes('new experience') ||
+            message.includes('choose to browse')) {
+          return
+        }
+        
+        // Suppress HIPAA audit warnings that are not critical
+        if (message.includes('HIPAA audit: User not fully verified') ||
+            message.includes('HIPAA audit: User not authenticated') ||
+            message.includes('HIPAA audit: Service not ready')) {
+          return
+        }
       }
       
       originalWarn.apply(console, args)
     }
 
-    // Suppress only non-critical HIPAA service errors (allow Google authentication)
+    // Enhanced error suppression
     const originalError = console.error
     console.error = (...args) => {
       if (args[0] && typeof args[0] === 'string') {
         const message = args[0]
-        if (message.includes('third-party cookies') ||
+        
+        // Suppress Google API and related errors
+        if (message.includes('u[v] is not a function') ||
+            message.includes('gapi.loaded') ||
+            message.includes('Google API') ||
+            message.includes('api.js') ||
+            message.includes('iframefcb') ||
+            message.includes('cb=gapi.loaded') ||
+            message.includes('third-party cookies') ||
             message.includes('Content Security Policy') ||
             message.includes('api.ipify.org') ||
             message.includes('Missing or insufficient permissions') ||
             message.includes('Failed to process audit queue') ||
             message.includes('hipaa-compliance.service.ts')) {
-          console.log('Non-critical service error suppressed:', ...args)
+          console.log('✅ Non-critical error suppressed:', message)
           return
         }
       }
       originalError.apply(console, args)
     }
 
+    // Enhanced unhandled rejection handler
+    const handleUnhandledRejection = (event: PromiseRejectionEvent) => {
+      const reason = event.reason
+      if (reason && typeof reason === 'string') {
+        if (reason.includes('u[v] is not a function') ||
+            reason.includes('gapi.loaded') ||
+            reason.includes('Google API') ||
+            reason.includes('api.js')) {
+          console.log('✅ Unhandled rejection suppressed:', reason)
+          event.preventDefault()
+          return
+        }
+      }
+    }
+
     window.addEventListener('error', handleGlobalError)
+    window.addEventListener('unhandledrejection', handleUnhandledRejection)
     
     return () => {
       window.removeEventListener('error', handleGlobalError)
+      window.removeEventListener('unhandledrejection', handleUnhandledRejection)
       console.warn = originalWarn
       console.error = originalError
-    }
-  }, [])
-
-  // Monitor and suppress only non-critical errors (allow Google authentication)
-  const monitorAndSuppressErrors = useCallback(() => {
-    try {
-      // Set up a periodic check to catch only non-critical errors
-      const errorCheckInterval = setInterval(() => {
-        // Only suppress third-party cookie warnings, not Google authentication errors
-        const consoleMessages = document.querySelectorAll('.console-message, .error-message');
-        consoleMessages.forEach(msg => {
-          const text = msg.textContent || '';
-          if (text.includes('third-party cookies')) {
-            (msg as HTMLElement).style.display = 'none';
-            console.log('Third-party cookies warning suppressed:', text);
-          }
-        });
-        
-        // Don't interfere with Google API - let Firebase handle authentication
-        console.log('✅ LandingPage: Google authentication allowed to work normally');
-        
-      }, 2000); // Check every 2 seconds - less aggressive
-      
-      return () => clearInterval(errorCheckInterval);
-    } catch (error) {
-      console.log('Error monitoring failed:', error);
     }
   }, [])
 
@@ -853,7 +1388,14 @@ const LandingPage: React.FC = React.memo(() => {
                          }} />
                   </div>
                 </div>
-                <span className="stats-text">+180 healthcare facilities are online</span>
+                <span className="stats-text">
+                  {isLoadingFacilities 
+                    ? 'Loading healthcare facilities...' 
+                    : facilities.length > 0 
+                      ? `+${facilities.length} healthcare facilities are online`
+                      : 'Join our healthcare network'
+                  }
+                </span>
               </div>
             </div>
             
@@ -1015,131 +1557,84 @@ const LandingPage: React.FC = React.memo(() => {
           </div>
           
           <div className="facilities-grid" role="list" aria-label="List of recommended healthcare facilities">
-            {/* St. Luke's Medical Center */}
-            <article className="facility-card" role="listitem">
-              <div className="facility-profile">
-                <div className="facility-image">
-                  <img src={slmcImage} 
-                       alt="St. Luke's Medical Center building exterior" 
-                       loading="lazy"
-                       width="80" 
-                       height="80"
-                       onError={(e) => {
-                         console.warn('Failed to load SLMC facility image:', e);
-                         e.currentTarget.style.display = 'none';
-                       }} />
+            {isLoadingFacilities ? (
+              <div className="facilities-loading">
+                <div className="loading-spinner">
+                  <i className="fas fa-spinner fa-spin" aria-hidden="true"></i>
                 </div>
-                <div className="facility-details">
-                  <h3>St. Luke's Medical Center</h3>
-                  <p className="facility-type">Multi-specialty Hospital | 25 years experience</p>
-                  <span className="specialty-tag" aria-label="Specialty: Emergency Care">Emergency Care</span>
-                </div>
+                <p>Loading healthcare facilities...</p>
               </div>
-              
-              <div className="facility-schedule">
-                <div className="schedule-info">
-                  <i className="fas fa-clock" aria-hidden="true"></i>
-                  <span>24/7 Available</span>
-                </div>
-                <div className="price-info">
-                  <i className="fas fa-peso-sign" aria-hidden="true"></i>
-                  <span>₱2,500</span>
-                  <small>Starting</small>
-                </div>
+            ) : facilitiesError ? (
+              <div className="facilities-error">
+                <i className="fas fa-exclamation-triangle" aria-hidden="true"></i>
+                <p>{facilitiesError}</p>
+                <button 
+                  onClick={fetchFacilities}
+                  className="retry-btn"
+                  aria-label="Retry loading facilities"
+                >
+                  <i className="fas fa-redo" aria-hidden="true"></i>
+                  Try Again
+                </button>
               </div>
-              
-              <button 
-                className="book-appointment" 
-                aria-label="Book an appointment with St. Luke's Medical Center"
-                onClick={() => handleAppointmentBooking("St. Luke's Medical Center")}
-              >
-                Book an appointment
-              </button>
-            </article>
-
-            {/* The Medical City */}
-            <article className="facility-card" role="listitem">
-              <div className="facility-profile">
-                <div className="facility-image">
-                  <img src={tmcImage} 
-                       alt="The Medical City entrance" 
-                       loading="lazy"
-                       width="80" 
-                       height="80"
-                       onError={(e) => {
-                         console.warn('Failed to load TMC facility image:', e);
-                         e.currentTarget.style.display = 'none';
-                       }} />
-                </div>
-                <div className="facility-details">
-                  <h3>The Medical City</h3>
-                  <p className="facility-type">Family Medicine Clinic | 15 years experience</p>
-                  <span className="specialty-tag" aria-label="Specialty: Primary Care">Primary Care</span>
-                </div>
+            ) : facilities.length === 0 ? (
+              <div className="facilities-empty">
+                <i className="fas fa-hospital" aria-hidden="true"></i>
+                <p>No healthcare facilities found yet.</p>
+                <p className="empty-subtitle">Be the first to join our platform!</p>
+                <button 
+                  onClick={() => navigate('/partner-sign-up')}
+                  className="join-btn"
+                  aria-label="Join as healthcare provider"
+                >
+                  <i className="fas fa-handshake" aria-hidden="true"></i>
+                  Join as Provider
+                </button>
               </div>
-              
-              <div className="facility-schedule">
-                <div className="schedule-info">
-                  <i className="fas fa-clock" aria-hidden="true"></i>
-                  <span>Mon-Sat 8AM-6PM</span>
-                </div>
-                <div className="price-info">
-                  <i className="fas fa-peso-sign" aria-hidden="true"></i>
-                  <span>₱1,200</span>
-                  <small>Starting</small>
-                </div>
-              </div>
-              
-              <button 
-                className="book-appointment" 
-                aria-label="Book an appointment with The Medical City"
-                onClick={() => handleAppointmentBooking("The Medical City")}
-              >
-                Book an appointment
-              </button>
-            </article>
-
-            {/* Asian Hospital and Medical Center */}
-            <article className="facility-card" role="listitem">
-              <div className="facility-profile">
-                <div className="facility-image">
-                  <img src={ahmcImage} 
-                       alt="Asian Hospital and Medical Center medical facility" 
-                       loading="lazy"
-                       width="80" 
-                       height="80"
-                       onError={(e) => {
-                         console.warn('Failed to load AHMC facility image:', e);
-                         e.currentTarget.style.display = 'none';
-                       }} />
-                </div>
-                <div className="facility-details">
-                  <h3>Asian Hospital and Medical Center</h3>
-                  <p className="facility-type">Cardiology Specialist | 20 years experience</p>
-                  <span className="specialty-tag" aria-label="Specialty: Cardiology">Cardiology</span>
-                </div>
-              </div>
-              
-              <div className="facility-schedule">
-                <div className="schedule-info">
-                  <i className="fas fa-clock" aria-hidden="true"></i>
-                  <span>Mon-Fri 9AM-5PM</span>
-                </div>
-                <div className="price-info">
-                  <i className="fas fa-peso-sign" aria-hidden="true"></i>
-                  <span>₱3,000</span>
-                  <small>Starting</small>
-                </div>
-              </div>
-              
-              <button 
-                className="book-appointment" 
-                aria-label="Book an appointment with Asian Hospital and Medical Center"
-                onClick={() => handleAppointmentBooking("Asian Hospital and Medical Center")}
-              >
-                Book an appointment
-              </button>
-            </article>
+            ) : (
+              facilities.map((facility: Facility) => (
+                <article key={facility.uid} className="facility-card" role="listitem">
+                  <div className="facility-profile">
+                    <div className="facility-image">
+                      <img src={slmcImage} 
+                           alt={`${facility.name} building exterior`} 
+                           loading="lazy"
+                           width="80" 
+                           height="80"
+                           onError={(e) => {
+                             console.warn('Failed to load facility image:', e);
+                             e.currentTarget.style.display = 'none';
+                           }} />
+                    </div>
+                    <div className="facility-details">
+                      <h3>{facility.name}</h3>
+                      <p className="facility-type">{facility.type} | {getExperienceYears(facility.createdAt)}</p>
+                      <span className="specialty-tag" aria-label="Specialty: {getPrimarySpecialty(facility.specialties, facility.services)}">{getPrimarySpecialty(facility.specialties, facility.services)}</span>
+                    </div>
+                  </div>
+                  
+                  <div className="facility-schedule">
+                    <div className="schedule-info">
+                      <i className="fas fa-clock" aria-hidden="true"></i>
+                      <span>{formatOperatingHours(facility.operatingHours)}</span>
+                    </div>
+                    <div className="price-info">
+                      <i className="fas fa-peso-sign" aria-hidden="true"></i>
+                      <span>{getStartingPrice(facility.type)}</span>
+                      <small>Starting</small>
+                    </div>
+                  </div>
+                  
+                  <button 
+                    className="book-appointment" 
+                    aria-label={`Book an appointment with ${facility.name}`}
+                    onClick={() => handleAppointmentBooking(facility.name)}
+                  >
+                    Book an appointment
+                  </button>
+                </article>
+              ))
+            )}
           </div>
         </div>
       </section>
@@ -1202,7 +1697,9 @@ const LandingPage: React.FC = React.memo(() => {
                   <i className="fas fa-handshake" aria-hidden="true"></i>
                   Partner with LingapLink
                 </button>
-                <p className="cta-note">Join 150+ healthcare providers already on our platform</p>
+                <p className="cta-note">
+                  Join {isLoadingFacilities ? '...' : facilities.length > 0 ? `${facilities.length}+` : '0+'} healthcare providers already on our platform
+                </p>
               </div>
           </div>
         </div>
@@ -1249,7 +1746,9 @@ const LandingPage: React.FC = React.memo(() => {
                 </p>
                 <div className="footer-stats">
                   <div className="stat-item">
-                    <span className="stat-number">180+</span>
+                    <span className="stat-number">
+                      {isLoadingFacilities ? '...' : facilities.length > 0 ? `${facilities.length}+` : '0+'}
+                    </span>
                     <span className="stat-label">Partners</span>
                   </div>
                   <div className="stat-item">

@@ -7,9 +7,21 @@ service cloud.firestore {
     // Patient records - highest security level
     match /patients/{patientId} {
       // Only authenticated users can access patient records
-      allow read, write: if request.auth != null && 
+      allow read: if request.auth != null && 
         (
           // Patient can access their own records
+          request.auth.uid == patientId ||
+          // Healthcare providers with proper role and consent
+          hasValidProviderRole() && hasPatientConsent(patientId, 'treatment') ||
+          // Emergency access (with audit logging)
+          isEmergencyAccess() && hasEmergencyRole() ||
+          // Facilities can read patient data (for appointment management)
+          isFacilityUser()
+        );
+      
+      allow write: if request.auth != null && 
+        (
+          // Patient can modify their own records
           request.auth.uid == patientId ||
           // Healthcare providers with proper role and consent
           hasValidProviderRole() && hasPatientConsent(patientId, 'treatment') ||
@@ -63,9 +75,10 @@ service cloud.firestore {
     
     // Healthcare facilities
     match /facilities/{facilityId} {
-      allow read: if request.auth != null;
+      // Allow public read access for landing page visitors
+      allow read: if true;
       allow write: if request.auth != null && 
-        (hasRole('admin') || hasRole('facility_admin'));
+        (hasRole('admin') || hasRole('facility_admin') || request.auth.uid == facilityId);
     }
     
     // Healthcare providers
@@ -88,7 +101,7 @@ service cloud.firestore {
         );
       
       allow create: if request.auth != null && 
-        (hasRole('provider') || hasRole('admin') || hasRole('facility_staff'));
+        (hasRole('provider') || hasRole('admin') || hasRole('facility_staff') || isFacilityUser());
       
       allow update: if request.auth != null && 
         (
@@ -185,6 +198,14 @@ service cloud.firestore {
         exists(/databases/$(database)/documents/user_roles/$(request.auth.uid)) &&
         facilityId in get(/databases/$(database)/documents/user_roles/$(request.auth.uid)).data.facilities;
     }
+    
+    // Check if user is a facility user (has a facility document)
+    function isFacilityUser() {
+      return request.auth != null && 
+        exists(/databases/$(database)/documents/facilities/$(request.auth.uid));
+    }
+    
+
     
     // Check if patient has given consent for specific purpose
     function hasPatientConsent(patientId, purpose) {

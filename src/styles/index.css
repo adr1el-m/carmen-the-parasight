@@ -2403,6 +2403,150 @@ body {
   }
 }
 
+/* Facilities Loading, Error, and Empty States */
+.facilities-loading,
+.facilities-error,
+.facilities-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 3rem 2rem;
+  text-align: center;
+  grid-column: 1 / -1;
+  min-height: 200px;
+}
+
+.facilities-loading .loading-spinner {
+  margin-bottom: 1rem;
+}
+
+.facilities-loading .loading-spinner i {
+  font-size: 2rem;
+  color: #0040e7;
+  animation: spin 1s linear infinite;
+}
+
+.facilities-loading p {
+  color: #6b7280;
+  font-size: 1.1rem;
+  margin: 0;
+}
+
+.facilities-error {
+  color: #dc2626;
+}
+
+.facilities-error i {
+  font-size: 2.5rem;
+  margin-bottom: 1rem;
+  color: #dc2626;
+}
+
+.facilities-error p {
+  font-size: 1.1rem;
+  margin: 0 0 1.5rem 0;
+  color: #dc2626;
+}
+
+.retry-btn {
+  background: #dc2626;
+  color: white;
+  border: none;
+  padding: 0.75rem 1.5rem;
+  border-radius: 8px;
+  font-size: 1rem;
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.retry-btn:hover {
+  background: #b91c1c;
+}
+
+.facilities-empty {
+  color: #6b7280;
+}
+
+.facilities-empty i {
+  font-size: 3rem;
+  margin-bottom: 1rem;
+  color: #9ca3af;
+}
+
+.facilities-empty p {
+  font-size: 1.2rem;
+  margin: 0 0 0.5rem 0;
+  color: #6b7280;
+}
+
+.facilities-empty .empty-subtitle {
+  font-size: 1rem;
+  margin: 0 0 1.5rem 0;
+  color: #9ca3af;
+}
+
+.join-btn {
+  background: #0040e7;
+  color: white;
+  border: none;
+  padding: 0.75rem 1.5rem;
+  border-radius: 8px;
+  font-size: 1rem;
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.join-btn:hover {
+  background: #1d4ed8;
+}
+
+@keyframes spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* Responsive adjustments for facilities grid */
+@media (max-width: 768px) {
+  .facilities-loading,
+  .facilities-error,
+  .facilities-empty {
+    padding: 2rem 1rem;
+    min-height: 150px;
+  }
+  
+  .facilities-loading .loading-spinner i {
+    font-size: 1.5rem;
+  }
+  
+  .facilities-error i,
+  .facilities-empty i {
+    font-size: 2rem;
+  }
+  
+  .facilities-loading p,
+  .facilities-error p,
+  .facilities-empty p {
+    font-size: 1rem;
+  }
+  
+  .retry-btn,
+  .join-btn {
+    padding: 0.6rem 1.2rem;
+    font-size: 0.9rem;
+  }
+}
+
 /* FORCE LOGO COLORS - HIGH PRIORITY */
 .header-container .logo,
 .header-container .logo *,

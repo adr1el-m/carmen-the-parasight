@@ -175,7 +175,7 @@ const Dashboard: React.FC = React.memo(() => {
 
   useEffect(() => {
     // Check authentication
-    const unsubscribe = auth.onAuthStateChanged(async (user) => {
+    const unsubscribe = auth.onAuthStateChanged(async (user: any) => {
       if (user) {
         setUser(user)
         setIsLoading(false)
@@ -222,20 +222,26 @@ const Dashboard: React.FC = React.memo(() => {
   const loadUserAppointments = useCallback(async (userId: string) => {
     setIsLoadingAppointments(true)
     try {
+      console.log('🔍 loadUserAppointments called for user:', userId)
+      
       // First, check if user is a facility
       const { getFirestore, doc, getDoc } = await import('firebase/firestore')
       const db = getFirestore()
       const facilityDoc = await getDoc(doc(db, 'facilities', userId))
       
       if (facilityDoc.exists()) {
+        console.log('🔍 User is a facility, loading facility appointments...')
         // User is a facility - load facility appointments
         const { getFacilityAppointments } = await import('../services/firestoredb.js')
         const appointments = await getFacilityAppointments(userId)
+        console.log('📋 Facility appointments loaded:', appointments)
         setFacilityAppointments(appointments)
       } else {
+        console.log('🔍 User is a patient, loading patient appointments...')
         // User is a patient - load patient appointments
         const { getPatientAppointments } = await import('../services/firestoredb.js')
         const appointments = await getPatientAppointments(userId)
+        console.log('📋 Patient appointments loaded:', appointments)
         setFacilityAppointments(appointments)
       }
     } catch (error) {
@@ -950,76 +956,147 @@ const Dashboard: React.FC = React.memo(() => {
   useEffect(() => {
     if (!user?.uid) return
     
-    // Real-time listener for appointments (both facility and patient)
+    console.log('🔍 Setting up real-time listener for user:', user.uid)
     
     const setupRealTimeListener = async () => {
       try {
-        const { getFirestore, collection, onSnapshot } = await import('firebase/firestore')
+        const { getFirestore, collection, onSnapshot, doc, getDoc } = await import('firebase/firestore')
         const db = getFirestore()
-        const patientsRef = collection(db, 'patients')
         
-        const unsubscribe = onSnapshot(patientsRef, (querySnapshot) => {
-          const appointments: any[] = []
-          querySnapshot.forEach((doc) => {
-            const patientData = doc.data()
-            const patientAppointments = patientData?.activity?.appointments || []
-            
-            // Filter appointments based on user type
-            let userAppointments: any[] = []
-            
-            // Check if current user is a facility
-            if (doc.id === user.uid) {
-              // User is a patient - show their own appointments
-              userAppointments = patientAppointments
-            } else {
-              // Check if any appointments belong to this facility
-              userAppointments = patientAppointments.filter((appointment: any) => {
-                return appointment.facilityId === user.uid
-              })
-            }
-            
-            appointments.push(...userAppointments)
-          })
+        // Check if user is a facility or patient
+        const facilityDocRef = doc(db, 'facilities', user.uid)
+        const facilityDocSnap = await getDoc(facilityDocRef)
+        const isFacility = facilityDocSnap.exists()
+        
+        console.log('🔍 User type detected:', isFacility ? 'facility' : 'patient')
+        
+        if (isFacility) {
+          // For facilities: Listen to all patient documents for appointments belonging to this facility
+          console.log('🔍 Setting up facility appointment listener')
+          const patientsRef = collection(db, 'patients')
           
-          // Update the state with fresh data
-          setFacilityAppointments(appointments)
-          
-          // Show notification if new appointments were added
-          setFacilityAppointments(prevAppointments => {
-            if (appointments.length > prevAppointments.length) {
-              const newCount = appointments.length - prevAppointments.length
-              const notification = document.createElement('div')
-              notification.style.cssText = `
-                position: fixed;
-                top: 20px;
-                right: 20px;
-                background: #22c55e;
-                color: white;
-                padding: 16px 20px;
-                border-radius: 8px;
-                box-shadow: 0 4px 12px rgba(0,0,0,0.15);
-                z-index: 10000;
-                font-family: 'Inter', sans-serif;
-                font-size: 14px;
-                max-width: 350px;
-                animation: slideIn 0.3s ease-out;
-              `
-              notification.textContent = `${newCount} new appointment${newCount > 1 ? 's' : ''} received!`
-              document.body.appendChild(notification)
+          const unsubscribe = onSnapshot(patientsRef, (querySnapshot) => {
+            console.log('🔄 Facility appointment update detected')
+            console.log('📋 Total patient documents found:', querySnapshot.size)
+            const appointments: any[] = []
+            
+            querySnapshot.forEach((doc) => {
+              const patientData = doc.data()
+              const patientAppointments = patientData?.activity?.appointments || []
               
-              setTimeout(() => {
-                if (notification.parentNode) {
-                  notification.remove()
+              console.log(`📋 Patient ${doc.id} has ${patientAppointments.length} appointments`)
+              
+              // Filter appointments belonging to this facility
+              const facilityAppointments = patientAppointments.filter((appointment: any) => {
+                const matches = appointment.facilityId === user.uid
+                if (matches) {
+                  console.log(`✅ Found appointment for facility ${user.uid}:`, appointment)
                 }
-              }, 3000)
-            }
-            return appointments
+                return matches
+              })
+              
+              console.log(`📋 Filtered to ${facilityAppointments.length} appointments for this facility`)
+              
+              // Add patient info to each appointment for better display
+              const appointmentsWithPatientInfo = facilityAppointments.map((appointment: any) => ({
+                ...appointment,
+                patientId: doc.id,
+                patientName: patientData?.personalInfo?.fullName || appointment.patientName || 'Unknown Patient',
+                patientEmail: patientData?.email || appointment.patientEmail || '',
+                patientPhone: patientData?.personalInfo?.phone || '',
+                patientAge: patientData?.personalInfo?.age || null,
+                patientGender: patientData?.personalInfo?.gender || ''
+              }))
+              
+              appointments.push(...appointmentsWithPatientInfo)
+            })
+            
+            console.log('📋 Total facility appointments found:', appointments.length)
+            console.log('📋 Appointments data:', appointments)
+            
+            // Update the state with fresh data
+            setFacilityAppointments(appointments)
+            
+            // Show notification if new appointments were added
+            setFacilityAppointments(prevAppointments => {
+              if (appointments.length > prevAppointments.length) {
+                const newCount = appointments.length - prevAppointments.length
+                console.log(`🎉 ${newCount} new appointment(s) detected!`)
+                
+                // Show notification
+                const notification = document.createElement('div')
+                notification.style.cssText = `
+                  position: fixed;
+                  top: 20px;
+                  right: 20px;
+                  background: #22c55e;
+                  color: white;
+                  padding: 16px 20px;
+                  border-radius: 8px;
+                  box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+                  z-index: 10000;
+                  font-family: 'Inter', sans-serif;
+                  font-size: 14px;
+                  max-width: 350px;
+                  animation: slideIn 0.3s ease-out;
+                `
+                notification.textContent = `${newCount} new appointment${newCount > 1 ? 's' : ''} received!`
+                document.body.appendChild(notification)
+                
+                setTimeout(() => {
+                  if (notification.parentNode) {
+                    notification.remove()
+                  }
+                }, 3000)
+              }
+              return appointments
+            })
           })
-        })
-        
-        return unsubscribe
+          
+          return unsubscribe
+        } else {
+          // For patients: Listen to their own patient document
+          console.log('🔍 Setting up patient appointment listener')
+          const patientDocRef = doc(db, 'patients', user.uid)
+          
+          const unsubscribe = onSnapshot(patientDocRef, (docSnap) => {
+            if (docSnap.exists()) {
+              console.log('🔄 Patient appointment update detected')
+              const patientData = docSnap.data()
+              const appointments = patientData?.activity?.appointments || []
+              
+              console.log('📋 Patient appointments updated:', appointments.length)
+              
+              // Transform appointments to match the expected format
+              const transformedAppointments = appointments.map((appointment: any) => ({
+                id: appointment.id,
+                doctorName: appointment.doctor || 'TBD',
+                specialty: appointment.type || 'consultation',
+                time: appointment.time,
+                patientName: appointment.patientName || 'Patient',
+                type: appointment.type || 'consultation',
+                status: appointment.status === 'scheduled' ? 'pending' : appointment.status,
+                date: appointment.date,
+                facilityId: appointment.facilityId,
+                facilityName: appointment.facilityName,
+                notes: appointment.notes,
+                createdAt: appointment.createdAt,
+                isBookingForOther: appointment.isBookingForOther || false,
+                bookedBy: appointment.bookedBy,
+                patientForAppointment: appointment.patientForAppointment
+              }))
+              
+              setFacilityAppointments(transformedAppointments)
+            } else {
+              console.log('⚠️ Patient document does not exist')
+              setFacilityAppointments([])
+            }
+          })
+          
+          return unsubscribe
+        }
       } catch (error) {
-        console.error('Error setting up real-time listener:', error)
+        console.error('❌ Error setting up real-time listener:', error)
         return () => {}
       }
     }
@@ -1028,14 +1105,16 @@ const Dashboard: React.FC = React.memo(() => {
     
     setupRealTimeListener().then((unsub) => {
       unsubscribe = unsub
+      console.log('✅ Real-time listener set up successfully')
     })
     
-            return () => {
-          if (unsubscribe) {
-            unsubscribe()
-          }
-        }
-  }, [user?.uid]) // Removed facilityAppointments.length from dependencies to prevent infinite loop
+    return () => {
+      if (unsubscribe) {
+        console.log('🔍 Cleaning up real-time listener...')
+        unsubscribe()
+      }
+    }
+  }, [user?.uid]) // Only depend on user.uid to prevent infinite loops
 
   // Removed unused handleAction function
 
@@ -1371,11 +1450,14 @@ const Dashboard: React.FC = React.memo(() => {
                     <i className={`fas ${isLoadingAppointments ? 'fa-spinner fa-spin' : 'fa-sync-alt'}`}></i>
                     {isLoadingAppointments ? ' Refreshing...' : ' Refresh Appointments'}
                   </button>
+
                   <button className="btn btn-primary" onClick={openNewAppointmentModal}>
                     <i className="fas fa-plus"></i> New Appointment
                   </button>
                 </div>
               </div>
+
+
 
               {/* Triage Legend */}
               <div style={{ 

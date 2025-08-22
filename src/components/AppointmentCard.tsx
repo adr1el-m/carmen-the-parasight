@@ -4,6 +4,7 @@ import { formatTime, formatDateTime } from '../utils/dateUtils'
 interface AppointmentCardProps {
   appointment: any
   onEdit: (appointment: any) => void
+  onDelete: (appointmentId: string) => void
   formatTime: (time: string) => string
   formatDateTime: (dateTime: string) => string
 }
@@ -11,11 +12,16 @@ interface AppointmentCardProps {
 const AppointmentCard: React.FC<AppointmentCardProps> = ({ 
   appointment, 
   onEdit, 
+  onDelete, 
   formatTime, 
-  formatDateTime 
+  formatDateTime
 }) => {
+
   return (
     <div className={`appointment-card ${appointment.updatedBy === 'facility' ? 'has-modifications' : ''}`}>
+      
+
+
       <div className="appointment-date">
         <span className="date">{new Date(appointment.date).getDate()}</span>
         <span className="month">{new Date(appointment.date).toLocaleDateString('en-US', { month: 'short' })}</span>
@@ -77,14 +83,40 @@ const AppointmentCard: React.FC<AppointmentCardProps> = ({
            appointment.status === 'completed' ? 'Completed' : 
            appointment.status === 'cancelled' ? 'Cancelled' : appointment.status}
         </div>
-        <button 
-          className="btn btn-outline btn-sm"
-          onClick={() => onEdit(appointment)}
-          title="Edit appointment"
-        >
-          <i className="fas fa-edit"></i>
-          Edit
-        </button>
+        <div className="action-buttons">
+          {/* Only show edit/delete for upcoming appointments */}
+          {['scheduled', 'confirmed', 'pending'].includes(appointment.status) && (
+            <>
+              <button 
+                className="btn btn-outline btn-sm"
+                onClick={() => onEdit(appointment)}
+                title="Edit appointment"
+              >
+                <i className="fas fa-edit"></i>
+                Edit
+              </button>
+              <button 
+                className="btn btn-danger btn-sm"
+                onClick={() => onDelete(appointment.id)}
+                title="Delete appointment"
+              >
+                <i className="fas fa-trash"></i>
+                Delete
+              </button>
+            </>
+          )}
+          {/* Show view details for completed/cancelled appointments */}
+          {(appointment.status === 'completed' || appointment.status === 'cancelled') && (
+            <button 
+              className="btn btn-outline btn-sm"
+              onClick={() => onEdit(appointment)}
+              title="View appointment details"
+            >
+              <i className="fas fa-eye"></i>
+              View
+            </button>
+          )}
+        </div>
       </div>
     </div>
   )

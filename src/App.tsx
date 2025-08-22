@@ -8,6 +8,8 @@ import Dashboard from './components/Dashboard'
 import PartnerSignIn from './components/PartnerSignIn'
 import PartnerSignUp from './components/PartnerSignUp'
 import HIPAAComplianceDashboard from './components/HIPAAComplianceDashboard'
+import QuickAppoinments from './components/QuickAppoinments'
+import TriageDemo from './components/TriageDemo'
 import './index.css'
 
 const App: React.FC = () => {
@@ -27,6 +29,8 @@ const App: React.FC = () => {
         <Route path="/hipaa-compliance" element={<HIPAAComplianceDashboard />} />
         <Route path="/partner-sign-in" element={<PartnerSignIn />} />
         <Route path="/partner-sign-up" element={<PartnerSignUp />} />
+        <Route path="/quick-appointments" element={<QuickAppoinments />} />
+        <Route path="/triage-demo" element={<TriageDemo />} />
         
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>

@@ -1,13 +1,13 @@
-import React, { useMemo } from 'react'
+import React, { useMemo, useEffect, useState } from 'react'
 import AppointmentCard from './AppointmentCard'
 import { formatTime, formatDateTime } from '../utils/dateUtils'
-
 interface DashboardSectionProps {
   patientData: any
   activeAppointmentsTab: 'upcoming' | 'completed' | 'cancelled'
   onAppointmentsTabClick: (tab: 'upcoming' | 'completed' | 'cancelled') => void
   onOpenModal: (modalType: string) => void
   onEditAppointment: (appointment: any) => void
+  onDeleteAppointment: (appointmentId: string) => void
 }
 
 const DashboardSection: React.FC<DashboardSectionProps> = ({
@@ -15,8 +15,10 @@ const DashboardSection: React.FC<DashboardSectionProps> = ({
   activeAppointmentsTab,
   onAppointmentsTabClick,
   onOpenModal,
-  onEditAppointment
+  onEditAppointment,
+  onDeleteAppointment
 }) => {
+
   // Filter appointments based on active tab
   const filteredAppointments = useMemo(() => {
     if (!patientData?.activity?.appointments?.length) return []
@@ -24,7 +26,7 @@ const DashboardSection: React.FC<DashboardSectionProps> = ({
     const now = new Date()
     const today = new Date(now.getFullYear(), now.getMonth(), now.getDate())
     
-    return patientData.activity.appointments.filter(appointment => {
+    return patientData.activity.appointments.filter((appointment: any) => {
       const appointmentDate = new Date(appointment.date)
       const appointmentDateTime = new Date(appointmentDate.getFullYear(), appointmentDate.getMonth(), appointmentDate.getDate())
       
@@ -39,12 +41,14 @@ const DashboardSection: React.FC<DashboardSectionProps> = ({
         default:
           return true
       }
-    }).sort((a, b) => {
+    }).sort((a: any, b: any) => {
       const dateA = new Date(a.date)
       const dateB = new Date(b.date)
       return activeAppointmentsTab === 'completed' ? dateB.getTime() - dateA.getTime() : dateA.getTime() - dateB.getTime()
     })
   }, [patientData?.activity?.appointments, activeAppointmentsTab])
+
+
 
   const getUserDisplayName = () => {
     if (patientData?.personalInfo?.fullName && patientData.personalInfo.fullName.trim()) {
@@ -70,7 +74,7 @@ const DashboardSection: React.FC<DashboardSectionProps> = ({
             <i className="fas fa-calendar-check"></i>
           </div>
           <div className="stat-info">
-            <h3>{patientData?.activity?.appointments?.filter(apt => apt.status === 'scheduled').length || 0}</h3>
+            <h3>{patientData?.activity?.appointments?.filter((apt: any) => apt.status === 'scheduled').length || 0}</h3>
             <p>Upcoming Appointments</p>
           </div>
         </div>
@@ -119,6 +123,8 @@ const DashboardSection: React.FC<DashboardSectionProps> = ({
       <div className="dashboard-section">
         <h3>Appointments</h3>
         
+
+        
         {/* Appointments Tabs */}
         <div className="content-tabs" style={{ marginBottom: '20px' }}>
           <button 
@@ -127,7 +133,7 @@ const DashboardSection: React.FC<DashboardSectionProps> = ({
           >
             Upcoming
             <span className="tab-count">
-              {patientData?.activity?.appointments?.filter(apt => 
+              {patientData?.activity?.appointments?.filter((apt: any) => 
                 ['scheduled', 'confirmed', 'pending'].includes(apt.status) && 
                 new Date(apt.date) >= new Date(new Date().getFullYear(), new Date().getMonth(), new Date().getDate())
               ).length || 0}
@@ -139,7 +145,7 @@ const DashboardSection: React.FC<DashboardSectionProps> = ({
           >
             Completed
             <span className="tab-count">
-              {patientData?.activity?.appointments?.filter(apt => apt.status === 'completed').length || 0}
+              {patientData?.activity?.appointments?.filter((apt: any) => apt.status === 'completed').length || 0}
             </span>
           </button>
           <button 
@@ -148,18 +154,19 @@ const DashboardSection: React.FC<DashboardSectionProps> = ({
           >
             Cancelled
             <span className="tab-count">
-              {patientData?.activity?.appointments?.filter(apt => apt.status === 'cancelled').length || 0}
+              {patientData?.activity?.appointments?.filter((apt: any) => apt.status === 'cancelled').length || 0}
             </span>
           </button>
         </div>
         
         <div className="appointments-list">
           {filteredAppointments.length > 0 ? (
-            filteredAppointments.map((appointment) => (
+            filteredAppointments.map((appointment: any) => (
               <AppointmentCard
                 key={appointment.id}
                 appointment={appointment}
                 onEdit={onEditAppointment}
+                onDelete={onDeleteAppointment}
                 formatTime={formatTime}
                 formatDateTime={formatDateTime}
               />

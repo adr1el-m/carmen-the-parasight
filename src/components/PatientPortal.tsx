@@ -1431,6 +1431,122 @@ const PatientPortal: React.FC = () => {
     }
   }, [user, editAppointmentForm, editingAppointment, patientData, closeModal])
 
+  const handleDeleteAppointment = useCallback(async (appointmentId: string) => {
+    console.log('🔍 handleDeleteAppointment called for appointment:', appointmentId)
+    
+    if (!user) {
+      console.error('❌ No user found')
+      showNotification('Please sign in to delete appointments', 'error')
+      return
+    }
+    
+    // Find the appointment to get its details
+    const appointmentToDelete = patientData?.activity?.appointments?.find(apt => apt.id === appointmentId)
+    
+    if (!appointmentToDelete) {
+      console.error('❌ Appointment not found')
+      showNotification('Appointment not found', 'error')
+      return
+    }
+    
+    // Check if appointment is in the past
+    const appointmentDate = new Date(appointmentToDelete.date + 'T' + appointmentToDelete.time)
+    const now = new Date()
+    if (appointmentDate <= now) {
+      showNotification('Cannot delete past appointments', 'error')
+      return
+    }
+    
+    // Check if appointment is within 24 hours (some facilities may have policies)
+    const timeUntilAppointment = appointmentDate.getTime() - now.getTime()
+    const hoursUntilAppointment = timeUntilAppointment / (1000 * 60 * 60)
+    
+    if (hoursUntilAppointment < 24) {
+      const confirmed = window.confirm(
+        'This appointment is within 24 hours. Some facilities may have cancellation policies. Are you sure you want to delete this appointment?'
+      )
+      if (!confirmed) return
+    } else {
+      const confirmed = window.confirm(
+        `Are you sure you want to delete your appointment with ${appointmentToDelete.facilityName || 'the healthcare facility'} on ${appointmentToDelete.date} at ${appointmentToDelete.time}? This action cannot be undone.`
+      )
+      if (!confirmed) return
+    }
+    
+    try {
+      console.log('🔄 Starting appointment deletion...')
+      
+      // Update local state immediately for better UX
+      setPatientData(prev => {
+        if (!prev) return prev
+        
+        const updatedAppointments = prev.activity?.appointments?.filter(apt => apt.id !== appointmentId) || []
+        
+        return {
+          ...prev,
+          activity: {
+            ...prev.activity,
+            appointments: updatedAppointments
+          },
+          updatedAt: new Date().toISOString()
+        }
+      })
+      
+      console.log('✅ Local state updated successfully!')
+      
+      // Try to delete from Firebase
+      try {
+        console.log('📦 Attempting Firebase deletion...')
+        const { deleteAppointment } = await import('../services/firestoredb.js')
+        
+        await deleteAppointment(user.uid, appointmentId)
+        
+        console.log('✅ Firebase deletion successful!')
+        showNotification('Appointment deleted successfully!', 'success')
+        
+        // Update localStorage
+        try {
+          const updatedData = {
+            ...patientData,
+            activity: {
+              ...patientData?.activity,
+              appointments: patientData?.activity?.appointments?.filter(apt => apt.id !== appointmentId) || []
+            },
+            updatedAt: new Date().toISOString()
+          }
+          localStorage.setItem(`patientData_${user.uid}`, JSON.stringify(updatedData))
+          console.log('✅ Updated localStorage after deletion')
+        } catch (localStorageError) {
+          console.warn('⚠️ localStorage update failed:', localStorageError)
+        }
+        
+      } catch (firebaseError: any) {
+        console.warn('⚠️ Firebase deletion failed:', firebaseError)
+        
+        // Revert local state if Firebase deletion failed
+        setPatientData(prev => {
+          if (!prev) return prev
+          
+          const originalAppointments = patientData?.activity?.appointments || []
+          
+          return {
+            ...prev,
+            activity: {
+              ...prev.activity,
+              appointments: originalAppointments
+            }
+          }
+        })
+        
+        showNotification('Failed to delete appointment from server. Please try again.', 'error')
+      }
+      
+    } catch (error: any) {
+      console.error('❌ Error deleting appointment:', error)
+      showNotification('Failed to delete appointment. Please try again.', 'error')
+    }
+  }, [user, patientData])
+
   const handleFileSelect = useCallback((event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0]
     if (file) {
@@ -1865,6 +1981,7 @@ const PatientPortal: React.FC = () => {
                   })
                   openModal('editAppointment')
                 }}
+                onDeleteAppointment={handleDeleteAppointment}
               />
             </Suspense>
           )}

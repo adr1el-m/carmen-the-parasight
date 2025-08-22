@@ -2,7 +2,7 @@ import React, { useState, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { auth } from '../config/firebase'
 import { signInWithEmailAndPassword, signInWithPopup, GoogleAuthProvider } from 'firebase/auth'
-import '../styles/partnerSignUp.css'
+import '../styles/partnerSignIn.css'
 import '../styles/csp-utilities.css'
 
 const PartnerSignIn: React.FC = React.memo(() => {
@@ -130,95 +130,130 @@ const PartnerSignIn: React.FC = React.memo(() => {
   }, [])
 
   return (
-    <div className="partner-signup-container">
-      <div className="signup-header">
-        <div className="logo">
+    <div className="partner-signin-container">
+      {/* Left Side - Brand Section */}
+      <div className="signin-brand">
+        <div className="brand-logo">
           <i className="fas fa-heartbeat"></i>
           <span>LingapLink</span>
         </div>
-        <h1>Healthcare Provider Sign In</h1>
-        <p>Access your facility dashboard and manage your practice</p>
+        
+        <div className="brand-content">
+          <h1>Welcome Back</h1>
+          <p>Sign in to your healthcare provider dashboard and continue managing your practice with our comprehensive platform.</p>
+          
+          <div className="brand-features">
+            <div className="feature-item">
+              <i className="fas fa-check-circle"></i>
+              <span>Manage patient appointments</span>
+            </div>
+            <div className="feature-item">
+              <i className="fas fa-check-circle"></i>
+              <span>Access consultation tools</span>
+            </div>
+            <div className="feature-item">
+              <i className="fas fa-check-circle"></i>
+              <span>View analytics & reports</span>
+            </div>
+            <div className="feature-item">
+              <i className="fas fa-check-circle"></i>
+              <span>Secure patient management</span>
+            </div>
+          </div>
+        </div>
       </div>
 
-      <div className="signup-content">
-        <form onSubmit={handleSubmit} className="signup-form">
-          <div className="form-step">
-            <h2>Sign In to Your Account</h2>
-            <p>Enter your credentials to access your dashboard</p>
-            
-            <div className="form-group">
-              <label htmlFor="email">Email Address *</label>
-              <input
-                type="email"
-                id="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                placeholder="Enter your email address"
-                required
-              />
+      {/* Right Side - Form Section */}
+      <div className="signin-form-section">
+        <div className="signin-form-container">
+          <div className="form-header">
+            <div className="logo" style={{ color: '#0040e7' }}>
+              <i className="fas fa-heartbeat" style={{ color: '#0040e7' }}></i>
+              <span style={{ color: '#0040e7' }}>LingapLink</span>
             </div>
+            <h2>Provider Sign In</h2>
+            <p>Access your facility dashboard</p>
+          </div>
 
-            <div className="form-group">
-              <label htmlFor="password">Password *</label>
-              <div className="password-input">
+          {errorMessage && (
+            <div className="error-message">
+              <i className="fas fa-exclamation-circle"></i>
+              {errorMessage}
+            </div>
+          )}
+
+          <form onSubmit={handleSubmit} className="signin-form">
+            <div className="form-step">
+              <div className="form-group">
+                <label htmlFor="email">Email Address</label>
                 <input
-                  type={showPassword ? 'text' : 'password'}
-                  id="password"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  placeholder="Enter your password"
+                  type="email"
+                  id="email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  placeholder="Enter your email address"
                   required
                 />
-                <button
-                  type="button"
-                  className="password-toggle"
-                  onClick={() => setShowPassword(!showPassword)}
-                  aria-label={showPassword ? 'Hide password' : 'Show password'}
+              </div>
+
+              <div className="form-group">
+                <label htmlFor="password">Password</label>
+                <div className="password-input">
+                  <input
+                    type={showPassword ? 'text' : 'password'}
+                    id="password"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    placeholder="Enter your password"
+                    required
+                  />
+                  <button
+                    type="button"
+                    className="password-toggle"
+                    onClick={() => setShowPassword(!showPassword)}
+                    aria-label={showPassword ? 'Hide password' : 'Show password'}
+                  >
+                    <i className={`fas fa-${showPassword ? 'eye-slash' : 'eye'}`}></i>
+                  </button>
+                </div>
+              </div>
+
+              <div className="forgot-password">
+                <a href="/reset-password">Forgot your password?</a>
+              </div>
+
+              <div className="form-actions">
+                <button 
+                  type="submit" 
+                  className="btn btn-primary" 
+                  disabled={isLoading}
                 >
-                  <i className={`fas fa-${showPassword ? 'eye-slash' : 'eye'}`}></i>
+                  {isLoading ? 'Signing In...' : 'Sign In'}
                 </button>
               </div>
             </div>
+          </form>
 
-            <div className="form-actions">
-              <button 
-                type="submit" 
-                className="btn btn-primary" 
-                disabled={isLoading}
-              >
-                {isLoading ? 'Signing In...' : 'Sign In'}
-              </button>
+          <div className="social-signup">
+            <div className="divider">
+              <span>or sign in with</span>
             </div>
+            <button
+              type="button"
+              className="btn btn-google"
+              onClick={handleGoogleSignIn}
+              disabled={isGoogleSignInInProgress}
+            >
+              <i className="fab fa-google"></i>
+              {isGoogleSignInInProgress ? 'Signing in...' : 'Continue with Google'}
+            </button>
           </div>
-        </form>
 
-        <div className="social-signup">
-          <div className="divider">
-            <span>or</span>
+          <div className="signin-footer">
+            <p>New to LingapLink? <a href="/partner-signup">Register your facility here</a></p>
+            <p>Need help? <a href="/help">Contact our support team</a></p>
           </div>
-          <button
-            type="button"
-            className="btn btn-google"
-            onClick={handleGoogleSignIn}
-            disabled={isGoogleSignInInProgress}
-          >
-            <i className="fab fa-google"></i>
-            {isGoogleSignInInProgress ? 'Signing in...' : 'Continue with Google'}
-          </button>
         </div>
-
-        {errorMessage && (
-          <div className="error-message general-error">
-            <i className="fas fa-exclamation-circle"></i>
-            {errorMessage}
-          </div>
-        )}
-      </div>
-
-      <div className="signup-footer">
-        <p>Don't have an account? <a href="/partner-signup">Register your facility here</a></p>
-        <p>Forgot password? <a href="/reset-password">Reset your password</a></p>
-        <p>Need help? <a href="/help">Contact our support team</a></p>
       </div>
     </div>
   )

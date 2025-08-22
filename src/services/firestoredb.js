@@ -1060,6 +1060,55 @@ export async function updateAppointmentByFacility(appointmentId, patientId, upda
 }
 
 /**
+ * Delete appointment for a patient
+ */
+export async function deleteAppointment(userId, appointmentId) {
+    try {
+        console.log('🔍 Deleting appointment:', appointmentId);
+        console.log('👤 User ID:', userId);
+        
+        // Get current patient data
+        const patientData = await getPatientData(userId);
+        if (!patientData) {
+            throw new Error('Patient data not found');
+        }
+        
+        const appointments = patientData?.activity?.appointments || [];
+        const appointmentIndex = appointments.findIndex(apt => apt.id === appointmentId);
+        
+        if (appointmentIndex === -1) {
+            throw new Error('Appointment not found');
+        }
+        
+        // Check if appointment is in the past
+        const appointmentToDelete = appointments[appointmentIndex];
+        const appointmentDate = new Date(appointmentToDelete.date + 'T' + appointmentToDelete.time);
+        const now = new Date();
+        
+        if (appointmentDate <= now) {
+            throw new Error('Cannot delete past appointments');
+        }
+        
+        // Remove the appointment from the array
+        const updatedAppointments = appointments.filter(apt => apt.id !== appointmentId);
+        
+        // Update the patient document
+        const patientUpdates = {
+            'activity.appointments': updatedAppointments,
+            updatedAt: serverTimestamp()
+        };
+        
+        await updateDoc(doc(db, 'patients', userId), patientUpdates);
+        
+        console.log('✅ Appointment deleted successfully');
+        return true;
+    } catch (error) {
+        console.error('Error deleting appointment:', error);
+        throw error;
+    }
+}
+
+/**
  * Create appointment for a patient by facility (using patient UID)
  */
 export async function createAppointmentForPatient(patientUid, appointmentData, facilityId, facilityName) {

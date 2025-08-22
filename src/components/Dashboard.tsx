@@ -5,6 +5,7 @@ import { signOut } from 'firebase/auth'
 import '../styles/shared-header.css'
 import '../styles/dashboard.css'
 import '../styles/csp-utilities.css'
+import { evaluateAppointmentUrgency } from '../services/triage.service'
 
 // Types for better type safety
 interface User {
@@ -31,6 +32,13 @@ interface DashboardStats {
   totalPatients: number
   staffMembers: number
   todayAppointments: number
+}
+
+interface UrgencyData {
+  [appointmentId: string]: {
+    level: 'RED' | 'ORANGE' | 'GREEN'
+    urgency: string
+  }
 }
 
 interface QuickAction {
@@ -88,6 +96,9 @@ const Dashboard: React.FC = React.memo(() => {
     notes: ''
   })
   const [isEditingAppointment, setIsEditingAppointment] = useState(false)
+  
+  // Triage urgency state
+  const [urgencyData, setUrgencyData] = useState<UrgencyData>({})
   
   // Profile editing state
   const [showEditProfileModal, setShowEditProfileModal] = useState(false)
@@ -901,6 +912,40 @@ const Dashboard: React.FC = React.memo(() => {
     handleRefresh()
   }, [handleNavClick, handleRefresh])
 
+  // Evaluate urgency for appointments when they change
+  useEffect(() => {
+    if (!filteredAppointments.length) return
+    
+    const evaluateUrgency = async () => {
+      const newUrgencyData: UrgencyData = {}
+      
+      for (const appointment of filteredAppointments) {
+        try {
+          const urgency = await evaluateAppointmentUrgency({
+            id: appointment.id,
+            type: appointment.type,
+            notes: appointment.notes || '',
+            status: appointment.status,
+            date: appointment.date,
+            time: appointment.time,
+            patientName: appointment.patientName || 'Unknown',
+            doctor: appointment.doctor || 'TBD'
+          })
+          
+          newUrgencyData[appointment.id] = urgency
+        } catch (error) {
+          console.warn(`Failed to evaluate urgency for appointment ${appointment.id}:`, error)
+          // Fallback to default urgency
+          newUrgencyData[appointment.id] = { level: 'GREEN', urgency: 'ROUTINE' }
+        }
+      }
+      
+      setUrgencyData(newUrgencyData)
+    }
+    
+    evaluateUrgency()
+  }, [filteredAppointments])
+
   // Real-time listener for appointments (both facility and patient)
   useEffect(() => {
     if (!user?.uid) return
@@ -1192,6 +1237,53 @@ const Dashboard: React.FC = React.memo(() => {
               
               <div className="dashboard-section" role="region" aria-label="Today's schedule">
                 <h3>Today's Schedule</h3>
+                
+                {/* Triage Legend */}
+                <div style={{ 
+                  marginBottom: '20px', 
+                  padding: '15px', 
+                  backgroundColor: '#f8fafc', 
+                  borderRadius: '8px',
+                  border: '1px solid #e2e8f0'
+                }}>
+                  <h4 style={{ margin: '0 0 10px 0', fontSize: '14px', color: '#475569' }}>🚨 Triage Urgency Levels:</h4>
+                  <div style={{ display: 'flex', gap: '20px', flexWrap: 'wrap' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      <div style={{ 
+                        width: '20px', 
+                        height: '20px', 
+                        backgroundColor: '#dc2626', 
+                        borderRadius: '4px',
+                        border: '2px solid white',
+                        boxShadow: '0 2px 4px rgba(0,0,0,0.2)'
+                      }}></div>
+                      <span style={{ fontSize: '13px' }}><strong>RED:</strong> Critical - Life-threatening</span>
+                    </div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      <div style={{ 
+                        width: '20px', 
+                        height: '20px', 
+                        backgroundColor: '#ea580c', 
+                        borderRadius: '4px',
+                        border: '2px solid white',
+                        boxShadow: '0 2px 4px rgba(0,0,0,0.2)'
+                      }}></div>
+                      <span style={{ fontSize: '13px' }}><strong>ORANGE:</strong> Very Urgent - Serious</span>
+                    </div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      <div style={{ 
+                        width: '20px', 
+                        height: '20px', 
+                        backgroundColor: '#059669', 
+                        borderRadius: '4px',
+                        border: '2px solid white',
+                        boxShadow: '0 2px 4px rgba(0,0,0,0.2)'
+                      }}></div>
+                      <span style={{ fontSize: '13px' }}><strong>GREEN:</strong> Routine - Non-urgent</span>
+                    </div>
+                  </div>
+                </div>
+                
                 <div className="appointments-list" role="list" aria-label="List of today's appointments">
                   {isLoadingAppointments ? (
                     <div className="empty-state">
@@ -1210,28 +1302,45 @@ const Dashboard: React.FC = React.memo(() => {
                       <p>You don't have any appointments scheduled for today.</p>
                     </div>
                   ) : (
-                    facilityAppointments.map((appointment) => (
-                      <div key={appointment.id} className="appointment-card" role="listitem">
-                        <div className="appointment-date" aria-label={`Appointment time: ${appointment.time}`}>
-                          <span className="date">{formatTime(appointment.time).split(' ')[0]}</span>
-                          <span className="month">{formatTime(appointment.time).split(' ')[1]}</span>
+                    facilityAppointments.map((appointment) => {
+                      const urgency = urgencyData[appointment.id] || { level: 'GREEN', urgency: 'ROUTINE' }
+                      const urgencyStyles = {
+                        backgroundColor: urgency.level === 'RED' ? '#dc2626' : 
+                                       urgency.level === 'ORANGE' ? '#ea580c' : '#059669',
+                        color: 'white',
+                        borderColor: urgency.level === 'RED' ? '#dc2626' : 
+                                   urgency.level === 'ORANGE' ? '#ea580c' : '#059669'
+                      }
+                      
+                      return (
+                        <div key={appointment.id} className="appointment-card" role="listitem">
+                          {/* Triage Urgency Indicator */}
+                          <div className="urgency-indicator" style={urgencyStyles}>
+                            <div className="urgency-level">{urgency.level}</div>
+                            <div className="urgency-text">{urgency.urgency}</div>
+                          </div>
+                          
+                          <div className="appointment-date" aria-label={`Appointment time: ${appointment.time}`}>
+                            <span className="date">{formatTime(appointment.time).split(' ')[0]}</span>
+                            <span className="month">{formatTime(appointment.time).split(' ')[1]}</span>
+                          </div>
+                          <div className="appointment-info">
+                            <h4>{appointment.doctor || 'Doctor TBD'}</h4>
+                            <p>{appointment.type} - {appointment.facilityName || 'Facility'}</p>
+                            <div className="appointment-time">Patient: {appointment.patientName}</div>
+                          </div>
+                          <div className="appointment-actions">
+                            <span className={`status ${appointment.status}`} aria-label={`Appointment status: ${appointment.status}`}>
+                              {appointment.status === 'confirmed' ? 'Confirmed' : 
+                               appointment.status === 'pending' ? 'Pending' : 
+                               appointment.status === 'scheduled' ? 'Scheduled' : 
+                               appointment.status === 'completed' ? 'Completed' : 
+                               appointment.status === 'cancelled' ? 'Cancelled' : appointment.status}
+                            </span>
+                          </div>
                         </div>
-                        <div className="appointment-info">
-                          <h4>{appointment.doctor || 'Doctor TBD'}</h4>
-                          <p>{appointment.type} - {appointment.facilityName || 'Facility'}</p>
-                          <div className="appointment-time">Patient: {appointment.patientName}</div>
-                        </div>
-                        <div className="appointment-actions">
-                          <span className={`status ${appointment.status}`} aria-label={`Appointment status: ${appointment.status}`}>
-                            {appointment.status === 'confirmed' ? 'Confirmed' : 
-                             appointment.status === 'pending' ? 'Pending' : 
-                             appointment.status === 'scheduled' ? 'Scheduled' : 
-                             appointment.status === 'completed' ? 'Completed' : 
-                             appointment.status === 'cancelled' ? 'Cancelled' : appointment.status}
-                          </span>
-                        </div>
-                      </div>
-                    ))
+                      )
+                    })
                   )}
                 </div>
               </div>
@@ -1268,6 +1377,52 @@ const Dashboard: React.FC = React.memo(() => {
                 </div>
               </div>
 
+              {/* Triage Legend */}
+              <div style={{ 
+                marginBottom: '20px', 
+                padding: '15px', 
+                backgroundColor: '#f8fafc', 
+                borderRadius: '8px',
+                border: '1px solid #e2e8f0'
+              }}>
+                <h4 style={{ margin: '0 0 10px 0', fontSize: '14px', color: '#475569' }}>🚨 Triage Urgency Levels:</h4>
+                <div style={{ display: 'flex', gap: '20px', flexWrap: 'wrap' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <div style={{ 
+                      width: '20px', 
+                      height: '20px', 
+                      backgroundColor: '#dc2626', 
+                      borderRadius: '4px',
+                      border: '2px solid white',
+                      boxShadow: '0 2px 4px rgba(0,0,0,0.2)'
+                    }}></div>
+                    <span style={{ fontSize: '13px' }}><strong>RED:</strong> Critical - Life-threatening</span>
+                  </div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <div style={{ 
+                      width: '20px', 
+                      height: '20px', 
+                      backgroundColor: '#ea580c', 
+                      borderRadius: '4px',
+                      border: '2px solid white',
+                      boxShadow: '0 2px 4px rgba(0,0,0,0.2)'
+                    }}></div>
+                    <span style={{ fontSize: '13px' }}><strong>ORANGE:</strong> Very Urgent - Serious</span>
+                  </div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <div style={{ 
+                      width: '20px', 
+                      height: '20px', 
+                      backgroundColor: '#059669', 
+                      borderRadius: '4px',
+                      border: '2px solid white',
+                      boxShadow: '0 2px 4px rgba(0,0,0,0.2)'
+                    }}></div>
+                    <span style={{ fontSize: '13px' }}><strong>GREEN:</strong> Routine - Non-urgent</span>
+                  </div>
+                </div>
+              </div>
+              
               <div className="content-tabs">
                 <button 
                   className={`tab-link ${activeConsultsTab === 'upcoming' ? 'active' : ''}`}
@@ -1325,88 +1480,105 @@ const Dashboard: React.FC = React.memo(() => {
                     )}
                   </div>
                 ) : (
-                  filteredAppointments.map((appointment) => (
-                    <div key={appointment.id} className="record-item-card">
-                      <div className="date-box">
-                        <span className="day">{new Date(appointment.date).toLocaleDateString('en-US', { weekday: 'short' })}</span>
-                        <span className="date-num">{new Date(appointment.date).getDate()}</span>
-                      </div>
-                      <div className="record-divider-v"></div>
-                      <div className="record-details-grid">
-                        <div className="detail-item-flex">
-                          <i className="far fa-clock"></i>
-                          <span>{formatTime(appointment.time)}</span>
+                  filteredAppointments.map((appointment) => {
+                    const urgency = urgencyData[appointment.id] || { level: 'GREEN', urgency: 'ROUTINE' }
+                    const urgencyStyles = {
+                      backgroundColor: urgency.level === 'RED' ? '#dc2626' : 
+                                     urgency.level === 'ORANGE' ? '#ea580c' : '#059669',
+                      color: 'white',
+                      borderColor: urgency.level === 'RED' ? '#dc2626' : 
+                                 urgency.level === 'ORANGE' ? '#ea580c' : '#059669'
+                    }
+                    
+                    return (
+                      <div key={appointment.id} className="record-item-card">
+                        {/* Triage Urgency Indicator */}
+                        <div className="urgency-indicator" style={urgencyStyles}>
+                          <div className="urgency-level">{urgency.level}</div>
+                          <div className="urgency-text">{urgency.urgency}</div>
                         </div>
-                        <div className="detail-item-flex">
-                          <span>Type: {appointment.type}</span>
+                        
+                        <div className="date-box">
+                          <span className="day">{new Date(appointment.date).toLocaleDateString('en-US', { weekday: 'short' })}</span>
+                          <span className="date-num">{new Date(appointment.date).getDate()}</span>
                         </div>
-                        <div className="detail-item-flex">
-                          <i className="far fa-user"></i>
-                          <span>{appointment.patientName}</span>
-                        </div>
-                        <div className="detail-item-flex">
-                          <span>Status: {appointment.status}</span>
-                        </div>
-                        {appointment.doctor && (
+                        <div className="record-divider-v"></div>
+                        <div className="record-details-grid">
                           <div className="detail-item-flex">
-                            <i className="fas fa-user-md"></i>
-                            <span>{appointment.doctor}</span>
+                            <i className="far fa-clock"></i>
+                            <span>{formatTime(appointment.time)}</span>
                           </div>
-                        )}
-                        {appointment.notes && (
                           <div className="detail-item-flex">
-                            <span>Notes: {appointment.notes}</span>
+                            <span>Type: {appointment.type}</span>
                           </div>
-                        )}
-                      </div>
-                      <div className="record-actions-dropdown">
-                        <button 
-                          className="btn btn-outline btn-sm"
-                          onClick={() => openAppointmentModal(appointment)}
-                          style={{ marginBottom: '8px' }}
-                        >
-                          <i className="fas fa-eye"></i> View Details
-                        </button>
-                        <select 
-                          value={appointment.status}
-                          onChange={async (e) => {
-                            const newStatus = e.target.value
-                            console.log('Status changed to:', newStatus)
-                            
-                            try {
-                              // Import the update function
-                              const { updateAppointmentStatus } = await import('../services/firestoredb.js')
+                          <div className="detail-item-flex">
+                            <i className="far fa-user"></i>
+                            <span>{appointment.patientName}</span>
+                          </div>
+                          <div className="detail-item-flex">
+                            <span>Status: {appointment.status}</span>
+                          </div>
+                          {appointment.doctor && (
+                            <div className="detail-item-flex">
+                              <i className="fas fa-user-md"></i>
+                              <span>{appointment.doctor}</span>
+                            </div>
+                          )}
+                          {appointment.notes && (
+                            <div className="detail-item-flex">
+                              <span>Notes: {appointment.notes}</span>
+                            </div>
+                          )}
+                        </div>
+                        <div className="record-actions-dropdown">
+                          <button 
+                            className="btn btn-outline btn-sm"
+                            onClick={() => openAppointmentModal(appointment)}
+                            style={{ marginBottom: '8px' }}
+                          >
+                            <i className="fas fa-eye"></i> View Details
+                          </button>
+                          <select 
+                            value={appointment.status}
+                            onChange={async (e) => {
+                              const newStatus = e.target.value
+                              console.log('Status changed to:', newStatus)
                               
-                              // Update the appointment status in the database
-                              await updateAppointmentStatus(
-                                appointment.id,
-                                newStatus,
-                                appointment.patientId,
-                                user?.uid || ''
-                              )
-                              
-                              // Show success notification
-                              showNotification(`Appointment status updated to ${newStatus}`, 'success')
-                              
-                              // Reload appointments to reflect the change
-                              if (user?.uid) {
-                                loadUserAppointments(user.uid)
+                              try {
+                                // Import the update function
+                                const { updateAppointmentStatus } = await import('../services/firestoredb.js')
+                                
+                                // Update the appointment status in the database
+                                await updateAppointmentStatus(
+                                  appointment.id,
+                                  newStatus,
+                                  appointment.patientId,
+                                  user?.uid || ''
+                                )
+                                
+                                // Show success notification
+                                showNotification(`Appointment status updated to ${newStatus}`, 'success')
+                                
+                                // Reload appointments to reflect the change
+                                if (user?.uid) {
+                                  loadUserAppointments(user.uid)
+                                }
+                                
+                              } catch (error) {
+                                console.error('Error updating appointment status:', error)
+                                showNotification('Failed to update appointment status', 'error')
                               }
-                              
-                            } catch (error) {
-                              console.error('Error updating appointment status:', error)
-                              showNotification('Failed to update appointment status', 'error')
-                            }
-                          }}
-                        >
-                          <option value="scheduled">Scheduled</option>
-                          <option value="confirmed">Confirmed</option>
-                          <option value="completed">Completed</option>
-                          <option value="cancelled">Cancelled</option>
-                        </select>
+                            }}
+                          >
+                            <option value="scheduled">Scheduled</option>
+                            <option value="confirmed">Confirmed</option>
+                            <option value="completed">Completed</option>
+                            <option value="cancelled">Cancelled</option>
+                          </select>
+                        </div>
                       </div>
-                    </div>
-                  ))
+                    )
+                  })
                 )}
               </div>
             </section>

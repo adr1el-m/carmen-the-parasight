@@ -22,11 +22,12 @@ const LandingPage: React.FC = React.memo(() => {
   const [searchTerm, setSearchTerm] = useState('')
   const [location, setLocation] = useState('')
   const [isSearching, setIsSearching] = useState(false)
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
   
   // Refs for cleanup
   const headerScrollRef = useRef<(() => void) | null>(null)
   const observerRef = useRef<IntersectionObserver | null>(null)
-  const notificationTimeoutRef = useRef<NodeJS.Timeout | null>(null)
+  const notificationTimeoutRef = useRef<number | null>(null)
 
   // Selective error suppression - only suppress actual errors, not intercept Google API
   if (typeof window !== 'undefined') {
@@ -731,22 +732,62 @@ const LandingPage: React.FC = React.memo(() => {
       {/* Navigation Header */}
       <header className="header" role="banner">
         <div className="header-container">
-          <div className="logo">
-            <i className="fas fa-heartbeat" aria-hidden="true"></i>
-            <span>LingapLink</span>
-            <span className="logo-badge">PH</span>
+          <div className="logo" style={{ color: '#0040e7' }}>
+            <i className="fas fa-heartbeat" aria-hidden="true" style={{ color: '#0040e7' }}></i>
+            <span style={{ color: '#0040e7' }}>LingapLink</span>
+            <span className="logo-badge" style={{ 
+              background: '#0040e7', 
+              color: '#ffffff',
+              padding: '0.3rem 0.5rem',
+              borderRadius: '6px',
+              fontSize: '0.75rem',
+              fontWeight: '700',
+              marginLeft: '0.5rem',
+              border: '1px solid rgba(255, 255, 255, 0.3)'
+            }}>PH</span>
           </div>
           
-          <nav className="header-actions" role="navigation" aria-label="Main navigation">
+          {/* Mobile Menu Toggle */}
+          <button 
+            className="mobile-menu-toggle"
+            onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+            aria-label="Toggle mobile navigation menu"
+            aria-expanded={isMobileMenuOpen}
+          >
+            <span className={`hamburger ${isMobileMenuOpen ? 'open' : ''}`}>
+              <span></span>
+              <span></span>
+              <span></span>
+            </span>
+          </button>
+          
+          <nav className={`header-actions ${isMobileMenuOpen ? 'mobile-open' : ''}`} role="navigation" aria-label="Main navigation">
             <button 
-              onClick={() => navigate('/patient-sign-in')}
+              onClick={() => {
+                navigate('/quick-appointments')
+                setIsMobileMenuOpen(false)
+              }}
+              className="quick-appointment-btn" 
+              aria-label="Book a quick appointment without signing up"
+            >
+              <i className="fas fa-calendar-plus" aria-hidden="true"></i>
+              Quick Appointment
+            </button>
+            <button 
+              onClick={() => {
+                navigate('/patient-sign-in')
+                setIsMobileMenuOpen(false)
+              }}
               className="login-btn" 
               aria-label="Sign in to your patient account"
             >
               Login
             </button>
             <button 
-              onClick={() => navigate('/patient-sign-up')}
+              onClick={() => {
+                navigate('/patient-sign-up')
+                setIsMobileMenuOpen(false)
+              }}
               className="register-btn" 
               aria-label="Create a new patient account"
             >
@@ -754,6 +795,15 @@ const LandingPage: React.FC = React.memo(() => {
             </button>
           </nav>
         </div>
+        
+        {/* Mobile Menu Overlay */}
+        {isMobileMenuOpen && (
+          <div 
+            className="mobile-menu-overlay"
+            onClick={() => setIsMobileMenuOpen(false)}
+            aria-hidden="true"
+          />
+        )}
       </header>
 
       {/* Main Content */}
@@ -763,6 +813,8 @@ const LandingPage: React.FC = React.memo(() => {
             <div className="hero-left">
               <h1>Get Your Consultation Online</h1>
               <h2>Connect with top healthcare facilities from home</h2>
+
+              
 
               
               <div className="online-stats">
@@ -924,6 +976,25 @@ const LandingPage: React.FC = React.memo(() => {
                 {isSearching ? 'Searching...' : 'Search'}
               </button>
             </form>
+            
+            {/* Quick Appointment CTA */}
+            <div className="quick-appointment-cta">
+              <div className="cta-content">
+                <div className="cta-text">
+                  <h3>Need an appointment fast?</h3>
+                  <p>Don't have time to sign up? Book a quick appointment in just 2 minutes!</p>
+                </div>
+                <button 
+                  onClick={() => navigate('/quick-appointments')}
+                  className="cta-quick-appointment-btn"
+                  aria-label="Book a quick appointment without signing up"
+                >
+                  <i className="fas fa-bolt" aria-hidden="true"></i>
+                  Quick Appointment
+                </button>
+              </div>
+            </div>
+
           </div>
         </section>
       </main>
@@ -1301,6 +1372,39 @@ const LandingPage: React.FC = React.memo(() => {
           </div>
         </div>
       </footer>
+
+      {/* Emergency Call Button - Fixed Position */}
+      <div className="emergency-call-fixed">
+        <button 
+          className="emergency-call-btn-fixed"
+          onClick={() => {
+            // Ask for confirmation before proceeding
+            const confirmed = window.confirm('🚨 Are you sure you want to call emergency services?\n\nThis is a DEMO application. In a real emergency, call 911 or your local emergency number immediately.\n\nClick OK to continue with the demo, or Cancel to go back.')
+            
+            if (confirmed) {
+              // Mock emergency call - in real app this would call actual emergency services
+              const mockNumber = '+63 911 123 4567'
+              showNotification(`🚨 Emergency Call: ${mockNumber}`, 'info')
+              
+              // Simulate call attempt
+              setTimeout(() => {
+                showNotification('📞 Connecting to emergency services...', 'info')
+              }, 1000)
+              
+              setTimeout(() => {
+                showNotification('⚠️ This is a demo. In a real emergency, call 911 or your local emergency number.', 'warning')
+              }, 3000)
+            }
+          }}
+          aria-label="Emergency call button - Call emergency services"
+          title="Emergency Call - Demo Only"
+        >
+          <div className="emergency-icon-fixed">
+            <i className="fas fa-phone-alt"></i>
+          </div>
+          <span className="emergency-text-fixed">911</span>
+        </button>
+      </div>
 
       {/* Toast Container for Notifications */}
       <div id="toast-container" className="toast-container" aria-live="polite" aria-atomic="false"></div>

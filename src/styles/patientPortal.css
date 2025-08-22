@@ -965,6 +965,54 @@ body {
     }
 }
 
+/* Action buttons container for edit/delete buttons */
+.appointment-actions .action-buttons {
+    display: flex;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+}
+
+/* Danger button styling */
+.btn-danger {
+    background-color: #dc3545;
+    color: white;
+    border: 1px solid #dc3545;
+    transition: all 0.2s ease;
+}
+
+.btn-danger:hover {
+    background-color: #c82333;
+    border-color: #bd2130;
+    color: white;
+}
+
+.btn-danger:focus {
+    background-color: #c82333;
+    border-color: #bd2130;
+    color: white;
+    box-shadow: 0 0 0 0.2rem rgba(220, 53, 69, 0.25);
+}
+
+.btn-danger:active {
+    background-color: #bd2130;
+    border-color: #a71e2a;
+    color: white;
+}
+
+/* Responsive design for action buttons */
+@media (max-width: 768px) {
+    .appointment-actions .action-buttons {
+        flex-direction: column;
+        gap: 0.25rem;
+    }
+    
+    .appointment-actions .action-buttons .btn-sm {
+        width: 100%;
+        justify-content: center;
+    }
+}
+
 .btn-outline {
     padding: 0.5rem 1rem;
     border: 1px solid var(--border-light);

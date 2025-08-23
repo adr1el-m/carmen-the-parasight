@@ -595,14 +595,23 @@ const PatientPortal: React.FC = () => {
   }, [navigate])
 
   const toggleSidebar = useCallback(() => {
-    setIsSidebarOpen(prev => !prev)
+    console.log('🔘 toggleSidebar called')
+    const newState = !isSidebarOpen
+    console.log('🔘 Setting sidebar state to:', newState)
+    setIsSidebarOpen(newState)
+    
     if (sidebarRef.current) {
+      console.log('🔘 Toggling sidebar active class')
       sidebarRef.current.classList.toggle('active')
+      console.log('🔘 Sidebar classes after toggle:', sidebarRef.current.className)
     }
+    
     if (sidebarOverlayRef.current) {
+      console.log('🔘 Toggling sidebar overlay active class')
       sidebarOverlayRef.current.classList.toggle('active')
+      console.log('🔘 Overlay classes after toggle:', sidebarOverlayRef.current.className)
     }
-  }, [])
+  }, [isSidebarOpen])
 
   const closeSidebar = useCallback(() => {
     setIsSidebarOpen(false)
@@ -1885,37 +1894,17 @@ const PatientPortal: React.FC = () => {
     if (user && activeSection === 'facilities') {
       loadFacilities()
       
-      // Set up real-time listener for facility updates
-      const setupFacilityListener = async () => {
-        try {
-          const { getFirestore, collection, onSnapshot } = await import('firebase/firestore')
-          const db = getFirestore()
-          const facilitiesRef = collection(db, 'facilities')
-          
-          const unsubscribe = onSnapshot(facilitiesRef, (querySnapshot) => {
-            console.log('🔄 Real-time facility update detected')
-            // Reload facilities when any facility document changes
-            loadFacilities()
-          })
-          
-          // Store the unsubscribe function to clean up later
-          return unsubscribe
-        } catch (error) {
-          console.error('❌ Error setting up facility listener:', error)
-          return () => {}
-        }
-      }
+      // DISABLED: Real-time listener for facility updates to prevent console errors
+      console.log('🔍 Real-time facility listeners disabled - using periodic refresh only')
       
-      let unsubscribe: (() => void) | null = null
-      setupFacilityListener().then((unsub) => {
-        unsubscribe = unsub
-      })
+      // Set up periodic refresh instead of real-time listener
+      const refreshInterval = setInterval(() => {
+        loadFacilities()
+      }, 30000) // Refresh every 30 seconds
       
       // Cleanup function
       return () => {
-        if (unsubscribe) {
-          unsubscribe()
-        }
+        clearInterval(refreshInterval)
       }
     }
   }, [user, activeSection, loadFacilities])

@@ -1,4 +1,5 @@
 import { GoogleGenerativeAI } from '@google/generative-ai'
+import { getAITriageConfig, isAITriageConfigured, getAITriageStatus } from '../config/ai-triage.config'
 
 // Initialize Gemini AI
 const genAI = new GoogleGenerativeAI(import.meta.env.VITE_GEMINI_API_KEY || '')
@@ -6,6 +7,13 @@ const genAI = new GoogleGenerativeAI(import.meta.env.VITE_GEMINI_API_KEY || '')
 // Cache for urgency evaluations to avoid repeated API calls
 const urgencyCache = new Map<string, { level: string; urgency: string; timestamp: number }>()
 const CACHE_DURATION = 5 * 60 * 1000 // 5 minutes
+
+// Rate limiting configuration
+const RATE_LIMIT = {
+  maxRequests: 10, // Maximum requests per minute
+  windowMs: 60 * 1000, // 1 minute window
+  requests: [] as number[]
+}
 
 interface AppointmentData {
   id?: string
@@ -24,17 +32,49 @@ interface UrgencyResult {
 }
 
 /**
+ * Checks if we're within rate limits
+ */
+function isRateLimited(): boolean {
+  const now = Date.now()
+  // Remove old requests outside the window
+  RATE_LIMIT.requests = RATE_LIMIT.requests.filter(time => now - time < RATE_LIMIT.windowMs)
+  
+  // Check if we've exceeded the limit
+  if (RATE_LIMIT.requests.length >= RATE_LIMIT.maxRequests) {
+    console.warn('Rate limit exceeded, using fallback evaluation')
+    return true
+  }
+  
+  return false
+}
+
+/**
+ * Records a request for rate limiting
+ */
+function recordRequest(): void {
+  RATE_LIMIT.requests.push(Date.now())
+}
+
+/**
  * Evaluates the urgency of an appointment using Gemini AI
  * @param appointment - The appointment data to evaluate
  * @returns Promise<UrgencyResult> - The urgency level and description
  */
 export async function evaluateAppointmentUrgency(appointment: AppointmentData): Promise<UrgencyResult> {
   try {
-    // Check if API key is configured
-    if (!import.meta.env.VITE_GEMINI_API_KEY) {
-      console.warn('Gemini API key not configured, using fallback evaluation')
+    console.log(`🚨 evaluateAppointmentUrgency called for appointment ${appointment.id}`)
+    
+    // Check if AI triage service is enabled and configured
+    const isConfigured = isAITriageConfigured()
+    console.log(`🔧 AI triage configured:`, isConfigured)
+    console.log(`🔧 Config status:`, getAITriageStatus())
+    
+    if (!isConfigured) {
+      console.log('❌ AI triage service not configured, using fallback evaluation')
       return fallbackUrgencyEvaluation(appointment)
     }
+    
+    console.log(`✅ AI triage is configured and enabled, proceeding with Gemini evaluation...`)
 
     // Check cache first
     const cacheKey = generateCacheKey(appointment)
@@ -48,20 +88,51 @@ export async function evaluateAppointmentUrgency(appointment: AppointmentData): 
       }
     }
 
-    console.log(`Evaluating urgency for appointment ${appointment.id} using Gemini AI...`)
+    // Check rate limiting
+    if (isRateLimited()) {
+      console.log('Rate limit active, using fallback evaluation for appointment:', appointment.id)
+      const fallback = fallbackUrgencyEvaluation(appointment)
+      // Cache the fallback result to avoid repeated fallback calls
+      urgencyCache.set(cacheKey, {
+        level: fallback.level,
+        urgency: fallback.urgency,
+        timestamp: Date.now()
+      })
+      return fallback
+    }
+
+    console.log(`🔥 Evaluating urgency for appointment ${appointment.id} using Gemini AI...`)
+
+    // Record this request for rate limiting
+    recordRequest()
 
     // Prepare the prompt for Gemini AI
     const prompt = createUrgencyPrompt(appointment)
+    console.log(`📝 Prompt for Gemini:`, prompt)
     
     // Get Gemini model
+    console.log(`🤖 Initializing Gemini model...`)
     const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' })
+    console.log(`✅ Gemini model initialized`)
     
-    // Generate response
-    const result = await model.generateContent(prompt)
-    const response = await result.response
+    // Get configuration for timeout
+    const config = getAITriageConfig()
+    console.log(`⏱️ Using timeout:`, config.timeout)
+    
+    // Generate response with timeout
+    console.log(`🚀 Sending request to Gemini AI...`)
+    const result = await Promise.race([
+      model.generateContent(prompt),
+      new Promise((_, reject) => 
+        setTimeout(() => reject(new Error('Request timeout')), config.timeout)
+      )
+    ])
+    
+    console.log(`📨 Received response from Gemini AI`)
+    const response = await (result as any).response
     const text = response.text()
     
-    console.log(`Gemini AI response for appointment ${appointment.id}:`, text)
+    console.log(`🎯 Gemini AI response for appointment ${appointment.id}:`, text)
     
     // Parse the AI response
     const urgency = parseAIResponse(text)
@@ -76,12 +147,42 @@ export async function evaluateAppointmentUrgency(appointment: AppointmentData): 
     })
     
     return urgency
-  } catch (error) {
-    console.error(`Error evaluating appointment ${appointment.id} urgency:`, error)
+  } catch (error: any) {
+    // Handle specific error types
+    if (error.message?.includes('RATE_LIMIT_EXCEEDED') || 
+        error.message?.includes('429') ||
+        error.message?.includes('quota')) {
+      console.log(`Rate limit exceeded for appointment ${appointment.id}, using fallback`)
+      
+      // Cache the fallback result to avoid repeated API calls
+      const cacheKey = generateCacheKey(appointment)
+      const fallback = fallbackUrgencyEvaluation(appointment)
+      urgencyCache.set(cacheKey, {
+        level: fallback.level,
+        urgency: fallback.urgency,
+        timestamp: Date.now()
+      })
+      
+      return fallback
+    }
+    
+    if (error.message?.includes('timeout')) {
+      console.log(`Request timeout for appointment ${appointment.id}, using fallback`)
+    } else {
+      console.log(`Error evaluating appointment ${appointment.id} urgency:`, error.message || 'Unknown error')
+    }
     
     // Fallback to basic evaluation based on keywords
     const fallback = fallbackUrgencyEvaluation(appointment)
-    console.log(`Using fallback evaluation for appointment ${appointment.id}:`, fallback)
+    
+    // Cache the fallback result
+    const cacheKey = generateCacheKey(appointment)
+    urgencyCache.set(cacheKey, {
+      level: fallback.level,
+      urgency: fallback.urgency,
+      timestamp: Date.now()
+    })
+    
     return fallback
   }
 }

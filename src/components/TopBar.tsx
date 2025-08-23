@@ -9,13 +9,15 @@ const TopBar: React.FC<TopBarProps> = ({ onToggleSidebar, isSidebarOpen }) => {
   return (
     <div className="top-bar">
       <button 
-        className="mobile-menu-toggle" 
+        className={`mobile-menu-toggle ${isSidebarOpen ? 'active' : ''}`}
         onClick={onToggleSidebar}
         aria-label="Toggle navigation menu"
         aria-expanded={isSidebarOpen}
         aria-controls="sidebar-navigation"
       >
-        <i className="fas fa-bars" aria-hidden="true"></i>
+        <span className="hamburger-line"></span>
+        <span className="hamburger-line"></span>
+        <span className="hamburger-line"></span>
       </button>
     </div>
   )

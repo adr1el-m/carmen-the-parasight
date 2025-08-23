@@ -18,9 +18,12 @@
   --border-color: #e2e8f0;
   --border-light: #f1f5f9;
   --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
-  --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -2px rgba(0, 0, 0, 0.1);
-  --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -4px rgba(0, 0, 0, 0.1);
-  --shadow-xl: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1);
+  --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 
+               0 2px 4px -2px rgba(0, 0, 0, 0.1);
+  --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 
+               0 4px 6px -4px rgba(0, 0, 0, 0.1);
+  --shadow-xl: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 
+               0 8px 10px -6px rgba(0, 0, 0, 0.1);
   --border-radius: 12px;
   --border-radius-sm: 8px;
   --border-radius-lg: 16px;
@@ -34,15 +37,17 @@
 }
 
 .partner-signin-container {
-  min-height: 100vh;
-  display: grid;
+  height: 100vh;
+  display: flex;
   grid-template-columns: 1fr 1fr;
   font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
   background: var(--bg-secondary);
+  overflow: hidden; /* prevent double scrollbars */
 }
 
 /* Left Side - Brand Section */
 .signin-brand {
+  flex: 0 0 50%;
   background: linear-gradient(135deg, var(--primary-blue) 0%, var(--primary-dark) 100%);
   display: flex;
   flex-direction: column;
@@ -50,7 +55,9 @@
   justify-content: center;
   padding: 3rem;
   color: var(--text-white);
-  position: relative;
+  position: sticky;
+  top: 0;
+  height: 100vh;
   overflow: hidden;
 }
 
@@ -124,9 +131,13 @@
 
 /* Right Side - Form Section */
 .signin-form-section {
+  flex: 0 0 50%;
+  height: 100vh;
+  overflow-y: auto;
   display: flex;
+  flex-direction: column; /* stack children vertically */
   align-items: center;
-  justify-content: center;
+  justify-content: flex-start;
   padding: 3rem;
   background: var(--bg-primary);
 }
@@ -226,20 +237,28 @@
 /* Password Input */
 .password-input {
   position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.password-input input {
+  width: 100%;
+  padding-right: 2.5rem; /* space for eye icon */
 }
 
 .password-toggle {
   position: absolute;
-  right: 1rem;
+  right: 0.75rem;
   top: 50%;
   transform: translateY(-50%);
   background: none;
   border: none;
-  color: var(--text-secondary);
   cursor: pointer;
-  padding: 0.25rem;
-  transition: color 0.3s ease;
+  color: #666;
   font-size: 1rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .password-toggle:hover {
@@ -395,11 +414,11 @@
   .partner-signin-container {
     grid-template-columns: 1fr;
   }
-  
+
   .signin-brand {
     display: none;
   }
-  
+
   .signin-form-section {
     min-height: 100vh;
   }
@@ -409,11 +428,11 @@
   .signin-form-section {
     padding: 2rem 1.5rem;
   }
-  
+
   .brand-content h1 {
     font-size: 2rem;
   }
-  
+
   .form-header h2 {
     font-size: 1.5rem;
   }
@@ -423,15 +442,15 @@
   .signin-form-section {
     padding: 1.5rem 1rem;
   }
-  
+
   .signin-form-container {
     max-width: 100%;
   }
-  
+
   .brand-content h1 {
     font-size: 1.75rem;
   }
-  
+
   .form-header h2 {
     font-size: 1.25rem;
   }

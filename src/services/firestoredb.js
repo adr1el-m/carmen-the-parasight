@@ -1009,6 +1009,70 @@ export async function updateAppointmentByFacility(appointmentId, patientId, upda
         // Get the original appointment to preserve some fields
         const originalAppointment = appointments[appointmentIndex];
         
+        // Check if notes or type changed, which might affect urgency
+        const notesChanged = originalAppointment.notes !== updatedAppointmentData.notes;
+        const typeChanged = originalAppointment.type !== updatedAppointmentData.type;
+        const shouldReevaluateUrgency = notesChanged || typeChanged;
+        
+        // Re-evaluate urgency if relevant fields changed
+        let urgencyLevel = originalAppointment.urgency?.level || 'GREEN';
+        let urgencyDescription = originalAppointment.urgency?.description || 'ROUTINE';
+        
+        if (shouldReevaluateUrgency) {
+            try {
+                // Import and use the triage service to evaluate urgency
+                const { evaluateAppointmentUrgency } = await import('./triage.service.ts');
+                const urgencyResult = await evaluateAppointmentUrgency({
+                    id: appointmentId,
+                    type: updatedAppointmentData.type || originalAppointment.type,
+                    notes: updatedAppointmentData.notes || originalAppointment.notes,
+                    status: updatedAppointmentData.status || originalAppointment.status,
+                    date: updatedAppointmentData.date || originalAppointment.date,
+                    time: updatedAppointmentData.time || originalAppointment.time
+                });
+                
+                urgencyLevel = urgencyResult.level;
+                urgencyDescription = urgencyResult.urgency;
+                console.log('🚨 Urgency re-evaluation result:', urgencyResult);
+            } catch (urgencyError) {
+                console.log('⚠️ Urgency re-evaluation failed, using fallback:', urgencyError.message);
+                // Use fallback urgency evaluation based on keywords
+                const text = `${updatedAppointmentData.notes || originalAppointment.notes || ''} ${updatedAppointmentData.type || originalAppointment.type || ''}`.toLowerCase();
+                
+                // Critical/Red indicators
+                const redKeywords = [
+                    'chest pain', 'heart attack', 'stroke', 'severe bleeding', 'unconscious',
+                    'difficulty breathing', 'severe trauma', 'overdose', 'suicide', 'seizure',
+                    'cardiac arrest', 'respiratory failure', 'anaphylaxis', 'severe burns'
+                ];
+                
+                // Urgent/Orange indicators
+                const orangeKeywords = [
+                    'high fever', 'severe headache', 'broken bone', 'deep cut', 'infection',
+                    'dehydration', 'severe pain', 'allergic reaction', 'meningitis symptoms',
+                    'appendicitis', 'gallbladder', 'kidney stone', 'pneumonia symptoms'
+                ];
+                
+                // Check for red level
+                if (redKeywords.some(keyword => text.includes(keyword))) {
+                    urgencyLevel = 'RED';
+                    urgencyDescription = 'CRITICAL';
+                }
+                // Check for orange level
+                else if (orangeKeywords.some(keyword => text.includes(keyword))) {
+                    urgencyLevel = 'ORANGE';
+                    urgencyDescription = 'VERY URGENT';
+                }
+                // Default to green
+                else {
+                    urgencyLevel = 'GREEN';
+                    urgencyDescription = 'ROUTINE';
+                }
+                
+                console.log('🚨 Fallback urgency re-evaluation:', { level: urgencyLevel, urgency: urgencyDescription });
+            }
+        }
+        
         // Update the appointment with new data while preserving existing fields
         const updatedAppointments = appointments.map((apt, index) => {
             if (index === appointmentIndex) {
@@ -1020,6 +1084,14 @@ export async function updateAppointmentByFacility(appointmentId, patientId, upda
                     doctor: updatedAppointmentData.doctor || apt.doctor,
                     status: updatedAppointmentData.status || apt.status,
                     notes: updatedAppointmentData.notes || apt.notes,
+                    // Update urgency if it was re-evaluated
+                    urgency: shouldReevaluateUrgency ? {
+                        level: urgencyLevel,
+                        description: urgencyDescription,
+                        evaluatedAt: new Date().toISOString(),
+                        evaluatedBy: 'system',
+                        reEvaluated: true
+                    } : apt.urgency,
                     // Add metadata about the update
                     updatedAt: new Date().toISOString(),
                     updatedBy: 'facility',
@@ -1034,7 +1106,9 @@ export async function updateAppointmentByFacility(appointmentId, patientId, upda
                                 date: apt.date !== updatedAppointmentData.date ? { from: apt.date, to: updatedAppointmentData.date } : null,
                                 time: apt.time !== updatedAppointmentData.time ? { from: apt.time, to: updatedAppointmentData.time } : null,
                                 doctor: apt.doctor !== updatedAppointmentData.doctor ? { from: apt.doctor, to: updatedAppointmentData.doctor } : null,
-                                status: apt.status !== updatedAppointmentData.status ? { from: apt.status, to: updatedAppointmentData.status } : null
+                                status: apt.status !== updatedAppointmentData.status ? { from: apt.status, to: updatedAppointmentData.status } : null,
+                                notes: apt.notes !== updatedAppointmentData.notes ? { from: apt.notes, to: updatedAppointmentData.notes } : null,
+                                type: apt.type !== updatedAppointmentData.type ? { from: apt.type, to: updatedAppointmentData.type } : null
                             }
                         }
                     ]
@@ -1137,7 +1211,64 @@ export async function createAppointmentForPatient(patientUid, appointmentData, f
             await initializePatientActivity(patientUid);
         }
         
-        // Create the appointment object
+        // Evaluate urgency level for the appointment
+        let urgencyLevel = 'GREEN';
+        let urgencyDescription = 'ROUTINE';
+        
+        try {
+            // Import and use the triage service to evaluate urgency
+            const { evaluateAppointmentUrgency } = await import('./triage.service.ts');
+            const urgencyResult = await evaluateAppointmentUrgency({
+                id: `temp_${Date.now()}`,
+                type: appointmentData.type || 'consultation',
+                notes: appointmentData.notes || '',
+                status: appointmentData.status || 'scheduled',
+                date: appointmentData.date || '',
+                time: appointmentData.time || ''
+            });
+            
+            urgencyLevel = urgencyResult.level;
+            urgencyDescription = urgencyResult.urgency;
+            console.log('🚨 Urgency evaluation result:', urgencyResult);
+        } catch (urgencyError) {
+            console.log('⚠️ Urgency evaluation failed, using fallback:', urgencyError.message);
+            // Use fallback urgency evaluation based on keywords
+            const text = `${appointmentData.notes || ''} ${appointmentData.type || ''}`.toLowerCase();
+            
+            // Critical/Red indicators
+            const redKeywords = [
+                'chest pain', 'heart attack', 'stroke', 'severe bleeding', 'unconscious',
+                'difficulty breathing', 'severe trauma', 'overdose', 'suicide', 'seizure',
+                'cardiac arrest', 'respiratory failure', 'anaphylaxis', 'severe burns'
+            ];
+            
+            // Urgent/Orange indicators
+            const orangeKeywords = [
+                'high fever', 'severe headache', 'broken bone', 'deep cut', 'infection',
+                'dehydration', 'severe pain', 'allergic reaction', 'meningitis symptoms',
+                'appendicitis', 'gallbladder', 'kidney stone', 'pneumonia symptoms'
+            ];
+            
+            // Check for red level
+            if (redKeywords.some(keyword => text.includes(keyword))) {
+                urgencyLevel = 'RED';
+                urgencyDescription = 'CRITICAL';
+            }
+            // Check for orange level
+            else if (orangeKeywords.some(keyword => text.includes(keyword))) {
+                urgencyLevel = 'ORANGE';
+                urgencyDescription = 'VERY URGENT';
+            }
+            // Default to green
+            else {
+                urgencyLevel = 'GREEN';
+                urgencyDescription = 'ROUTINE';
+            }
+            
+            console.log('🚨 Fallback urgency evaluation:', { level: urgencyLevel, urgency: urgencyDescription });
+        }
+        
+        // Create the appointment object with urgency information
         const appointment = {
             id: `appointment_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
             patientId: patientUid,
@@ -1152,10 +1283,17 @@ export async function createAppointmentForPatient(patientUid, appointmentData, f
             facilityId: facilityId,
             facilityName: facilityName,
             createdAt: new Date().toISOString(),
-            createdBy: 'facility' // Mark that this was created by the facility
+            createdBy: 'facility', // Mark that this was created by the facility
+            // Add urgency information
+            urgency: {
+                level: urgencyLevel,
+                description: urgencyDescription,
+                evaluatedAt: new Date().toISOString(),
+                evaluatedBy: 'system'
+            }
         };
         
-        console.log('📅 Created appointment object:', appointment);
+        console.log('📅 Created appointment object with urgency:', appointment);
         
         // Add the appointment to the patient's document
         const patientUpdates = {
@@ -1169,6 +1307,7 @@ export async function createAppointmentForPatient(patientUid, appointmentData, f
         
         console.log('✅ Appointment created successfully for patient:', patientUid);
         console.log('✅ Patient document updated with new appointment');
+        console.log('🚨 Urgency level stored:', urgencyLevel);
         
         // Verify the update by reading the document again
         const updatedDocSnap = await getDoc(patientDocRef);

@@ -35,9 +35,9 @@ const NotificationSystem: React.FC<NotificationSystemProps> = ({ showNotificatio
     notification.className = `notification notification-${type}`
     notification.innerHTML = `
       <div class="notification-content">
-        <i class="fas fa-${getNotificationIcon(type)}"></i>
+        <i class="fas fa-${getNotificationIcon(type)}" aria-hidden="true"></i>
         <span>${message}</span>
-        <button class="notification-close">&times;</button>
+        <button class="notification-close" aria-label="Close notification">&times;</button>
       </div>
     `
     
@@ -85,6 +85,7 @@ const NotificationSystem: React.FC<NotificationSystemProps> = ({ showNotificatio
 }
 
 export default React.memo(NotificationSystem)
+
 
 
 

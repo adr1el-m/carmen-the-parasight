@@ -91,16 +91,18 @@ const AppointmentCard: React.FC<AppointmentCardProps> = ({
                 className="btn btn-outline btn-sm"
                 onClick={() => onEdit(appointment)}
                 title="Edit appointment"
+                aria-label="Edit this appointment"
               >
-                <i className="fas fa-edit"></i>
+                <i className="fas fa-edit" aria-hidden="true"></i>
                 Edit
               </button>
               <button 
                 className="btn btn-danger btn-sm"
                 onClick={() => onDelete(appointment.id)}
                 title="Delete appointment"
+                aria-label="Delete this appointment"
               >
-                <i className="fas fa-trash"></i>
+                <i className="fas fa-trash" aria-hidden="true"></i>
                 Delete
               </button>
             </>
@@ -111,10 +113,11 @@ const AppointmentCard: React.FC<AppointmentCardProps> = ({
               className="btn btn-outline btn-sm"
               onClick={() => onEdit(appointment)}
               title="View appointment details"
+              aria-label="View appointment details"
             >
-              <i className="fas fa-eye"></i>
+              <i className="fas fa-eye" aria-hidden="true"></i>
               View
-            </button>
+              </button>
           )}
         </div>
       </div>

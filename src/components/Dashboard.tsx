@@ -159,6 +159,14 @@ const Dashboard: React.FC = React.memo(() => {
   const mainContentRef = useRef<HTMLDivElement>(null)
   const statsRef = useRef<HTMLDivElement>(null)
 
+  // Refs for focus management
+  const newAppointmentModalRef = useRef<HTMLDivElement>(null)
+  const editAppointmentModalRef = useRef<HTMLDivElement>(null)
+  const editProfileModalRef = useRef<HTMLDivElement>(null)
+  const documentModalRef = useRef<HTMLDivElement>(null)
+  const firstTabRef = useRef<HTMLButtonElement>(null)
+  const lastTabRef = useRef<HTMLButtonElement>(null)
+
 
 
 
@@ -495,6 +503,66 @@ const Dashboard: React.FC = React.memo(() => {
     setShowDocumentModal(false)
     setViewingDocument(null)
   }, [])
+
+  // Keyboard navigation handlers
+  const handleTabKeyDown = useCallback((e: React.KeyboardEvent, isFirstTab: boolean, isLastTab: boolean) => {
+    if (e.key === 'Tab') {
+      if (e.shiftKey && isFirstTab) {
+        // Shift+Tab from first tab should go to previous element
+        e.preventDefault()
+        const prevElement = e.currentTarget.previousElementSibling as HTMLElement
+        prevElement?.focus()
+      } else if (!e.shiftKey && isLastTab) {
+        // Tab from last tab should go to next element
+        e.preventDefault()
+        const nextElement = e.currentTarget.nextElementSibling as HTMLElement
+        nextElement?.focus()
+      }
+    }
+  }, [])
+
+  const handleModalKeyDown = useCallback((e: React.KeyboardEvent, modalRef: React.RefObject<HTMLDivElement>) => {
+    if (e.key === 'Escape') {
+      // Close modal on Escape key
+      if (showNewAppointmentModal) {
+        closeNewAppointmentModal()
+      } else if (showEditAppointmentModal) {
+        closeEditAppointmentModal()
+      } else if (showEditProfileModal) {
+        closeEditProfileModal()
+      } else if (showDocumentModal) {
+        closeDocumentModal()
+      }
+    } else if (e.key === 'Tab') {
+      // Trap focus within modal
+      const modal = modalRef.current
+      if (!modal) return
+
+      const focusableElements = modal.querySelectorAll(
+        'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
+      )
+      const firstElement = focusableElements[0] as HTMLElement
+      const lastElement = focusableElements[focusableElements.length - 1] as HTMLElement
+
+      if (e.shiftKey && document.activeElement === firstElement) {
+        e.preventDefault()
+        lastElement.focus()
+      } else if (!e.shiftKey && document.activeElement === lastElement) {
+        e.preventDefault()
+        firstElement.focus()
+      }
+    }
+  }, [showNewAppointmentModal, showEditAppointmentModal, showEditProfileModal, showDocumentModal])
+
+  const handleSidebarKeyDown = useCallback((e: React.KeyboardEvent) => {
+    if (e.key === 'Escape' && isSidebarOpen) {
+      closeSidebar()
+    } else if (e.key === 'Tab' && !e.shiftKey) {
+      // Tab from sidebar should go to main content
+      e.preventDefault()
+      mainContentRef.current?.focus()
+    }
+  }, [isSidebarOpen])
 
   const handleOpenDocument = useCallback((document: any) => {
     try {
@@ -1335,58 +1403,69 @@ const Dashboard: React.FC = React.memo(() => {
   return (
     <div className="dashboard-layout" role="application" aria-label="Healthcare Management Dashboard">
       {/* Sidebar */}
-      <aside className={`sidebar ${isSidebarOpen ? 'active' : ''}`} ref={sidebarRef} role="navigation" aria-label="Main navigation">
+      <aside 
+        className={`sidebar ${isSidebarOpen ? 'active' : ''}`} 
+        ref={sidebarRef} 
+        role="navigation" 
+        aria-label="Main navigation"
+        onKeyDown={handleSidebarKeyDown}
+        tabIndex={-1}
+      >
         <div className="sidebar-header">
-          <div className="logo">
+          <a href="/" className="logo" aria-label="LingapLink - Healthcare Platform">
             <i className="fas fa-heartbeat" aria-hidden="true"></i>
             <span>LingapLink</span>
-          </div>
+          </a>
         </div>
         
-        <nav className="sidebar-nav">
-          <ul className="nav-items">
-            <li className={`nav-item ${activeSection === 'dashboard' ? 'active' : ''}`}>
+        <nav className="sidebar-nav" aria-label="Dashboard navigation">
+          <ul className="nav-items" role="menubar">
+            <li className={`nav-item ${activeSection === 'dashboard' ? 'active' : ''}`} role="none">
               <button 
                 className="nav-link" 
                 onClick={(e) => { e.preventDefault(); handleNavClick('dashboard'); }}
                 aria-current={activeSection === 'dashboard' ? 'page' : undefined}
+                role="menuitem"
               >
                 <i className="fas fa-th-large" aria-hidden="true"></i>
                 <span>Dashboard</span>
               </button>
             </li>
-            <li className={`nav-item ${activeSection === 'my-consults' ? 'active' : ''}`}>
+            <li className={`nav-item ${activeSection === 'my-consults' ? 'active' : ''}`} role="none">
               <button 
                 className="nav-link" 
                 onClick={(e) => { e.preventDefault(); handleNavClick('my-consults'); }}
                 aria-current={activeSection === 'my-consults' ? 'page' : undefined}
+                role="menuitem"
               >
                 <i className="fas fa-notes-medical" aria-hidden="true"></i>
                 <span>Appointments</span>
               </button>
             </li>
-            <li className={`nav-item ${activeSection === 'help' ? 'active' : ''}`}>
+            <li className={`nav-item ${activeSection === 'help' ? 'active' : ''}`} role="none">
               <button 
                 className="nav-link" 
                 onClick={(e) => { e.preventDefault(); handleNavClick('help'); }}
+                role="menuitem"
                 aria-current={activeSection === 'help' ? 'page' : undefined}
               >
                 <i className="fas fa-question-circle" aria-hidden="true"></i>
                 <span>Help</span>
               </button>
             </li>
-            <li className={`nav-item ${activeSection === 'profile' ? 'active' : ''}`}>
+            <li className={`nav-item ${activeSection === 'profile' ? 'active' : ''}`} role="none">
               <button 
                 className="nav-link" 
                 onClick={(e) => { e.preventDefault(); handleNavClick('profile'); }}
                 aria-current={activeSection === 'profile' ? 'page' : undefined}
+                role="menuitem"
               >
                 <i className="fas fa-user-circle" aria-hidden="true"></i>
                 <span>Profile</span>
               </button>
             </li>
-            <li className="nav-item">
-              <button className="nav-link" onClick={handleLogout}>
+            <li className="nav-item" role="none">
+              <button className="nav-link" onClick={handleLogout} aria-label="Sign out of your account" role="menuitem">
                 <i className="fas fa-sign-out-alt" aria-hidden="true"></i>
                 <span>Logout</span>
               </button>
@@ -1399,10 +1478,22 @@ const Dashboard: React.FC = React.memo(() => {
       </aside>
       
       {/* Sidebar Overlay for Mobile */}
-      <div className={`sidebar-overlay ${isSidebarOpen ? 'active' : ''}`} ref={sidebarOverlayRef} onClick={closeSidebar}></div>
+      <div 
+        className={`sidebar-overlay ${isSidebarOpen ? 'active' : ''}`} 
+        ref={sidebarOverlayRef} 
+        onClick={closeSidebar}
+        aria-hidden="true"
+        role="presentation"
+      />
 
       {/* Main Content */}
-      <main className="main-content" ref={mainContentRef}>
+      <main 
+        className="main-content" 
+        ref={mainContentRef}
+        tabIndex={-1}
+        role="main"
+        aria-label="Dashboard main content"
+      >
         {/* Top Bar */}
         <div className="top-bar">
           <div className="top-bar-left">
@@ -1540,12 +1631,12 @@ const Dashboard: React.FC = React.memo(() => {
                       <span>📊 Appointment Migration Status:</span>
                       <span style={{ 
                         fontWeight: 'bold',
-                        color: migrationStats.migrationProgress === 100 ? '#059669' : '#ea580c'
+                        color: migrationStats.migrationProgress === 100 ? '#059669' : '#d97706' /* Darker orange for WCAG AA compliance */
                       }}>
                         {migrationStats.migrationProgress}% Complete
                       </span>
                     </div>
-                    <div style={{ marginTop: '0.5rem', color: '#64748b' }}>
+                    <div style={{ marginTop: '0.5rem', color: '#4a5568' }}> {/* Darker gray for WCAG AA compliance */}
                       {migrationStats.migratedAppointments} of {migrationStats.totalAppointments} appointments migrated
                     </div>
                   </div>
@@ -1593,7 +1684,7 @@ const Dashboard: React.FC = React.memo(() => {
                       <div style={{ 
                         width: '20px', 
                         height: '20px', 
-                        backgroundColor: '#ea580c', 
+                        backgroundColor: '#d97706', /* Darker orange for WCAG AA compliance */
                         borderRadius: '4px',
                         border: '2px solid white',
                         boxShadow: '0 2px 4px rgba(0,0,0,0.2)'
@@ -1636,10 +1727,10 @@ const Dashboard: React.FC = React.memo(() => {
                       const urgency = urgencyData[appointment.id] || { level: 'GREEN', urgency: 'ROUTINE' }
                       const urgencyStyles = {
                         backgroundColor: urgency.level === 'RED' ? '#dc2626' : 
-                                       urgency.level === 'ORANGE' ? '#ea580c' : '#059669',
+                                       urgency.level === 'ORANGE' ? '#d97706' : '#059669', /* Darker orange for WCAG AA compliance */
                         color: 'white',
                         borderColor: urgency.level === 'RED' ? '#dc2626' : 
-                                   urgency.level === 'ORANGE' ? '#ea580c' : '#059669'
+                                   urgency.level === 'ORANGE' ? '#d97706' : '#059669' /* Darker orange for WCAG AA compliance */
                       }
                       
                       return (
@@ -1687,7 +1778,7 @@ const Dashboard: React.FC = React.memo(() => {
               <div className="section-header-flex">
                 <div className="section-title">
                   <h1 className="section-main-title">Appointments</h1>
-                  <p className="facility-info" style={{ fontSize: '14px', color: '#666', marginTop: '4px' }}>
+                  <p className="facility-info" style={{ fontSize: '14px', color: '#4a5568', marginTop: '4px' }}> {/* Darker gray for WCAG AA compliance */}
                     <i className="fas fa-calendar-alt"></i> {facilityData ? 'Healthcare Facility' : 'Patient Portal'}
                   </p>
                 </div>
@@ -1702,7 +1793,7 @@ const Dashboard: React.FC = React.memo(() => {
                     {isLoadingAppointments ? ' Refreshing...' : ' Refresh Appointments'}
                   </button>
 
-                  <button className="btn btn-primary" onClick={openNewAppointmentModal}>
+                  <button className="btn btn-primary" onClick={openNewAppointmentModal} aria-label="Create a new appointment">
                     <i className="fas fa-plus"></i> New Appointment
                   </button>
                 </div>
@@ -1748,7 +1839,7 @@ const Dashboard: React.FC = React.memo(() => {
                     <div style={{ 
                       width: '20px', 
                       height: '20px', 
-                      backgroundColor: '#ea580c', 
+                      backgroundColor: '#d97706', /* Darker orange for WCAG AA compliance */
                       borderRadius: '4px',
                       border: '2px solid white',
                       boxShadow: '0 2px 4px rgba(0,0,0,0.2)'
@@ -1769,22 +1860,36 @@ const Dashboard: React.FC = React.memo(() => {
                 </div>
               </div>
               
-              <div className="content-tabs">
+              <div className="content-tabs" role="tablist" aria-label="Appointment consultation tabs">
                 <button 
+                  ref={firstTabRef}
                   className={`tab-link ${activeConsultsTab === 'upcoming' ? 'active' : ''}`}
                   onClick={() => handleConsultsTabClick('upcoming')}
+                  onKeyDown={(e) => handleTabKeyDown(e, true, false)}
+                  role="tab"
+                  aria-selected={activeConsultsTab === 'upcoming'}
+                  aria-label="View upcoming appointments"
                 >
                   Upcoming
                 </button>
                 <button 
                   className={`tab-link ${activeConsultsTab === 'past' ? 'active' : ''}`}
                   onClick={() => handleConsultsTabClick('past')}
+                  onKeyDown={(e) => handleTabKeyDown(e, false, false)}
+                  role="tab"
+                  aria-selected={activeConsultsTab === 'past'}
+                  aria-label="View past appointments"
                 >
                   Past
                 </button>
                 <button 
+                  ref={lastTabRef}
                   className={`tab-link ${activeConsultsTab === 'cancelled' ? 'active' : ''}`}
                   onClick={() => handleConsultsTabClick('cancelled')}
+                  onKeyDown={(e) => handleTabKeyDown(e, false, true)}
+                  role="tab"
+                  aria-selected={activeConsultsTab === 'cancelled'}
+                  aria-label="View cancelled appointments"
                 >
                   Cancelled
                 </button>
@@ -1812,15 +1917,15 @@ const Dashboard: React.FC = React.memo(() => {
                     </p>
                     {activeConsultsTab === 'upcoming' && (
                       <>
-                        <p style={{ fontSize: '14px', color: '#666', marginTop: '8px' }}>
+                        <p style={{ fontSize: '14px', color: '#4a5568', marginTop: '8px' }}> {/* Darker gray for WCAG AA compliance */}
                           <i className="fas fa-info-circle"></i> 
                           {facilityData ? 
                             'Patients can book appointments through the PatientPortal. Use the refresh button above to check for new appointments.' :
                             'You can book appointments through the PatientPortal. Use the refresh button above to check for new appointments.'
                           }
                         </p>
-                        <button className="btn btn-primary" onClick={openNewAppointmentModal}>
-                          <i className="fas fa-plus"></i> Schedule New Appointment
+                        <button className="btn btn-primary" onClick={openNewAppointmentModal} aria-label="Schedule a new appointment">
+                          <i className="fas fa-plus" aria-hidden="true"></i> Schedule New Appointment
                         </button>
                       </>
                     )}
@@ -1886,8 +1991,9 @@ const Dashboard: React.FC = React.memo(() => {
                             className="btn btn-outline btn-sm"
                             onClick={() => openAppointmentModal(appointment)}
                             style={{ marginBottom: '8px' }}
+                            aria-label="View appointment details"
                           >
-                            <i className="fas fa-eye"></i> View Details
+                            <i className="fas fa-eye" aria-hidden="true"></i> View Details
                           </button>
                           <select 
                             value={appointment.status}
@@ -2089,8 +2195,8 @@ const Dashboard: React.FC = React.memo(() => {
                   <p>Manage your facility information and settings</p>
                 </div>
                 <div className="section-controls">
-                  <button className="btn btn-primary" onClick={openEditProfileModal}>
-                    <i className="fas fa-edit"></i> Edit Profile
+                  <button className="btn btn-primary" onClick={openEditProfileModal} aria-label="Edit facility profile">
+                    <i className="fas fa-edit" aria-hidden="true"></i> Edit Profile
                   </button>
                 </div>
               </div>
@@ -2122,7 +2228,7 @@ const Dashboard: React.FC = React.memo(() => {
                       <span style={{ 
                         fontFamily: 'monospace', 
                         fontWeight: 'bold', 
-                        color: '#0040e7',
+                        color: '#0052cc', /* Darker blue for WCAG AA compliance */
                         whiteSpace: 'nowrap',
                         overflow: 'hidden',
                         textOverflow: 'ellipsis',
@@ -2323,45 +2429,65 @@ const Dashboard: React.FC = React.memo(() => {
 
       {/* Appointment Details Modal */}
       {showAppointmentModal && selectedAppointment && (
-        <div className="modal" style={{ display: 'block' }}>
+        <div 
+          className="modal" 
+          style={{ display: 'block' }}
+          onKeyDown={(e) => handleModalKeyDown(e, editAppointmentModalRef)}
+          tabIndex={-1}
+        >
           <div className="modal-content" style={{ maxWidth: '800px', maxHeight: '90vh', overflow: 'hidden' }}>
             <div className="modal-header">
               <h3>Appointment Details</h3>
-              <button className="close-btn" onClick={closeAppointmentModal}>
+              <button className="close-btn" onClick={closeAppointmentModal} aria-label="Close appointment details modal">
                 <i className="fas fa-times"></i>
               </button>
             </div>
             
             <div className="modal-body" style={{ padding: '0', overflow: 'hidden' }}>
               {/* Modal Tabs */}
-              <div className="modal-tabs">
+              <div className="modal-tabs" role="tablist" aria-label="Appointment information tabs">
                 <button 
                   className={`modal-tab ${appointmentModalTab === 'details' ? 'active' : ''}`}
                   onClick={() => setAppointmentModalTab('details')}
+                  role="tab"
+                  aria-selected={appointmentModalTab === 'details'}
+                  aria-label="View appointment details"
                 >
                   <i className="fas fa-calendar-alt"></i> Appointment Details
                 </button>
                 <button 
                   className={`modal-tab ${appointmentModalTab === 'personal' ? 'active' : ''}`}
                   onClick={() => setAppointmentModalTab('personal')}
+                  role="tab"
+                  aria-selected={appointmentModalTab === 'personal'}
+                  aria-label="View personal information"
                 >
                   <i className="fas fa-user"></i> Personal Info
                 </button>
                 <button 
                   className={`modal-tab ${appointmentModalTab === 'conditions' ? 'active' : ''}`}
                   onClick={() => setAppointmentModalTab('conditions')}
+                  role="tab"
+                  aria-selected={appointmentModalTab === 'conditions'}
+                  aria-label="View medical conditions"
                 >
                   <i className="fas fa-heartbeat"></i> Medical Conditions
                 </button>
                 <button 
                   className={`modal-tab ${appointmentModalTab === 'history' ? 'active' : ''}`}
                   onClick={() => setAppointmentModalTab('history')}
+                  role="tab"
+                  aria-selected={appointmentModalTab === 'history'}
+                  aria-label="View consultation history"
                 >
                   <i className="fas fa-history"></i> Consultation History
                 </button>
                 <button 
                   className={`modal-tab ${appointmentModalTab === 'documents' ? 'active' : ''}`}
                   onClick={() => setAppointmentModalTab('documents')}
+                  role="tab"
+                  aria-selected={appointmentModalTab === 'documents'}
+                  aria-label="View medical documents"
                 >
                   <i className="fas fa-file-medical"></i> Documents
                 </button>
@@ -2666,12 +2792,13 @@ const Dashboard: React.FC = React.memo(() => {
             </div>
 
             <div className="modal-footer">
-              <button className="btn btn-secondary" onClick={closeAppointmentModal}>
+              <button className="btn btn-secondary" onClick={closeAppointmentModal} aria-label="Close appointment details">
                 Close
               </button>
               <button 
                 className="btn btn-primary" 
                 onClick={() => openEditAppointmentModal(selectedAppointment)}
+                aria-label="Edit this appointment"
               >
                 <i className="fas fa-edit"></i> Edit Appointment
               </button>
@@ -2682,11 +2809,17 @@ const Dashboard: React.FC = React.memo(() => {
 
       {/* New Appointment Modal */}
       {showNewAppointmentModal && (
-        <div className="modal" style={{ display: 'block' }}>
+        <div 
+          ref={newAppointmentModalRef}
+          className="modal" 
+          style={{ display: 'block' }}
+          onKeyDown={(e) => handleModalKeyDown(e, newAppointmentModalRef)}
+          tabIndex={-1}
+        >
           <div className="modal-content" style={{ maxWidth: '600px' }}>
             <div className="modal-header">
               <h3>Create New Appointment</h3>
-              <button className="close-btn" onClick={closeNewAppointmentModal}>
+              <button className="close-btn" onClick={closeNewAppointmentModal} aria-label="Close new appointment modal">
                 <i className="fas fa-times"></i>
               </button>
             </div>
@@ -2819,7 +2952,13 @@ const Dashboard: React.FC = React.memo(() => {
 
       {/* Edit Appointment Modal */}
       {showEditAppointmentModal && selectedAppointment && (
-        <div className="modal" style={{ display: 'block' }}>
+        <div 
+          ref={editAppointmentModalRef}
+          className="modal" 
+          style={{ display: 'block' }}
+          onKeyDown={(e) => handleModalKeyDown(e, editAppointmentModalRef)}
+          tabIndex={-1}
+        >
           <div className="modal-content" style={{ maxWidth: '600px' }}>
             <div className="modal-header">
               <h3>Edit Appointment</h3>
@@ -2940,7 +3079,13 @@ const Dashboard: React.FC = React.memo(() => {
 
       {/* Edit Profile Modal */}
       {showEditProfileModal && (
-        <div className="modal" style={{ display: 'block' }}>
+        <div 
+          ref={editProfileModalRef}
+          className="modal" 
+          style={{ display: 'block' }}
+          onKeyDown={(e) => handleModalKeyDown(e, editProfileModalRef)}
+          tabIndex={-1}
+        >
           <div className="modal-content" style={{ maxWidth: '800px', maxHeight: '90vh', overflow: 'auto' }}>
             <div className="modal-header">
               <h3>Edit Facility Profile</h3>
@@ -3421,7 +3566,13 @@ const Dashboard: React.FC = React.memo(() => {
 
       {/* Document Viewer Modal */}
       {showDocumentModal && viewingDocument && (
-        <div className="modal" style={{ display: 'block' }}>
+        <div 
+          ref={documentModalRef}
+          className="modal" 
+          style={{ display: 'block' }}
+          onKeyDown={(e) => handleModalKeyDown(e, documentModalRef)}
+          tabIndex={-1}
+        >
           <div className="modal-content" style={{ maxWidth: '800px', maxHeight: '90vh' }}>
             <div className="modal-header">
               <h3>View Document: {viewingDocument.name || viewingDocument.originalName || 'Document'}</h3>

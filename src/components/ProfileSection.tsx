@@ -273,8 +273,8 @@ const ProfileSection: React.FC<ProfileSectionProps> = ({
               <div className="history-header">
                 <h2>Consultation History</h2>
                 <div className="history-controls">
-                  <button className="btn btn-primary" onClick={() => onOpenModal('addConsultationHistory')}>
-                    <i className="fas fa-plus"></i> Add Consultation
+                  <button className="btn btn-primary" onClick={() => onOpenModal('addConsultationHistory')} aria-label="Add new consultation record">
+                    <i className="fas fa-plus" aria-hidden="true"></i> Add Consultation
                   </button>
                 </div>
               </div>
@@ -334,8 +334,9 @@ const ProfileSection: React.FC<ProfileSectionProps> = ({
               <button 
                 className="btn btn-primary" 
                 onClick={() => onOpenModal('uploadDocument')}
+                aria-label="Upload medical document"
               >
-                <i className="fas fa-upload"></i>
+                <i className="fas fa-upload" aria-hidden="true"></i>
                 Upload Document
               </button>
             </div>

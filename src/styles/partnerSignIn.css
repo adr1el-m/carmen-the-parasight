@@ -1,22 +1,25 @@
 /* Partner SignIn Styles - Improved Design */
 
+/* Import standardized breakpoints */
+@import url('./breakpoints.css');
+
 /* CSS Variables */
 :root {
-  --primary-blue: #0040e7;
-  --primary-dark: #002c9a;
-  --primary-light: #e6eaf8;
-  --success-color: #10b981;
-  --warning-color: #f59e0b;
-  --error-color: #ef4444;
-  --text-primary: #1e293b;
-  --text-secondary: #475569;
+  --primary-blue: #0052cc; /* Darker blue for WCAG AA compliance */
+  --primary-dark: #003d99; /* Darker for better contrast */
+  --primary-light: #e6f0ff; /* Updated light blue */
+  --success-color: #059669; /* Darker green for WCAG AA compliance */
+  --warning-color: #d97706; /* Darker orange for WCAG AA compliance */
+  --error-color: #dc2626; /* Darker red for WCAG AA compliance */
+  --text-primary: #1a202c; /* Darker text for WCAG AA compliance */
+  --text-secondary: #2d3748; /* Darker secondary text for better contrast */
   --text-white: #ffffff;
-  --text-muted: #94a3b8;
+  --text-muted: #718096; /* Darker muted text for WCAG AA compliance */
   --bg-primary: #ffffff;
-  --bg-secondary: #f8fafc;
-  --bg-tertiary: #f1f5f9;
+  --bg-secondary: #f7fafc; /* Slightly darker for better contrast */
+  --bg-tertiary: #edf2f7; /* Darker tertiary background for better contrast */
   --border-color: #e2e8f0;
-  --border-light: #f1f5f9;
+  --border-light: #edf2f7; /* Darker light border for better contrast */
   --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
   --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 
                0 2px 4px -2px rgba(0, 0, 0, 0.1);
@@ -84,7 +87,7 @@
 
 .brand-logo i {
   font-size: 2.5rem;
-  color: #ff6b6b;
+  color: #dc2626; /* Darker red for WCAG AA compliance */
 }
 
 .brand-content {
@@ -125,7 +128,7 @@
 
 .feature-item i {
   width: 20px;
-  color: #10b981;
+  color: #059669; /* Darker green for WCAG AA compliance */
   font-size: 1.1rem;
 }
 
@@ -254,7 +257,7 @@
   background: none;
   border: none;
   cursor: pointer;
-  color: #666;
+  color: #4a5568; /* Darker gray for WCAG AA compliance */
   font-size: 1rem;
   display: flex;
   align-items: center;

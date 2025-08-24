@@ -84,33 +84,49 @@
           }
         }, true);
         
-        // Block network requests to Firestore and Google APIs
+        // Block network requests to Firestore and Google APIs (but allow Google Auth)
         const originalFetch = window.fetch;
         window.fetch = function(url, options) {
-          if (typeof url === 'string' && (
-            url.includes('firestore.googleapis.com') ||
-            url.includes('googleapis.com') ||
-            url.includes('webchannel') ||
-            url.includes('gsessionid')
-          )) {
-            console.log('🚫 Blocked Firestore/Google API request:', url);
-            return Promise.resolve(new Response('Blocked', { status: 403 }));
+          if (typeof url === 'string') {
+            // Allow Google authentication endpoints
+            if (url.includes('identitytoolkit.googleapis.com') || 
+                url.includes('securetoken.googleapis.com') ||
+                url.includes('accounts.google.com')) {
+              return originalFetch.apply(this, arguments);
+            }
+            
+            // Block other unwanted requests
+            if (url.includes('firestore.googleapis.com') ||
+                url.includes('googleapis.com') ||
+                url.includes('webchannel') ||
+                url.includes('gsessionid')) {
+              console.log('🚫 Blocked Firestore/Google API request:', url);
+              return Promise.resolve(new Response('Blocked', { status: 403 }));
+            }
           }
           return originalFetch.apply(this, arguments);
         };
         
-        // Block XMLHttpRequest to Firestore
+        // Block XMLHttpRequest to Firestore (but allow Google Auth)
         const originalXHROpen = XMLHttpRequest.prototype.open;
         XMLHttpRequest.prototype.open = function(method, url, ...args) {
-          if (typeof url === 'string' && (
-            url.includes('firestore.googleapis.com') ||
-            url.includes('googleapis.com') ||
-            url.includes('webchannel') ||
-            url.includes('gsessionid')
-          )) {
-            console.log('🚫 Blocked Firestore/Google API XHR request:', url);
-            this.abort();
-            return;
+          if (typeof url === 'string') {
+            // Allow Google authentication endpoints
+            if (url.includes('identitytoolkit.googleapis.com') || 
+                url.includes('securetoken.googleapis.com') ||
+                url.includes('accounts.google.com')) {
+              return originalXHROpen.apply(this, [method, url, ...args]);
+            }
+            
+            // Block other unwanted requests
+            if (url.includes('firestore.googleapis.com') ||
+                url.includes('googleapis.com') ||
+                url.includes('webchannel') ||
+                url.includes('gsessionid')) {
+              console.log('🚫 Blocked Firestore/Google API XHR request:', url);
+              this.abort();
+              return;
+            }
           }
           return originalXHROpen.apply(this, [method, url, ...args]);
         };

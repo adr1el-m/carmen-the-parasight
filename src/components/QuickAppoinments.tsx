@@ -207,10 +207,10 @@ const QuickAppoinments: React.FC = () => {
           </div>
 
           <div className="form-actions">
-            <button type="button" onClick={handleBackToHome} className="btn-secondary">
+            <button type="button" onClick={handleBackToHome} className="btn-secondary" aria-label="Cancel and return to home page">
               Cancel
             </button>
-            <button type="submit" className="btn-primary">
+            <button type="submit" className="btn-primary" aria-label="Submit quick appointment request">
               Submit Quick Appointment Request
             </button>
           </div>

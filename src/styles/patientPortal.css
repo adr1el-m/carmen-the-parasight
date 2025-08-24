@@ -1,5 +1,8 @@
 /* Patient Portal CSS - Complete Styles */
 
+/* Import standardized breakpoints */
+@import url('./breakpoints.css');
+
 /* Additional styles for new functionality */
 .no-appointments {
   text-align: center;
@@ -3393,7 +3396,7 @@ input:checked + .slider:before {
   color: #374151;
 }
 
-/* Responsive Styles */
+/* Responsive Styles - Small Mobile */
 @media (max-width: 640px) {
   .modal-content {
     width: 95%;

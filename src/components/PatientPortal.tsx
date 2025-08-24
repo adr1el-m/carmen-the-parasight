@@ -325,9 +325,18 @@ const PatientPortal: React.FC = () => {
     'Other'
   ]
   
+  // Refs for cleanup
+  const headerScrollRef = useRef<(() => void) | null>(null)
+  const observerRef = useRef<IntersectionObserver | null>(null)
+  const notificationTimeoutRef = useRef<number | null>(null)
+
+  // Refs for focus management
+  const mainContentRef = useRef<HTMLElement>(null)
   const sidebarRef = useRef<HTMLElement>(null)
   const sidebarOverlayRef = useRef<HTMLDivElement>(null)
-  const mainContentRef = useRef<HTMLDivElement>(null)
+  const searchInputRef = useRef<HTMLInputElement>(null)
+  const firstTabRef = useRef<HTMLButtonElement>(null)
+  const lastTabRef = useRef<HTMLButtonElement>(null)
 
   // Memoized data for better performance
   const appointments: Appointment[] = useMemo(() => [
@@ -593,6 +602,45 @@ const PatientPortal: React.FC = () => {
       console.error('Logout error:', error)
     }
   }, [navigate])
+
+  // Keyboard navigation handlers
+  const handleTabKeyDown = useCallback((e: React.KeyboardEvent, isFirstTab: boolean, isLastTab: boolean) => {
+    if (e.key === 'Tab') {
+      if (e.shiftKey && isFirstTab) {
+        // Shift+Tab from first tab should go to previous element
+        e.preventDefault()
+        const prevElement = e.currentTarget.previousElementSibling as HTMLElement
+        prevElement?.focus()
+      } else if (!e.shiftKey && isLastTab) {
+        // Tab from last tab should go to next element
+        e.preventDefault()
+        const nextElement = e.currentTarget.nextElementSibling as HTMLElement
+        nextElement?.focus()
+      }
+    }
+  }, [])
+
+  const handleSidebarKeyDown = useCallback((e: React.KeyboardEvent) => {
+    if (e.key === 'Escape' && isSidebarOpen) {
+      closeSidebar()
+    } else if (e.key === 'Tab' && !e.shiftKey) {
+      // Tab from sidebar should go to main content
+      e.preventDefault()
+      mainContentRef.current?.focus()
+    }
+  }, [isSidebarOpen])
+
+  const handleSearchKeyDown = useCallback((e: React.KeyboardEvent) => {
+    if (e.key === 'Enter') {
+      // Enter in search should trigger search
+      e.preventDefault()
+      // Add search functionality here
+    } else if (e.key === 'Tab' && !e.shiftKey) {
+      // Tab from search should go to first tab
+      e.preventDefault()
+      firstTabRef.current?.focus()
+    }
+  }, [])
 
   const toggleSidebar = useCallback(() => {
     console.log('🔘 toggleSidebar called')
@@ -1971,10 +2019,22 @@ const PatientPortal: React.FC = () => {
 
       
       {/* Sidebar Overlay for Mobile */}
-      <div className={`sidebar-overlay ${isSidebarOpen ? 'active' : ''}`} ref={sidebarOverlayRef} onClick={closeSidebar}></div>
+      <div 
+        className={`sidebar-overlay ${isSidebarOpen ? 'active' : ''}`} 
+        ref={sidebarOverlayRef} 
+        onClick={closeSidebar}
+        aria-hidden="true"
+        role="presentation"
+      />
 
       {/* Main Content */}
-      <main className="main-content" ref={mainContentRef}>
+      <main 
+        className="main-content" 
+        ref={mainContentRef}
+        tabIndex={-1}
+        role="main"
+        aria-label="Patient portal main content"
+      >
         {/* Top Bar */}
         <Suspense fallback={<div className="loading-spinner">Loading top bar...</div>}>
           <TopBar
@@ -2243,7 +2303,7 @@ const PatientPortal: React.FC = () => {
                     <p>There are currently no healthcare facilities registered in the system.</p>
                     <p>This is normal if no facilities have signed up yet. Facilities will appear here once they register.</p>
                     <div style={{ marginTop: '1rem', padding: '1rem', backgroundColor: '#f8f9fa', borderRadius: '8px', border: '1px solid #e9ecef' }}>
-                      <p style={{ margin: '0', fontSize: '0.9rem', color: '#6c757d' }}>
+                      <p style={{ margin: '0', fontSize: '0.9rem', color: '#4a5568' }}> {/* Darker gray for WCAG AA compliance */}
                         <i className="fas fa-info-circle" style={{ marginRight: '0.5rem' }}></i>
                         <strong>For Healthcare Facilities:</strong> Sign up through the Partner Registration to appear in this list.
                       </p>
@@ -2263,8 +2323,14 @@ const PatientPortal: React.FC = () => {
               
               <div className="help-search">
                 <div className="search-box">
-                  <i className="fas fa-search"></i>
-                  <input type="text" placeholder="Search for help articles..." />
+                  <i className="fas fa-search" aria-hidden="true"></i>
+                  <input 
+                    ref={searchInputRef}
+                    type="text" 
+                    placeholder="Search for help articles..." 
+                    aria-label="Search help articles"
+                    onKeyDown={handleSearchKeyDown}
+                  />
                 </div>
               </div>
               
@@ -2303,9 +2369,9 @@ const PatientPortal: React.FC = () => {
                 <h3>Frequently Asked Questions</h3>
                 <div className="faq-list">
                   <div className="faq-item">
-                    <button className="faq-question">
+                    <button className="faq-question" aria-label="How do I book an appointment? Click to expand answer">
                       <span>How do I book an appointment?</span>
-                      <i className="fas fa-chevron-down"></i>
+                      <i className="fas fa-chevron-down" aria-hidden="true"></i>
                     </button>
                     <div className="faq-answer">
                       <p>You can book an appointment by clicking the "Book Appointment" button in the Quick Actions section on the Dashboard. Choose your preferred doctor, date, and time, then submit your request.</p>
@@ -2313,9 +2379,9 @@ const PatientPortal: React.FC = () => {
                   </div>
                   
                   <div className="faq-item">
-                    <button className="faq-question">
+                    <button className="faq-question" aria-label="How do I join a virtual consultation? Click to expand answer">
                       <span>How do I join a virtual consultation?</span>
-                      <i className="fas fa-chevron-down"></i>
+                      <i className="fas fa-chevron-down" aria-hidden="true"></i>
                     </button>
                     <div className="faq-answer">
                       <p>When it's time for your virtual consultation, go to your Dashboard and click the "Join Call" button next to your appointment.</p>
@@ -2323,9 +2389,9 @@ const PatientPortal: React.FC = () => {
                   </div>
                   
                   <div className="faq-item">
-                    <button className="faq-question">
+                    <button className="faq-question" aria-label="Can I reschedule or cancel my appointment? Click to expand answer">
                       <span>Can I reschedule or cancel my appointment?</span>
-                      <i className="fas fa-chevron-down"></i>
+                      <i className="fas fa-chevron-down" aria-hidden="true"></i>
                     </button>
                     <div className="faq-answer">
                       <p>Yes, you can reschedule or cancel appointments up to 24 hours before the scheduled time. Go to your appointments and click the "Reschedule" button.</p>
@@ -2348,7 +2414,7 @@ const PatientPortal: React.FC = () => {
           <div className="modal-content" style={{ position: 'relative', backgroundColor: 'white', margin: '5% auto', padding: '20px', border: '1px solid #888', width: '90%', maxWidth: '600px', borderRadius: '8px', maxHeight: '80vh', overflowY: 'auto' }}>
             <div className="modal-header">
               <h3>Edit Profile Information</h3>
-              <button className="close-btn" onClick={closeModal}>
+              <button className="close-btn" onClick={closeModal} aria-label="Close edit profile modal">
                 <i className="fas fa-times"></i>
               </button>
             </div>
@@ -2446,7 +2512,7 @@ const PatientPortal: React.FC = () => {
               </form>
             </div>
             <div className="modal-footer">
-              <button className="btn-secondary" onClick={closeModal}>Cancel</button>
+              <button className="btn-secondary" onClick={closeModal} aria-label="Cancel editing profile">Cancel</button>
               <button 
                 className="btn-primary" 
                 type="submit"
@@ -2466,7 +2532,7 @@ const PatientPortal: React.FC = () => {
           <div className="modal-content" style={{ maxWidth: '900px', width: '90vw' }}>
             <div className="modal-header">
               <h3>Book Appointment</h3>
-              <button className="close-btn" onClick={closeModal}>
+              <button className="close-btn" onClick={closeModal} aria-label="Close book appointment modal">
                 <i className="fas fa-times"></i>
               </button>
             </div>
@@ -2662,12 +2728,12 @@ const PatientPortal: React.FC = () => {
                     )}
                   </select>
                   {!isLoadingFacilities && facilities.length === 0 && (
-                    <small style={{ color: '#dc3545', fontSize: '12px' }}>
+                    <small style={{ color: '#dc2626', fontSize: '12px' }}> {/* Darker red for WCAG AA compliance */}
                       No facilities available. Please check back later.
                     </small>
                   )}
                   {isLoadingFacilities && (
-                    <small style={{ color: '#666', fontSize: '12px' }}>
+                    <small style={{ color: '#4a5568', fontSize: '12px' }}> {/* Darker gray for WCAG AA compliance */}
                       <i className="fas fa-spinner fa-spin"></i> Loading healthcare facilities...
                     </small>
                   )}
@@ -2697,33 +2763,33 @@ const PatientPortal: React.FC = () => {
                     onChange={(e) => setAppointmentForm(prev => ({ ...prev, doctor: e.target.value }))}
                   />
                 </div>
-                <div className="form-group">
-                  <label htmlFor="appointmentDate">Date *</label>
-                  <input 
-                    type="date" 
-                    id="appointmentDate" 
-                    required
-                    min={new Date().toISOString().split('T')[0]}
-                    value={appointmentForm.date}
-                    onChange={(e) => setAppointmentForm(prev => ({ ...prev, date: e.target.value }))}
-                  />
-                  <small style={{ color: '#666', fontSize: '12px' }}>
-                    Select a future date
-                  </small>
-                </div>
-                <div className="form-group">
-                  <label htmlFor="appointmentTime">Time *</label>
-                  <input 
-                    type="time" 
-                    id="appointmentTime" 
-                    required
-                    value={appointmentForm.time}
-                    onChange={(e) => setAppointmentForm(prev => ({ ...prev, time: e.target.value }))}
-                  />
-                  <small style={{ color: '#666', fontSize: '12px' }}>
-                    Select appointment time
-                  </small>
-                </div>
+                                  <div className="form-group">
+                    <label htmlFor="appointmentDate">Date *</label>
+                    <input 
+                      type="date" 
+                      id="appointmentDate" 
+                      required
+                      min={new Date().toISOString().split('T')[0]}
+                      value={appointmentForm.date}
+                      onChange={(e) => setAppointmentForm(prev => ({ ...prev, date: e.target.value }))}
+                    />
+                    <small style={{ color: '#4a5568', fontSize: '12px' }}> {/* Darker gray for WCAG AA compliance */}
+                      Select a future date
+                    </small>
+                  </div>
+                                  <div className="form-group">
+                    <label htmlFor="appointmentTime">Time *</label>
+                    <input 
+                      type="time" 
+                      id="appointmentTime" 
+                      required
+                      value={appointmentForm.time}
+                      onChange={(e) => setAppointmentForm(prev => ({ ...prev, time: e.target.value }))}
+                    />
+                    <small style={{ color: '#4a5568', fontSize: '12px' }}> {/* Darker gray for WCAG AA compliance */}
+                      Select appointment time
+                    </small>
+                  </div>
                 <div className="form-group">
                   <label htmlFor="appointmentNotes">Notes</label>
                   <textarea 

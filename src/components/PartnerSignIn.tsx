@@ -59,11 +59,28 @@ const PartnerSignIn: React.FC = React.memo(() => {
       setIsGoogleSignInInProgress(true)
       setErrorMessage('')
       
+      console.log('🔐 Starting Google sign-in process...')
+      console.log('🔐 Auth object available:', !!auth)
+      console.log('🔐 GoogleAuthProvider available:', !!GoogleAuthProvider)
+      
       const provider = new GoogleAuthProvider()
       provider.addScope('email')
       provider.addScope('profile')
       
-      await signInWithPopup(auth, provider)
+      console.log('🔐 Google provider configured:', provider)
+      console.log('🔐 Attempting sign-in with popup...')
+      
+      // Check if popup is blocked
+      const popupTest = window.open('', '_blank', 'width=1,height=1')
+      if (popupTest) {
+        popupTest.close()
+        console.log('✅ Popup is not blocked, proceeding with Google sign-in')
+      } else {
+        console.log('⚠️ Popup might be blocked by browser')
+      }
+      
+      const result = await signInWithPopup(auth, provider)
+      console.log('✅ Google sign-in successful:', result.user.email)
       
       showNotification('Google sign in successful! Welcome back.', 'success')
       
@@ -73,8 +90,29 @@ const PartnerSignIn: React.FC = React.memo(() => {
       }, 1000)
 
     } catch (error: any) {
-      console.error('Google sign in error:', error)
-      setErrorMessage(error.message || 'Google sign in failed. Please try again.')
+      console.error('🔐 Google sign in error:', error)
+      console.error('🔐 Error code:', error.code)
+      console.error('🔐 Error message:', error.message)
+      console.error('🔐 Full error object:', error)
+      
+      // Provide better error messages for common Google sign-in issues
+      let message = 'Google sign in failed. Please try again.'
+      
+      if (error.code === 'auth/network-request-failed') {
+        message = 'Network error. Please check your connection and try again.'
+      } else if (error.code === 'auth/popup-closed-by-user') {
+        message = 'Sign-in popup was closed. Please try again.'
+      } else if (error.code === 'auth/popup-blocked') {
+        message = 'Pop-up blocked by browser. Please allow pop-ups for this site.'
+      } else if (error.code === 'auth/cancelled-popup-request') {
+        message = 'Sign-in was cancelled. Please try again.'
+      } else if (error.code === 'auth/account-exists-with-different-credential') {
+        message = 'An account already exists with this email using a different sign-in method.'
+      } else if (error.message) {
+        message = error.message
+      }
+      
+      setErrorMessage(message)
     } finally {
       setIsGoogleSignInInProgress(false)
     }
@@ -167,10 +205,10 @@ const PartnerSignIn: React.FC = React.memo(() => {
       <div className="signin-form-section">
         <div className="signin-form-container">
           <div className="form-header">
-            <div className="logo" style={{ color: '#0040e7' }}>
-              <i className="fas fa-heartbeat" style={{ color: '#0040e7' }}></i>
-              <span style={{ color: '#0040e7' }}>LingapLink</span>
-            </div>
+                    <div className="logo" style={{ color: '#0052cc' }}>
+          <i className="fas fa-heartbeat" style={{ color: '#0052cc' }}></i>
+          <span style={{ color: '#0052cc' }}>LingapLink</span>
+        </div>
             <h2>Provider Sign In</h2>
             <p>Access your facility dashboard</p>
           </div>

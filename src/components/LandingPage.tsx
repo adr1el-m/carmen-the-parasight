@@ -82,6 +82,15 @@ const LandingPage: React.FC = React.memo(() => {
   const observerRef = useRef<IntersectionObserver | null>(null)
   const notificationTimeoutRef = useRef<number | null>(null)
 
+  // Refs for focus management
+  const searchInputRef = useRef<HTMLInputElement>(null)
+  const locationInputRef = useRef<HTMLInputElement>(null)
+  const searchButtonRef = useRef<HTMLButtonElement>(null)
+  const quickAppointmentRef = useRef<HTMLButtonElement>(null)
+  const mobileMenuToggleRef = useRef<HTMLButtonElement>(null)
+  const loginButtonRef = useRef<HTMLButtonElement>(null)
+  const registerButtonRef = useRef<HTMLButtonElement>(null)
+
   // Enhanced error suppression for Google API and third-party issues
   if (typeof window !== 'undefined') {
     console.log('✅ LandingPage: Enhanced error suppression enabled');
@@ -1159,6 +1168,97 @@ const LandingPage: React.FC = React.memo(() => {
     }
   }, [])
 
+  // Keyboard navigation handlers
+  const handleSearchKeyDown = useCallback((e: React.KeyboardEvent) => {
+    if (e.key === 'Enter' && !searchTerm && !location) {
+      e.preventDefault()
+      showNotification('Please enter a search term or location', 'warning')
+      searchInputRef.current?.focus()
+    } else if (e.key === 'Tab' && e.shiftKey) {
+      // Shift+Tab from search input should go to mobile menu toggle
+      e.preventDefault()
+      mobileMenuToggleRef.current?.focus()
+    }
+  }, [searchTerm, location])
+
+  const handleLocationKeyDown = useCallback((e: React.KeyboardEvent) => {
+    if (e.key === 'Tab' && !e.shiftKey) {
+      // Tab from location input should go to search button
+      e.preventDefault()
+      searchButtonRef.current?.focus()
+    } else if (e.key === 'Enter') {
+      // Enter in location input should trigger search
+      e.preventDefault()
+      handleSearch()
+    }
+  }, [handleSearch])
+
+  const handleSearchButtonKeyDown = useCallback((e: React.KeyboardEvent) => {
+    if (e.key === 'Tab' && !e.shiftKey) {
+      // Tab from search button should go to quick appointment button
+      e.preventDefault()
+      quickAppointmentRef.current?.focus()
+    }
+  }, [])
+
+  const handleQuickAppointmentKeyDown = useCallback((e: React.KeyboardEvent) => {
+    if (e.key === 'Tab' && !e.shiftKey) {
+      // Tab from quick appointment should go to first facility card
+      e.preventDefault()
+      const firstFacilityCard = document.querySelector('.facility-card button') as HTMLButtonElement
+      firstFacilityCard?.focus()
+    }
+  }, [])
+
+  const handleMobileMenuToggleKeyDown = useCallback((e: React.KeyboardEvent) => {
+    if (e.key === 'Tab' && !e.shiftKey) {
+      // Tab from mobile menu toggle should go to search input
+      e.preventDefault()
+      searchInputRef.current?.focus()
+    }
+  }, [])
+
+  const handleLoginButtonKeyDown = useCallback((e: React.KeyboardEvent) => {
+    if (e.key === 'Tab' && !e.shiftKey) {
+      // Tab from login button should go to register button
+      e.preventDefault()
+      registerButtonRef.current?.focus()
+    }
+  }, [])
+
+  const handleRegisterButtonKeyDown = useCallback((e: React.KeyboardEvent) => {
+    if (e.key === 'Tab' && !e.shiftKey) {
+      // Tab from register button should go to search input
+      e.preventDefault()
+      searchInputRef.current?.focus()
+    }
+  }, [])
+
+  // Facility card keyboard navigation
+  const handleFacilityCardKeyDown = useCallback((e: React.KeyboardEvent, index: number) => {
+    if (e.key === 'Tab' && !e.shiftKey) {
+      // Tab to next facility card or to footer
+      e.preventDefault()
+      const nextCard = document.querySelector(`.facility-card:nth-child(${index + 2}) button`) as HTMLButtonElement
+      if (nextCard) {
+        nextCard.focus()
+      } else {
+        // If no more cards, go to footer
+        const footerLink = document.querySelector('.footer-nav button') as HTMLButtonElement
+        footerLink?.focus()
+      }
+    } else if (e.key === 'Tab' && e.shiftKey) {
+      // Shift+Tab to previous facility card or to quick appointment
+      e.preventDefault()
+      if (index > 0) {
+        const prevCard = document.querySelector(`.facility-card:nth-child(${index}) button`) as HTMLButtonElement
+        prevCard?.focus()
+      } else {
+        quickAppointmentRef.current?.focus()
+      }
+    }
+  }, [])
+
   // Enhanced global error handling for Google API and third-party issues
   useEffect(() => {
     const handleGlobalError = (event: ErrorEvent) => {
@@ -1261,17 +1361,22 @@ const LandingPage: React.FC = React.memo(() => {
   return (
     <>
       <YearUpdater />
+      {/* Skip link for keyboard navigation */}
+      <a href="#main-content" className="skip-link">
+        Skip to main content
+      </a>
+      
       {/* Live region for screen reader announcements */}
       <div id="live-region" aria-live="polite" aria-atomic="true" className="sr-only"></div>
       
       {/* Navigation Header */}
       <header className="header" role="banner">
         <div className="header-container">
-          <div className="logo" style={{ color: '#0040e7' }}>
-            <i className="fas fa-heartbeat" aria-hidden="true" style={{ color: '#0040e7' }}></i>
-            <span style={{ color: '#0040e7' }}>LingapLink</span>
+          <a href="/" className="logo" style={{ color: '#0052cc' }} aria-label="LingapLink - Healthcare Platform Philippines">
+            <i className="fas fa-heartbeat" aria-hidden="true" style={{ color: '#0052cc' }}></i>
+            <span style={{ color: '#0052cc' }}>LingapLink</span>
             <span className="logo-badge" style={{ 
-              background: '#0040e7', 
+              background: '#0052cc', 
               color: '#ffffff',
               padding: '0.3rem 0.5rem',
               borderRadius: '6px',
@@ -1279,13 +1384,15 @@ const LandingPage: React.FC = React.memo(() => {
               fontWeight: '700',
               marginLeft: '0.5rem',
               border: '1px solid rgba(255, 255, 255, 0.3)'
-            }}>PH</span>
-          </div>
+            }} aria-label="Philippines">PH</span>
+          </a>
           
           {/* Mobile Menu Toggle */}
           <button 
+            ref={mobileMenuToggleRef}
             className="mobile-menu-toggle"
             onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+            onKeyDown={handleMobileMenuToggleKeyDown}
             aria-label="Toggle mobile navigation menu"
             aria-expanded={isMobileMenuOpen}
           >
@@ -1309,20 +1416,24 @@ const LandingPage: React.FC = React.memo(() => {
               Quick Appointment
             </button>
             <button 
+              ref={loginButtonRef}
               onClick={() => {
                 navigate('/patient-sign-in')
                 setIsMobileMenuOpen(false)
               }}
+              onKeyDown={handleLoginButtonKeyDown}
               className="login-btn" 
               aria-label="Sign in to your patient account"
             >
               Login
             </button>
             <button 
+              ref={registerButtonRef}
               onClick={() => {
                 navigate('/patient-sign-up')
                 setIsMobileMenuOpen(false)
               }}
+              onKeyDown={handleRegisterButtonKeyDown}
               className="register-btn" 
               aria-label="Create a new patient account"
             >
@@ -1337,6 +1448,7 @@ const LandingPage: React.FC = React.memo(() => {
             className="mobile-menu-overlay"
             onClick={() => setIsMobileMenuOpen(false)}
             aria-hidden="true"
+            role="presentation"
           />
         )}
       </header>
@@ -1352,8 +1464,8 @@ const LandingPage: React.FC = React.memo(() => {
               
 
               
-              <div className="online-stats">
-                <div className="doctor-avatars" role="img" aria-label="Healthcare professionals">
+              <div className="online-stats" role="region" aria-label="Healthcare facilities statistics">
+                <div className="doctor-avatars" aria-label="Healthcare professionals">
                   <div className="avatar">
                     <img src={slmcImage} 
                          alt="St. Luke's Medical Center" 
@@ -1388,14 +1500,14 @@ const LandingPage: React.FC = React.memo(() => {
                          }} />
                   </div>
                 </div>
-                <span className="stats-text">
+                <p className="stats-text" aria-live="polite">
                   {isLoadingFacilities 
                     ? 'Loading healthcare facilities...' 
                     : facilities.length > 0 
                       ? `+${facilities.length} healthcare facilities are online`
                       : 'Join our healthcare network'
                   }
-                </span>
+                </p>
               </div>
             </div>
             
@@ -1431,12 +1543,13 @@ const LandingPage: React.FC = React.memo(() => {
         </div>
 
         {/* Search Section */}
-        <section className="search-section" aria-label="Healthcare facility search">
+        <section className="search-section" aria-labelledby="search-heading">
           <div className="search-container">
+            <h2 id="search-heading" className="sr-only">Search for healthcare facilities</h2>
             <form 
               className="search-bar" 
               role="search" 
-              aria-label="Search for healthcare facilities" 
+              aria-label="Healthcare facility search form" 
               onSubmit={(e) => { 
                 e.preventDefault(); 
                 try {
@@ -1451,6 +1564,7 @@ const LandingPage: React.FC = React.memo(() => {
                 <label htmlFor="facility-search" className="sr-only">Search for hospitals and clinics</label>
                 <i className="fas fa-search" aria-hidden="true"></i>
                 <input 
+                  ref={searchInputRef}
                   type="text" 
                   id="facility-search"
                   name="facility-search"
@@ -1464,12 +1578,7 @@ const LandingPage: React.FC = React.memo(() => {
                       console.warn('Search term update error:', error)
                     }
                   }}
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter' && !searchTerm && !location) {
-                      e.preventDefault()
-                      showNotification('Please enter a search term or location', 'warning')
-                    }
-                  }}
+                  onKeyDown={handleSearchKeyDown}
                 />
                 <div id="search-help" className="sr-only">Enter the name or type of healthcare facility you're looking for</div>
               </div>
@@ -1477,6 +1586,7 @@ const LandingPage: React.FC = React.memo(() => {
                 <label htmlFor="location-search" className="sr-only">Enter location</label>
                 <i className="fas fa-map-marker-alt" aria-hidden="true"></i>
                 <input 
+                  ref={locationInputRef}
                   type="text" 
                   id="location-search"
                   name="location-search"
@@ -1490,6 +1600,7 @@ const LandingPage: React.FC = React.memo(() => {
                       console.warn('Location update error:', error)
                     }
                   }}
+                  onKeyDown={handleLocationKeyDown}
                 />
                 <div id="location-help" className="sr-only">Enter city, province, or area to search nearby facilities</div>
                 <button 
@@ -1510,24 +1621,28 @@ const LandingPage: React.FC = React.memo(() => {
                 </button>
               </div>
               <button 
+                ref={searchButtonRef}
                 type="submit" 
                 className="search-button" 
                 aria-label="Search healthcare facilities"
                 disabled={isSearching}
+                onKeyDown={handleSearchButtonKeyDown}
               >
                 {isSearching ? 'Searching...' : 'Search'}
               </button>
             </form>
             
             {/* Quick Appointment CTA */}
-            <div className="quick-appointment-cta">
+            <aside className="quick-appointment-cta" role="complementary" aria-labelledby="quick-appointment-heading">
               <div className="cta-content">
                 <div className="cta-text">
-                  <h3>Need an appointment fast?</h3>
+                  <h3 id="quick-appointment-heading">Need an appointment fast?</h3>
                   <p>Don't have time to sign up? Book a quick appointment in just 2 minutes!</p>
                 </div>
                 <button 
+                  ref={quickAppointmentRef}
                   onClick={() => navigate('/quick-appointments')}
+                  onKeyDown={handleQuickAppointmentKeyDown}
                   className="cta-quick-appointment-btn"
                   aria-label="Book a quick appointment without signing up"
                 >
@@ -1535,7 +1650,7 @@ const LandingPage: React.FC = React.memo(() => {
                   Quick Appointment
                 </button>
               </div>
-            </div>
+            </aside>
 
           </div>
         </section>
@@ -1558,14 +1673,14 @@ const LandingPage: React.FC = React.memo(() => {
           
           <div className="facilities-grid" role="list" aria-label="List of recommended healthcare facilities">
             {isLoadingFacilities ? (
-              <div className="facilities-loading">
-                <div className="loading-spinner">
+              <div className="facilities-loading" role="status" aria-live="polite">
+                <div className="loading-spinner" aria-hidden="true">
                   <i className="fas fa-spinner fa-spin" aria-hidden="true"></i>
                 </div>
                 <p>Loading healthcare facilities...</p>
               </div>
             ) : facilitiesError ? (
-              <div className="facilities-error">
+              <div className="facilities-error" role="alert" aria-live="assertive">
                 <i className="fas fa-exclamation-triangle" aria-hidden="true"></i>
                 <p>{facilitiesError}</p>
                 <button 
@@ -1578,7 +1693,7 @@ const LandingPage: React.FC = React.memo(() => {
                 </button>
               </div>
             ) : facilities.length === 0 ? (
-              <div className="facilities-empty">
+              <div className="facilities-empty" role="status" aria-live="polite">
                 <i className="fas fa-hospital" aria-hidden="true"></i>
                 <p>No healthcare facilities found yet.</p>
                 <p className="empty-subtitle">Be the first to join our platform!</p>
@@ -1592,8 +1707,13 @@ const LandingPage: React.FC = React.memo(() => {
                 </button>
               </div>
             ) : (
-              facilities.map((facility: Facility) => (
-                <article key={facility.uid} className="facility-card" role="listitem">
+              facilities.map((facility: Facility, index: number) => (
+                <article 
+                  key={facility.uid} 
+                  className="facility-card" 
+                  role="listitem"
+                  onKeyDown={(e) => handleFacilityCardKeyDown(e, index)}
+                >
                   <div className="facility-profile">
                     <div className="facility-image">
                       <img src={slmcImage} 
@@ -1613,14 +1733,14 @@ const LandingPage: React.FC = React.memo(() => {
                     </div>
                   </div>
                   
-                  <div className="facility-schedule">
+                  <div className="facility-schedule" role="group" aria-label="Facility schedule and pricing">
                     <div className="schedule-info">
                       <i className="fas fa-clock" aria-hidden="true"></i>
-                      <span>{formatOperatingHours(facility.operatingHours)}</span>
+                      <time dateTime="09:00-17:00">{formatOperatingHours(facility.operatingHours)}</time>
                     </div>
                     <div className="price-info">
                       <i className="fas fa-peso-sign" aria-hidden="true"></i>
-                      <span>{getStartingPrice(facility.type)}</span>
+                      <span aria-label="Starting price">{getStartingPrice(facility.type)}</span>
                       <small>Starting</small>
                     </div>
                   </div>
@@ -1629,6 +1749,7 @@ const LandingPage: React.FC = React.memo(() => {
                     className="book-appointment" 
                     aria-label={`Book an appointment with ${facility.name}`}
                     onClick={() => handleAppointmentBooking(facility.name)}
+                    onKeyDown={(e) => handleFacilityCardKeyDown(e, index)}
                   >
                     Book an appointment
                   </button>
@@ -1735,18 +1856,18 @@ const LandingPage: React.FC = React.memo(() => {
           <div className="footer-main">
             <div className="footer-grid">
               {/* Company Info */}
-              <div className="footer-brand">
+              <div className="footer-brand" role="contentinfo">
                 <div className="footer-logo">
                   <i className="fas fa-heartbeat" aria-hidden="true"></i>
                   <span>LingapLink</span>
-                  <span className="logo-badge">PH</span>
+                  <span className="logo-badge" aria-label="Philippines">PH</span>
                 </div>
                 <p className="footer-description">
                   The Philippines' leading digital healthcare platform connecting patients with trusted medical facilities.
                 </p>
-                <div className="footer-stats">
+                <div className="footer-stats" role="group" aria-label="Platform statistics">
                   <div className="stat-item">
-                    <span className="stat-number">
+                    <span className="stat-number" aria-live="polite">
                       {isLoadingFacilities ? '...' : facilities.length > 0 ? `${facilities.length}+` : '0+'}
                     </span>
                     <span className="stat-label">Partners</span>
@@ -1765,13 +1886,13 @@ const LandingPage: React.FC = React.memo(() => {
               {/* For Patients */}
               <nav className="footer-nav" aria-labelledby="patient-nav">
                 <h3 id="patient-nav">For Patients</h3>
-                <ul className="nav-list">
-                  <li><button onClick={() => navigate('/patient-sign-up')}>Create Account</button></li>
-                  <li><button onClick={() => navigate('/patient-sign-in')}>Patient Login</button></li>
-                  <li><button onClick={() => navigate('/patient-portal')}>Find Healthcare</button></li>
-                  <li><button onClick={() => navigate('/patient-portal')}>Book Appointment</button></li>
-                  <li><button onClick={() => navigate('/patient-portal')}>Medical Records</button></li>
-                  <li><button onClick={() => navigate('/patient-portal')}>Telemedicine</button></li>
+                <ul className="nav-list" role="menu">
+                  <li role="none"><button onClick={() => navigate('/patient-sign-up')} aria-label="Create a new patient account" role="menuitem">Create Account</button></li>
+                  <li role="none"><button onClick={() => navigate('/patient-sign-in')} aria-label="Sign in to your patient account" role="menuitem">Patient Login</button></li>
+                  <li role="none"><button onClick={() => navigate('/patient-portal')} aria-label="Find healthcare facilities and providers" role="menuitem">Find Healthcare</button></li>
+                  <li role="none"><button onClick={() => navigate('/patient-portal')} aria-label="Book a medical appointment" role="menuitem">Book Appointment</button></li>
+                  <li role="none"><button onClick={() => navigate('/patient-portal')} aria-label="Access your medical records" role="menuitem">Medical Records</button></li>
+                  <li role="none"><button onClick={() => navigate('/patient-portal')} aria-label="Start a telemedicine consultation" role="menuitem">Telemedicine</button></li>
                 </ul>
               </nav>
 
@@ -1781,18 +1902,18 @@ const LandingPage: React.FC = React.memo(() => {
                   <i className="fas fa-user-md" aria-hidden="true"></i>
                   For Providers
                 </h3>
-                <ul className="nav-list">
-                  <li className="featured">
-                    <button onClick={handlePartnerSignup}>
+                <ul className="nav-list" role="menu">
+                  <li className="featured" role="none">
+                    <button onClick={handlePartnerSignup} aria-label="Register your healthcare practice with LingapLink" role="menuitem">
                       <i className="fas fa-star" aria-hidden="true"></i>
                       Join LingapLink
                     </button>
                   </li>
-                  <li><button onClick={handlePartnerSignin}>Provider Portal</button></li>
-                  <li><button onClick={handleBusinessPortal}>Practice Tools</button></li>
-                  <li><button onClick={handleBusinessPortal}>Patient Management</button></li>
-                  <li><button onClick={handleBusinessPortal}>Analytics</button></li>
-                  <li><button onClick={handleBusinessPortal}>Support</button></li>
+                  <li role="none"><button onClick={handlePartnerSignin} aria-label="Sign in to provider portal" role="menuitem">Provider Portal</button></li>
+                  <li role="none"><button onClick={handleBusinessPortal} aria-label="Access practice management tools" role="menuitem">Practice Tools</button></li>
+                  <li role="none"><button onClick={handleBusinessPortal} aria-label="Manage patient information and records" role="menuitem">Patient Management</button></li>
+                  <li role="none"><button onClick={handleBusinessPortal} aria-label="View practice analytics and reports" role="menuitem">Analytics</button></li>
+                  <li role="none"><button onClick={handleBusinessPortal} aria-label="Get support and help" role="menuitem">Support</button></li>
                 </ul>
               </nav>
 
@@ -1817,10 +1938,10 @@ const LandingPage: React.FC = React.memo(() => {
                 <div className="footer-links-section">
                   <h4>Quick Links</h4>
                   <ul className="quick-links">
-                    <li><a href="#">Help Center</a></li>
-                    <li><a href="#">Privacy Policy</a></li>
-                    <li><a href="#">Terms of Service</a></li>
-                    <li><a href="#">HIPAA Compliance</a></li>
+                    <li><a href="#" aria-label="Access help center and support resources">Help Center</a></li>
+                    <li><a href="#" aria-label="Read our privacy policy">Privacy Policy</a></li>
+                    <li><a href="#" aria-label="Read our terms of service">Terms of Service</a></li>
+                    <li><a href="#" aria-label="Learn about HIPAA compliance">HIPAA Compliance</a></li>
                   </ul>
                 </div>
               </div>

@@ -110,26 +110,29 @@ const DashboardSection: React.FC<DashboardSectionProps> = ({
         </div>
       </div>
 
-      <div className="quick-actions">
-        <h3>Quick Actions</h3>
-        <div className="action-buttons">
-          <button className="action-btn" onClick={() => onOpenModal('bookAppointment')}>
-            <i className="fas fa-calendar-plus"></i>
+      <section className="quick-actions" aria-labelledby="quick-actions-heading">
+        <h3 id="quick-actions-heading">Quick Actions</h3>
+        <div className="action-buttons" role="group" aria-label="Available quick actions">
+          <button className="action-btn" onClick={() => onOpenModal('bookAppointment')} aria-label="Book a new appointment">
+            <i className="fas fa-calendar-plus" aria-hidden="true"></i>
             <span>Book Appointment</span>
           </button>
         </div>
-      </div>
+      </section>
 
-      <div className="dashboard-section">
-        <h3>Appointments</h3>
+      <section className="dashboard-section" aria-labelledby="appointments-heading">
+        <h3 id="appointments-heading">Appointments</h3>
         
 
         
         {/* Appointments Tabs */}
-        <div className="content-tabs" style={{ marginBottom: '20px' }}>
+        <div className="content-tabs" style={{ marginBottom: '20px' }} role="tablist" aria-label="Appointment status tabs">
           <button 
             className={`tab-link ${activeAppointmentsTab === 'upcoming' ? 'active' : ''}`}
             onClick={() => onAppointmentsTabClick('upcoming')}
+            role="tab"
+            aria-selected={activeAppointmentsTab === 'upcoming'}
+            aria-label="View upcoming appointments"
           >
             Upcoming
             <span className="tab-count">
@@ -142,6 +145,9 @@ const DashboardSection: React.FC<DashboardSectionProps> = ({
           <button 
             className={`tab-link ${activeAppointmentsTab === 'completed' ? 'active' : ''}`}
             onClick={() => onAppointmentsTabClick('completed')}
+            role="tab"
+            aria-selected={activeAppointmentsTab === 'completed'}
+            aria-label="View completed appointments"
           >
             Completed
             <span className="tab-count">
@@ -151,6 +157,9 @@ const DashboardSection: React.FC<DashboardSectionProps> = ({
           <button 
             className={`tab-link ${activeAppointmentsTab === 'cancelled' ? 'active' : ''}`}
             onClick={() => onAppointmentsTabClick('cancelled')}
+            role="tab"
+            aria-selected={activeAppointmentsTab === 'cancelled'}
+            aria-label="View cancelled appointments"
           >
             Cancelled
             <span className="tab-count">
@@ -159,7 +168,7 @@ const DashboardSection: React.FC<DashboardSectionProps> = ({
           </button>
         </div>
         
-        <div className="appointments-list">
+        <div className="appointments-list" role="list" aria-label="Appointments list">
           {filteredAppointments.length > 0 ? (
             filteredAppointments.map((appointment: any) => (
               <AppointmentCard
@@ -172,7 +181,7 @@ const DashboardSection: React.FC<DashboardSectionProps> = ({
               />
             ))
           ) : (
-            <div className="no-appointments">
+            <div className="no-appointments" role="status" aria-live="polite">
               <p>
                 {activeAppointmentsTab === 'upcoming' && "No upcoming appointments scheduled."}
                 {activeAppointmentsTab === 'completed' && "No completed appointments yet."}
@@ -182,15 +191,16 @@ const DashboardSection: React.FC<DashboardSectionProps> = ({
                 <button 
                   className="btn-primary" 
                   onClick={() => onOpenModal('bookAppointment')}
+                  aria-label="Book your first appointment"
                 >
-                  <i className="fas fa-calendar-plus"></i>
+                  <i className="fas fa-calendar-plus" aria-hidden="true"></i>
                   Book Appointment
                 </button>
               )}
             </div>
           )}
         </div>
-      </div>
+      </section>
     </section>
   )
 }

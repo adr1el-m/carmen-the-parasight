@@ -1,5 +1,8 @@
 /* Patient Portal CSS - Complete Styles */
 
+/* Import standardized breakpoints */
+@import url('./breakpoints.css');
+
 :root {
     --primary-blue: #0040e7;
     --secondary-blue: #7BB3F0;
@@ -2869,7 +2872,7 @@ input:checked + .slider:before {
   color: #374151;
 }
 
-/* Responsive Styles */
+/* Responsive Styles - Small Mobile */
 @media (max-width: 640px) {
   .modal-content {
     width: 95%;
@@ -4070,6 +4073,32 @@ input:checked + .slider:before {
   -webkit-line-clamp: 3;
   -webkit-box-orient: vertical;
   text-overflow: ellipsis;
+}
+
+/* Fix for long notes in appointments list */
+.record-item-card .detail-item-flex .long-notes {
+  white-space: normal;
+  line-height: 1.4;
+  max-height: 4.2em; /* 3 lines of text */
+  overflow: hidden;
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  text-overflow: ellipsis;
+  word-wrap: break-word;
+  overflow-wrap: break-word;
+  max-width: 100%;
+}
+
+/* Ensure the notes container doesn't overflow */
+.record-item-card .detail-item-flex {
+  max-width: 100%;
+  overflow: hidden;
+}
+
+.record-item-card .detail-item-flex span {
+  max-width: 100%;
+  overflow: hidden;
 }
 
 .appointment-card .appointment-time {

@@ -62,6 +62,7 @@ const Dashboard: React.FC = React.memo(() => {
   // Removed unused lastActivity state
   const [isRefreshing, setIsRefreshing] = useState(false)
   const [facilityAppointments, setFacilityAppointments] = useState<any[]>([])
+  const [quickAppointments, setQuickAppointments] = useState<any[]>([])
   const [isLoadingAppointments, setIsLoadingAppointments] = useState(false)
   const [appointmentListener, setAppointmentListener] = useState<(() => void) | null>(null)
   const [showAppointmentModal, setShowAppointmentModal] = useState(false)
@@ -226,12 +227,22 @@ const Dashboard: React.FC = React.memo(() => {
       if (facilityDoc.exists()) {
         const data = facilityDoc.data()
         setFacilityData(data)
+        
+        // Load quick appointments if they exist
+        if (data.quickAppointments && Array.isArray(data.quickAppointments)) {
+          setQuickAppointments(data.quickAppointments)
+          console.log('📋 Quick appointments loaded:', data.quickAppointments.length)
+        } else {
+          setQuickAppointments([])
+        }
       } else {
         setFacilityData(null)
+        setQuickAppointments([])
       }
     } catch (error) {
       console.warn('⚠️ Firestore access control error (this is normal during development):', error)
       setFacilityData(null)
+      setQuickAppointments([])
     } finally {
       setIsLoadingFacilityData(false)
     }
@@ -1642,6 +1653,122 @@ const Dashboard: React.FC = React.memo(() => {
                   </div>
                 )}
               </div>
+              
+              {/* Quick Appointments Section */}
+              {quickAppointments.length > 0 && (
+                <div className="dashboard-section" role="region" aria-label="Quick appointment requests">
+                  <h3>🚨 Quick Appointment Requests</h3>
+                  <p style={{ color: '#6b7280', marginBottom: '20px' }}>
+                    New appointment requests from patients who used the quick appointment form
+                  </p>
+                  
+                  <div className="quick-appointments-grid" style={{ 
+                    display: 'grid', 
+                    gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', 
+                    gap: '20px' 
+                  }}>
+                    {quickAppointments.map((appointment) => (
+                      <div key={appointment.id} className="quick-appointment-card" style={{
+                        backgroundColor: 'white',
+                        border: '1px solid #e5e7eb',
+                        borderRadius: '12px',
+                        padding: '20px',
+                        boxShadow: '0 1px 3px rgba(0, 0, 0, 0.1)'
+                      }}>
+                        {/* Urgency Indicator */}
+                        <div style={{
+                          display: 'flex',
+                          justifyContent: 'space-between',
+                          alignItems: 'center',
+                          marginBottom: '15px'
+                        }}>
+                          <span style={{
+                            backgroundColor: appointment.urgency === 'RED' ? '#dc2626' : 
+                                           appointment.urgency === 'ORANGE' ? '#d97706' : '#059669',
+                            color: 'white',
+                            padding: '4px 12px',
+                            borderRadius: '20px',
+                            fontSize: '12px',
+                            fontWeight: 'bold'
+                          }}>
+                            {appointment.urgency} - {appointment.urgencyDescription}
+                          </span>
+                          <span style={{
+                            backgroundColor: '#f3f4f6',
+                            color: '#6b7280',
+                            padding: '4px 8px',
+                            borderRadius: '6px',
+                            fontSize: '11px'
+                          }}>
+                            Quick Request
+                          </span>
+                        </div>
+                        
+                        {/* Patient Info */}
+                        <div style={{ marginBottom: '15px' }}>
+                          <h4 style={{ margin: '0 0 8px 0', color: '#1f2937' }}>
+                            <i className="fas fa-user" style={{ marginRight: '8px', color: '#6b7280' }}></i>
+                            {appointment.patientName}
+                          </h4>
+                          <div style={{ fontSize: '14px', color: '#6b7280' }}>
+                            <div><i className="fas fa-envelope" style={{ marginRight: '6px' }}></i>{appointment.patientEmail}</div>
+                            <div><i className="fas fa-phone" style={{ marginRight: '6px' }}></i>{appointment.patientPhone}</div>
+                          </div>
+                        </div>
+                        
+                        {/* Appointment Details */}
+                        <div style={{ marginBottom: '15px' }}>
+                          <div style={{ fontSize: '14px', color: '#374151' }}>
+                            <div style={{ marginBottom: '6px' }}>
+                              <i className="fas fa-calendar" style={{ marginRight: '6px', color: '#6b7280' }}></i>
+                              <strong>Preferred Date:</strong> {appointment.preferredDate || 'Not specified'}
+                            </div>
+                            <div style={{ marginBottom: '6px' }}>
+                              <i className="fas fa-clock" style={{ marginRight: '6px', color: '#6b7280' }}></i>
+                              <strong>Preferred Time:</strong> {appointment.preferredTime || 'Not specified'}
+                            </div>
+                            {appointment.specialty && (
+                              <div style={{ marginBottom: '6px' }}>
+                                <i className="fas fa-stethoscope" style={{ marginRight: '6px', color: '#6b7280' }}></i>
+                                <strong>Specialty:</strong> {appointment.specialty}
+                              </div>
+                            )}
+                            {appointment.symptoms && (
+                              <div style={{ marginBottom: '6px' }}>
+                                <i className="fas fa-notes-medical" style={{ marginRight: '6px', color: '#6b7280' }}></i>
+                                <strong>Symptoms:</strong> {appointment.symptoms}
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                        
+                        {/* Actions */}
+                        <div style={{ display: 'flex', gap: '10px' }}>
+                          <button 
+                            className="btn btn-primary btn-sm"
+                            onClick={() => {
+                              // Convert quick appointment to regular appointment
+                              alert(`Converting quick appointment to regular appointment for ${appointment.patientName}.\n\nIn a real application, this would:\n1. Create a patient account\n2. Schedule the appointment\n3. Send confirmation to the patient\n4. Remove from quick appointments list`)
+                            }}
+                            style={{ flex: 1 }}
+                          >
+                            <i className="fas fa-calendar-plus"></i> Schedule Appointment
+                          </button>
+                          <button 
+                            className="btn btn-outline btn-sm"
+                            onClick={() => {
+                              // Contact patient
+                              alert(`Contacting patient ${appointment.patientName} at ${appointment.patientEmail} or ${appointment.patientPhone}`)
+                            }}
+                          >
+                            <i className="fas fa-phone"></i> Contact
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
               
               <div className="dashboard-section" role="region" aria-label="Today's schedule">
                 <h3>Today's Schedule</h3>

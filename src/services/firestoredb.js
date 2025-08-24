@@ -1945,6 +1945,148 @@ export async function updateFacilityInfo(facilityId, updateData) {
     }
 }
 
+/**
+ * Create quick appointment request (for non-registered patients)
+ */
+export async function createQuickAppointment(appointmentData) {
+    try {
+        console.log('🔍 Creating quick appointment request:', appointmentData);
+        
+        // Evaluate urgency level for the appointment
+        let urgencyLevel = 'GREEN';
+        let urgencyDescription = 'ROUTINE';
+        
+        try {
+            // Import and use the triage service to evaluate urgency
+            const { evaluateAppointmentUrgency } = await import('./triage.service.ts');
+            const urgencyResult = await evaluateAppointmentUrgency({
+                id: `temp_${Date.now()}`,
+                type: appointmentData.type || 'consultation',
+                notes: appointmentData.symptoms || '',
+                status: 'pending',
+                date: appointmentData.preferredDate || '',
+                time: appointmentData.preferredTime || ''
+            });
+            
+            urgencyLevel = urgencyResult.level;
+            urgencyDescription = urgencyResult.urgency;
+            console.log('🚨 Urgency evaluation result:', urgencyResult);
+        } catch (urgencyError) {
+            console.log('⚠️ Urgency evaluation failed, using fallback:', urgencyError.message);
+            // Use fallback urgency evaluation based on keywords
+            const text = `${appointmentData.symptoms || ''} ${appointmentData.specialty || ''}`.toLowerCase();
+            
+            // Critical/Red indicators
+            const redKeywords = [
+                'chest pain', 'heart attack', 'stroke', 'severe bleeding', 'unconscious',
+                'difficulty breathing', 'severe trauma', 'overdose', 'suicide', 'seizure',
+                'cardiac arrest', 'respiratory failure', 'anaphylaxis', 'severe burns'
+            ];
+            
+            // Urgent/Orange indicators
+            const orangeKeywords = [
+                'high fever', 'severe headache', 'broken bone', 'deep cut', 'infection',
+                'dehydration', 'severe pain', 'allergic reaction', 'meningitis symptoms',
+                'appendicitis', 'gallbladder', 'kidney stone', 'pneumonia symptoms'
+            ];
+            
+            // Check for red level
+            if (redKeywords.some(keyword => text.includes(keyword))) {
+                urgencyLevel = 'RED';
+                urgencyDescription = 'CRITICAL';
+            }
+            // Check for orange level
+            else if (orangeKeywords.some(keyword => text.includes(keyword))) {
+                urgencyLevel = 'ORANGE';
+                urgencyDescription = 'VERY URGENT';
+            }
+            // Default to green
+            else {
+                urgencyLevel = 'GREEN';
+                urgencyDescription = 'ROUTINE';
+            }
+            
+            console.log('🚨 Fallback urgency evaluation:', { level: urgencyLevel, urgency: urgencyDescription });
+        }
+        
+        // Create the quick appointment object
+        const quickAppointment = {
+            id: `quick_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+            type: 'quick_appointment',
+            status: 'pending',
+            urgency: urgencyLevel,
+            urgencyDescription: urgencyDescription,
+            
+            // Patient information
+            patientName: `${appointmentData.firstName} ${appointmentData.lastName}`,
+            patientEmail: appointmentData.email,
+            patientPhone: appointmentData.phone,
+            
+            // Appointment details
+            preferredDate: appointmentData.preferredDate,
+            preferredTime: appointmentData.preferredTime,
+            specialty: appointmentData.specialty,
+            symptoms: appointmentData.symptoms,
+            urgencyLevel: appointmentData.urgency,
+            
+            // Facility information
+            facilityId: appointmentData.facility,
+            
+            // Timestamps
+            createdAt: serverTimestamp(),
+            updatedAt: serverTimestamp(),
+            
+            // Source
+            source: 'quick_appointment_form'
+        };
+        
+        console.log('📅 Created quick appointment object:', quickAppointment);
+        
+        // Add to a special collection for quick appointments
+        const quickAppointmentsRef = collection(db, 'quickAppointments');
+        const docRef = await addDoc(quickAppointmentsRef, quickAppointment);
+        
+        console.log('✅ Quick appointment created with ID:', docRef.id);
+        
+        // Also add to the facility's appointments if facility is specified
+        if (appointmentData.facility && appointmentData.facility !== 'any') {
+            try {
+                const facilityRef = doc(db, 'facilities', appointmentData.facility);
+                const facilityDoc = await getDoc(facilityRef);
+                
+                if (facilityDoc.exists()) {
+                    const facilityData = facilityDoc.data();
+                    const facilityAppointment = {
+                        ...quickAppointment,
+                        facilityName: facilityData.facilityInfo?.name || facilityData.name || 'Unknown Facility',
+                        id: docRef.id // Use the same ID
+                    };
+                    
+                    // Add to facility's quick appointments
+                    await updateDoc(facilityRef, {
+                        quickAppointments: arrayUnion(facilityAppointment),
+                        updatedAt: serverTimestamp()
+                    });
+                    
+                    console.log('✅ Quick appointment added to facility:', appointmentData.facility);
+                }
+            } catch (facilityError) {
+                console.warn('⚠️ Could not add to facility, but appointment was created:', facilityError);
+            }
+        }
+        
+        return {
+            appointmentId: docRef.id,
+            urgency: urgencyLevel,
+            message: 'Quick appointment request submitted successfully!'
+        };
+        
+    } catch (error) {
+        console.error('❌ Error creating quick appointment:', error);
+        throw error;
+    }
+}
+
 // Console log for debugging
 console.log('Firestore Database Service ready - Auth and DB instances created');
 

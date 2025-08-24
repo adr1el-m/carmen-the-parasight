@@ -497,7 +497,7 @@ body {
   gap: 3rem;
   align-items: center;
   min-height: 600px;
-  padding: 4rem 0;
+  padding: 1rem 0;
 }
 
 .hero-left {
@@ -1412,7 +1412,7 @@ body {
 
   /* Hero section mobile */
   .hero-content {
-    padding: 2rem 0;
+    padding: 5 5px;
     min-height: auto;
   }
   
@@ -1442,7 +1442,7 @@ body {
 
   /* Search section mobile */
   .search-section {
-    margin-top: -40px;
+    margin-top: 20px;
     padding-bottom: 2rem;
   }
   
@@ -1531,6 +1531,19 @@ body {
   }
 
   /* Footer mobile */
+  
+  .footer-contact h3 {
+    text-align: center; /* Center heading */
+  }
+
+  .contact-methods {
+    align-items: center;
+    text-align: center;
+  }
+
+  .contact-item {
+    justify-content: center;
+  }
   .footer-grid {
     grid-template-columns: 1fr;
     gap: 2rem;

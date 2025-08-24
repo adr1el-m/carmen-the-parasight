@@ -40,6 +40,8 @@ html {
   overflow-x: hidden;
 }
 
+
+
 body {
   font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
   line-height: 1.6;
@@ -1356,11 +1358,59 @@ body {
 
 /* Mobile portrait */
 @media (max-width: 768px) {
+
+  .hero-container {
+    padding: 0 !important; /* Remove side padding completely */
+  }
+  
   .container,
   .header-container,
   .hero-container,
   .search-container {
     padding: 0 20px;
+  }
+
+  /* Add padding back to hero-content if needed */
+  .hero-content {
+    padding: 0rem 20px; /* Add padding to content instead */
+    gap: 1rem;
+  }
+
+  .doctor-main {
+    width: 60%; /* Even smaller for better mobile fit */
+    height: 80%;
+    top: 8%;
+    left: 8%; /* More spacing from left edge */
+  }
+  
+  .doctor-secondary {
+    width: 50%;
+    height: 70%;
+    bottom: 8%;
+    right: 3%; /* Safe distance from right edge */
+  }
+  
+  /* Reduce container height further if needed */
+  .hero-right {
+    height: 280px;
+  }
+
+  .hero-left {
+    text-align: center;
+    padding: 0rem 1rem; /* Add padding for better spacing */
+    order: 2; /* Text comes after images on mobile */
+  }
+  
+  .hero-left h1 {
+    font-size: 2rem; /* Adjust from your current 2.25rem */
+    line-height: 1.15;
+    margin-bottom: 0.5rem;
+  }
+  
+  .hero-left h2 {
+    font-size: 1.6rem; /* Adjust from your current 1.75rem */
+    line-height: 1.25;
+    margin-bottom: 1.25rem;
   }
 
   /* Header mobile improvements */
@@ -1667,6 +1717,7 @@ body {
   body {
     -webkit-text-size-adjust: 100%;
     -ms-text-size-adjust: 100%;
+    overflow-x: hidden;
   }
 }
 

@@ -635,7 +635,7 @@ const PatientSignIn: React.FC = React.memo(() => {
           
           <div className="signup-content">
             <div className="signup-header">
-              <h1>Welcome Back</h1>
+              <h1>Patient Sign In</h1>
               <p>New to LingapLink? <a href="/patient-sign-up" className="login-link">Sign up</a></p>
             </div>
 

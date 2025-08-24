@@ -205,12 +205,7 @@ const PartnerSignIn: React.FC = React.memo(() => {
       <div className="signin-form-section">
         <div className="signin-form-container">
           <div className="form-header">
-                    <div className="logo" style={{ color: '#0052cc' }}>
-          <i className="fas fa-heartbeat" style={{ color: '#0052cc' }}></i>
-          <span style={{ color: '#0052cc' }}>LingapLink</span>
-        </div>
             <h2>Provider Sign In</h2>
-            <p>Access your facility dashboard</p>
           </div>
 
           {errorMessage && (
@@ -256,9 +251,14 @@ const PartnerSignIn: React.FC = React.memo(() => {
                 </div>
               </div>
 
-              <div className="forgot-password">
-                <a href="/reset-password">Forgot your password?</a>
-              </div>
+                {/* New container for Remember Me and Forgot Password */}
+        <div className="form-options">
+          <div className="remember-me">
+            <input type="checkbox" id="remember-me" />
+            <label htmlFor="remember-me">Remember me</label>
+          </div>
+          <a href="/reset-password">Forgot password?</a>
+        </div>
 
               <div className="form-actions">
                 <button 
@@ -274,7 +274,7 @@ const PartnerSignIn: React.FC = React.memo(() => {
 
           <div className="social-signup">
             <div className="divider">
-              <span>or sign in with</span>
+              <span>or</span>
             </div>
             <button
               type="button"
@@ -288,8 +288,7 @@ const PartnerSignIn: React.FC = React.memo(() => {
           </div>
 
           <div className="signin-footer">
-            <p>New to LingapLink? <a href="/partner-signup">Register your facility here</a></p>
-            <p>Need help? <a href="/help">Contact our support team</a></p>
+            <p>New to LingapLink? <a href="/partner-signup">Register here</a> or <a href="/help">contact support</a>.</p>
           </div>
         </div>
       </div>

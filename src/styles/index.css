@@ -1360,7 +1360,7 @@ body {
 @media (max-width: 768px) {
 
   .hero-container {
-    padding: 0 !important; /* Remove side padding completely */
+    padding: 0 !important; 
   }
   
   .container,
@@ -1370,27 +1370,25 @@ body {
     padding: 0 20px;
   }
 
-  /* Add padding back to hero-content if needed */
   .hero-content {
-    padding: 0rem 20px; /* Add padding to content instead */
+    padding: 0rem 20px;
     gap: 1rem;
   }
 
   .doctor-main {
-    width: 60%; /* Even smaller for better mobile fit */
+    width: 60%; 
     height: 80%;
     top: 8%;
-    left: 8%; /* More spacing from left edge */
+    left: 8%; 
   }
   
   .doctor-secondary {
     width: 50%;
     height: 70%;
     bottom: 8%;
-    right: 3%; /* Safe distance from right edge */
+    right: 3%; 
   }
   
-  /* Reduce container height further if needed */
   .hero-right {
     height: 280px;
   }

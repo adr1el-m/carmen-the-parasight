@@ -670,9 +670,54 @@ const LandingPage: React.FC = React.memo(() => {
     // Fetch facilities from Firestore
     fetchFacilities()
 
-    // Ensure page is scrollable
+    // Ensure page is scrollable and hide scrollbar on mobile
     document.body.style.overflow = 'auto'
     document.documentElement.style.overflow = 'auto'
+    
+    // Hide scrollbar on mobile devices
+    const hideMobileScrollbar = () => {
+      if (window.innerWidth <= 768) {
+        document.body.style.cssText += `
+          -webkit-overflow-scrolling: touch;
+          scrollbar-width: none;
+          -ms-overflow-style: none;
+        `
+        document.documentElement.style.cssText += `
+          -webkit-overflow-scrolling: touch;
+          scrollbar-width: none;
+          -ms-overflow-style: none;
+        `
+        
+        // Add CSS to hide webkit scrollbar
+        const style = document.createElement('style')
+        style.id = 'mobile-scrollbar-hide'
+        style.textContent = `
+          @media (max-width: 768px) {
+            body::-webkit-scrollbar,
+            html::-webkit-scrollbar {
+              display: none;
+            }
+            body {
+              -webkit-overflow-scrolling: touch;
+              scrollbar-width: none;
+              -ms-overflow-style: none;
+            }
+            html {
+              -webkit-overflow-scrolling: touch;
+              scrollbar-width: none;
+              -ms-overflow-style: none;
+            }
+          }
+        `
+        document.head.appendChild(style)
+      }
+    }
+    
+    // Apply scrollbar hiding
+    hideMobileScrollbar()
+    
+    // Reapply on resize
+    window.addEventListener('resize', hideMobileScrollbar)
 
     // Cleanup function
     return () => {
@@ -682,6 +727,13 @@ const LandingPage: React.FC = React.memo(() => {
       }
       if (cleanupErrorMonitoring) {
         cleanupErrorMonitoring()
+      }
+      
+      // Remove mobile scrollbar hiding
+      window.removeEventListener('resize', hideMobileScrollbar)
+      const mobileStyle = document.getElementById('mobile-scrollbar-hide')
+      if (mobileStyle) {
+        mobileStyle.remove()
       }
     }
   }, [fetchFacilities])
@@ -1361,10 +1413,6 @@ const LandingPage: React.FC = React.memo(() => {
   return (
     <>
       <YearUpdater />
-      {/* Skip link for keyboard navigation */}
-      <a href="#main-content" className="skip-link">
-        Skip to main content
-      </a>
       
       {/* Live region for screen reader announcements */}
       <div id="live-region" aria-live="polite" aria-atomic="true" className="sr-only"></div>
@@ -1375,16 +1423,6 @@ const LandingPage: React.FC = React.memo(() => {
           <a href="/" className="logo" style={{ color: '#0052cc' }} aria-label="LingapLink - Healthcare Platform Philippines">
             <i className="fas fa-heartbeat" aria-hidden="true" style={{ color: '#0052cc' }}></i>
             <span style={{ color: '#0052cc' }}>LingapLink</span>
-            <span className="logo-badge" style={{ 
-              background: '#0052cc', 
-              color: '#ffffff',
-              padding: '0.3rem 0.5rem',
-              borderRadius: '6px',
-              fontSize: '0.75rem',
-              fontWeight: '700',
-              marginLeft: '0.5rem',
-              border: '1px solid rgba(255, 255, 255, 0.3)'
-            }} aria-label="Philippines">PH</span>
           </a>
           
           {/* Mobile Menu Toggle */}
@@ -1627,6 +1665,11 @@ const LandingPage: React.FC = React.memo(() => {
                 aria-label="Search healthcare facilities"
                 disabled={isSearching}
                 onKeyDown={handleSearchButtonKeyDown}
+                style={{
+                  backgroundColor: 'var(--primary-blue)',
+                  color: 'white',
+                  border: 'none'
+                }}
               >
                 {isSearching ? 'Searching...' : 'Search'}
               </button>
@@ -1729,7 +1772,7 @@ const LandingPage: React.FC = React.memo(() => {
                     <div className="facility-details">
                       <h3>{facility.name}</h3>
                       <p className="facility-type">{facility.type} | {getExperienceYears(facility.createdAt)}</p>
-                      <span className="specialty-tag" aria-label="Specialty: {getPrimarySpecialty(facility.specialties, facility.services)}">{getPrimarySpecialty(facility.specialties, facility.services)}</span>
+                      <span className="specialty-tag" style={{ color: 'white' }} aria-label="Specialty: {getPrimarySpecialty(facility.specialties, facility.services)}">{getPrimarySpecialty(facility.specialties, facility.services)}</span>
                     </div>
                   </div>
                   

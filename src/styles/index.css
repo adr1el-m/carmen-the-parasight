@@ -29,6 +29,8 @@
   --border-radius: 12px;
   --border-radius-sm: 8px;
   --border-radius-lg: 16px;
+  --footer-text: #e2e8f0; /* Light grey for footer text on dark background */
+  --footer-text-hover: #ffffff; /* White for footer text hover states */
 }
 
 /* Reset and Base Styles */
@@ -169,8 +171,14 @@ body {
   display: inline-block !important;
   opacity: 1 !important;
   visibility: visible !important;
-  text-shadow: none;
+  text-shadow: none !important;
   border: 1px solid rgba(255, 255, 255, 0.3);
+  text-align: center !important;
+  min-width: 2rem !important;
+  height: 1.5rem !important;
+  line-height: 1.5rem !important;
+  vertical-align: middle !important;
+  box-sizing: border-box !important;
 }
 
 /* Fallback for any remaining logo styles */
@@ -188,7 +196,8 @@ body {
   color: #0040e7 !important;
 }
 
-.logo span {
+/* Only apply to header logo, not signup/signin logos */
+.header .logo span {
   color: #0040e7 !important;
 }
 
@@ -771,7 +780,7 @@ body {
 }
 
 .search-button {
-  background: var(--gradient-primary);
+  background: var(--primary-blue);
   color: white;
   border: none;
   padding: 1rem 2rem;
@@ -783,6 +792,7 @@ body {
 }
 
 .search-button:hover {
+  background: var(--primary-dark);
   transform: translateY(-2px);
   box-shadow: var(--shadow-lg);
 }
@@ -813,6 +823,8 @@ body {
 .quick-appointment-cta .cta-text p {
   color: var(--text-secondary);
   margin: 0;
+  font-weight: 500;
+  line-height: 1.6;
 }
 
 .cta-quick-appointment-btn {
@@ -943,12 +955,57 @@ body {
 
 .specialty-tag {
   background: var(--primary-light);
-  color: white;
+  color: white !important;
   padding: 0.25rem 0.75rem;
   border-radius: 20px;
   font-size: 0.8rem;
   font-weight: 500;
   display: inline-block;
+}
+
+/* Ensure specialty tag is white on landing page */
+.landing-page .specialty-tag,
+.signup-container .specialty-tag,
+.main-hero .specialty-tag {
+  color: white !important;
+}
+
+/* Specific rule for facility cards */
+.facility-card .specialty-tag {
+  color: white !important;
+}
+
+/* Override any conflicting styles */
+.recommended-facilities .specialty-tag {
+  color: white !important;
+}
+
+/* Override logo colors to ensure primary-blue */
+.logo .logo-icon,
+.logo .logo-text {
+  color: #0040e7 !important;
+}
+
+/* More specific logo overrides */
+.signup-container .logo .logo-icon,
+.signup-container .logo .logo-text,
+.patient-signin .logo .logo-icon,
+.patient-signin .logo .logo-text {
+  color: #0040e7 !important;
+}
+
+/* Highest specificity for logo colors */
+div[class*="signup-container"] .logo .logo-icon,
+div[class*="signup-container"] .logo .logo-text,
+div[class*="patient-signin"] .logo .logo-icon,
+div[class*="patient-signin"] .logo .logo-text {
+  color: #0040e7 !important;
+}
+
+/* Direct hex color override for all logo elements */
+.signup-container .logo span,
+.patient-signin .logo span {
+  color: #0040e7 !important;
 }
 
 .facility-schedule {
@@ -1108,6 +1165,7 @@ body {
   color: var(--text-secondary);
   margin-bottom: 2rem;
   line-height: 1.6;
+  font-weight: 500;
 }
 
 .cta-features {
@@ -1128,8 +1186,9 @@ body {
 }
 
 .cta-feature span {
-  font-weight: 500;
+  font-weight: 600;
   color: var(--text-secondary);
+  line-height: 1.5;
 }
 
 .cta-action {
@@ -1143,7 +1202,7 @@ body {
   display: inline-flex;
   align-items: center;
   gap: 0.75rem;
-  background: var(--gradient-primary);
+  background: var(--primary-blue);
   color: white;
   padding: 1.25rem 2.5rem;
   border-radius: var(--border-radius-sm);
@@ -1156,6 +1215,7 @@ body {
 }
 
 .partner-btn:hover {
+  background: var(--primary-dark);
   transform: translateY(-2px);
   box-shadow: var(--shadow-xl);
 }
@@ -1172,6 +1232,8 @@ body {
 .cta-note {
   color: var(--text-secondary);
   font-size: 0.9rem;
+  font-weight: 500;
+  line-height: 1.5;
 }
 
 /* Footer */
@@ -1183,12 +1245,17 @@ body {
 
 .footer-main {
   padding: 3rem 0;
+  max-width: 1200px;
+  margin: 0 auto;
 }
 
 .footer-grid {
   display: grid;
   grid-template-columns: 2fr 1fr 1fr 1.5fr;
-  gap: 3rem;
+  gap: 4rem;
+  max-width: 1200px;
+  margin: 0 auto;
+  align-items: start;
 }
 
 .footer-brand .footer-logo {
@@ -1198,6 +1265,7 @@ body {
   gap: 0.5rem;
   font-size: 1.5rem;
   font-weight: 700;
+  margin-bottom: 1rem;
 }
 
 .footer-brand .footer-logo i {
@@ -1224,9 +1292,9 @@ body {
 }
 
 .footer-description {
-  color: var(--text-muted);
+  color: var(--footer-text);
   line-height: 1.6;
-  margin: 1rem 0;
+  margin: 1rem 0 2rem 0;
   max-width: 350px;
 }
 
@@ -1235,6 +1303,9 @@ body {
   font-weight: 600;
   margin-bottom: 1.5rem;
   color: white;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
 }
 
 .footer-nav ul {
@@ -1248,9 +1319,11 @@ body {
 }
 
 .footer-nav a {
-  color: var(--text-muted);
+  color: var(--footer-text);
   text-decoration: none;
   transition: color 0.3s ease;
+  font-weight: 500; /* Slightly bolder for better readability */
+  line-height: 1.5; /* Better line spacing */
 }
 
 .footer-nav a:hover {
@@ -1260,17 +1333,20 @@ body {
 .footer-nav button {
   background: none;
   border: none;
-  color: var(--text-secondary);
+  color: var(--footer-text);
   cursor: pointer;
   padding: 0;
   font-size: inherit;
   font-family: inherit;
+  font-weight: 500; /* Slightly bolder for better readability */
   text-align: left;
   transition: color 0.3s ease;
+  line-height: 1.5; /* Better line spacing */
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.1); /* Subtle shadow for better readability */
 }
 
 .footer-nav button:hover {
-  color: var(--primary-blue);
+  color: var(--footer-text-hover);
 }
 
 .footer-bottom {
@@ -1287,7 +1363,7 @@ body {
 }
 
 .copyright p {
-  color: var(--text-muted);
+  color: var(--footer-text);
   font-size: 0.9rem;
 }
 
@@ -1304,7 +1380,7 @@ body {
   height: 40px;
   background: #374151;
   border-radius: 50%;
-  color: var(--text-muted);
+  color: var(--footer-text);
   text-decoration: none;
   transition: all 0.3s ease;
 }
@@ -1582,6 +1658,11 @@ body {
   .search-section {
     margin-top: 20px;
     padding-bottom: 2rem;
+  }
+  
+  .search-container {
+    padding: 0 16px;
+    margin: 0 auto;
   }
   
   .search-bar {
@@ -1916,13 +1997,18 @@ body {
   color: var(--text-dark);
   padding: 2rem 0;
   margin-bottom: 2rem;
+  max-width: 1200px;
+  margin-left: auto;
+  margin-right: auto;
 }
 
 .footer-cta-content {
   display: flex;
   justify-content: space-between;
-  align-items: center;
-  gap: 2rem;
+  align-items: flex-start;
+  gap: 3rem;
+  max-width: 1200px;
+  margin: 0 auto;
 }
 
 .cta-text-section h3 {
@@ -1935,9 +2021,11 @@ body {
 }
 
 .cta-text-section p {
-  opacity: 0.9;
+  opacity: 1;
   margin: 0;
-  color: var(--text-secondary);
+  color: var(--footer-text);
+  font-weight: 500;
+  line-height: 1.6;
 }
 
 .cta-actions-section {
@@ -1986,8 +2074,10 @@ body {
 /* Footer stats */
 .footer-stats {
   display: flex;
-  gap: 2rem;
+  gap: 2.5rem;
   margin-top: 1rem;
+  justify-content: flex-start;
+  align-items: center;
 }
 
 .stat-item {
@@ -2003,7 +2093,7 @@ body {
 
 .stat-label {
   font-size: 0.8rem;
-  color: var(--text-secondary);
+  color: var(--footer-text);
   text-transform: uppercase;
   letter-spacing: 0.5px;
 }
@@ -2022,7 +2112,7 @@ body {
 .footer-nav a {
   background: none;
   border: none;
-  color: var(--text-secondary);
+  color: #e2e8f0; /* Light grey for better contrast on dark background */
   cursor: pointer;
   padding: 0;
   font-size: 0.9rem;
@@ -2031,7 +2121,7 @@ body {
 }
 
 .footer-nav a:hover {
-  color: var(--primary-blue);
+  color: var(--footer-text-hover);
 }
 
 .footer-nav .featured a {
@@ -2053,6 +2143,9 @@ body {
 /* Contact methods */
 .contact-methods {
   margin-bottom: 1.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
 }
 
 .contact-item {
@@ -2060,12 +2153,14 @@ body {
   align-items: center;
   gap: 0.5rem;
   margin-bottom: 0.5rem;
-  color: var(--text-secondary);
+  color: var(--footer-text);
   text-decoration: none;
+  font-weight: 500; /* Slightly bolder for better readability */
+  line-height: 1.5; /* Better line spacing */
 }
 
 .contact-item:hover {
-  color: var(--primary-blue);
+  color: var(--footer-text-hover);
 }
 
 .footer-links-section {
@@ -2077,12 +2172,18 @@ body {
   font-weight: 600;
   margin-bottom: 0.75rem;
   color: white;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
 }
 
 .quick-links {
   list-style: none;
   padding: 0;
   margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
 }
 
 .quick-links li {
@@ -2092,31 +2193,35 @@ body {
 .quick-links a {
   background: none;
   border: none;
-  color: var(--text-secondary);
+  color: var(--footer-text);
   cursor: pointer;
   padding: 0;
   font-size: 0.8rem;
   transition: color 0.3s ease;
   text-decoration: none;
+  font-weight: 500; /* Slightly bolder for better readability */
+  line-height: 1.5; /* Better line spacing */
 }
 
 .quick-links button {
   background: none;
   border: none;
-  color: var(--text-secondary);
+  color: var(--footer-text);
   cursor: pointer;
   padding: 0;
   font-size: 0.8rem;
   transition: color 0.3s ease;
   text-decoration: none;
+  font-weight: 500; /* Slightly bolder for better readability */
+  line-height: 1.5; /* Better line spacing */
 }
 
 .quick-links a:hover {
-  color: var(--primary-blue);
+  color: var(--footer-text-hover);
 }
 
 .quick-links button:hover {
-  color: var(--primary-blue);
+  color: var(--footer-text-hover);
 }
 
 /* Social links */
@@ -2132,7 +2237,7 @@ body {
   width: 40px;
   height: 40px;
   background: var(--bg-tertiary);
-  color: var(--text-secondary);
+  color: var(--footer-text);
   border-radius: 50%;
   text-decoration: none;
   transition: all 0.3s ease;
@@ -2721,5 +2826,23 @@ body {
   background: #0040e7 !important;
   color: #ffffff !important;
   border: 1px solid rgba(255, 255, 255, 0.3) !important;
+}
+
+/* Ensure header logo badge text is white */
+.header .logo .logo-badge,
+.header-container .logo .logo-badge,
+.header .logo .logo-badge[style*="color"],
+.header-container .logo .logo-badge[style*="color"] {
+  color: #ffffff !important;
+  text-shadow: none !important;
+  font-weight: 700 !important;
+}
+
+/* Ensure header logo heart icon and text are primary blue */
+.header .logo i.fas.fa-heartbeat,
+.header .logo span:not(.logo-badge),
+.header .logo i.fas.fa-heartbeat[style*="color"],
+.header .logo span:not(.logo-badge)[style*="color"] {
+  color: #0040e7 !important;
 }
 

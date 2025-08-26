@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
 import YearUpdater from './YearUpdater'
 import '../styles/index.css'
+import styles from './LandingPage.module.css';
 
 // Extend Window interface for Google API
 declare global {
@@ -670,54 +671,9 @@ const LandingPage: React.FC = React.memo(() => {
     // Fetch facilities from Firestore
     fetchFacilities()
 
-    // Ensure page is scrollable and hide scrollbar on mobile
+    // Ensure page is scrollable
     document.body.style.overflow = 'auto'
     document.documentElement.style.overflow = 'auto'
-    
-    // Hide scrollbar on mobile devices
-    const hideMobileScrollbar = () => {
-      if (window.innerWidth <= 768) {
-        document.body.style.cssText += `
-          -webkit-overflow-scrolling: touch;
-          scrollbar-width: none;
-          -ms-overflow-style: none;
-        `
-        document.documentElement.style.cssText += `
-          -webkit-overflow-scrolling: touch;
-          scrollbar-width: none;
-          -ms-overflow-style: none;
-        `
-        
-        // Add CSS to hide webkit scrollbar
-        const style = document.createElement('style')
-        style.id = 'mobile-scrollbar-hide'
-        style.textContent = `
-          @media (max-width: 768px) {
-            body::-webkit-scrollbar,
-            html::-webkit-scrollbar {
-              display: none;
-            }
-            body {
-              -webkit-overflow-scrolling: touch;
-              scrollbar-width: none;
-              -ms-overflow-style: none;
-            }
-            html {
-              -webkit-overflow-scrolling: touch;
-              scrollbar-width: none;
-              -ms-overflow-style: none;
-            }
-          }
-        `
-        document.head.appendChild(style)
-      }
-    }
-    
-    // Apply scrollbar hiding
-    hideMobileScrollbar()
-    
-    // Reapply on resize
-    window.addEventListener('resize', hideMobileScrollbar)
 
     // Cleanup function
     return () => {
@@ -727,13 +683,6 @@ const LandingPage: React.FC = React.memo(() => {
       }
       if (cleanupErrorMonitoring) {
         cleanupErrorMonitoring()
-      }
-      
-      // Remove mobile scrollbar hiding
-      window.removeEventListener('resize', hideMobileScrollbar)
-      const mobileStyle = document.getElementById('mobile-scrollbar-hide')
-      if (mobileStyle) {
-        mobileStyle.remove()
       }
     }
   }, [fetchFacilities])
@@ -1411,79 +1360,113 @@ const LandingPage: React.FC = React.memo(() => {
   }, [])
 
   return (
-    <>
+    <div className={styles.landingPageContainer}>
       <YearUpdater />
+      {/* Skip link for keyboard navigation */}
+      <a href="#main-content" className="skip-link">
+        Skip to main content
+      </a>
       
       {/* Live region for screen reader announcements */}
-      <div id="live-region" aria-live="polite" aria-atomic="true" className="sr-only"></div>
+      <div 
+        id="live-region" aria-live="polite" aria-atomic="true" className="sr-only">
+      </div>
       
       {/* Navigation Header */}
-      <header className="header" role="banner">
-        <div className="header-container">
-          <a href="/" className="logo" style={{ color: '#0052cc' }} aria-label="LingapLink - Healthcare Platform Philippines">
-            <i className="fas fa-heartbeat" aria-hidden="true" style={{ color: '#0052cc' }}></i>
-            <span style={{ color: '#0052cc' }}>LingapLink</span>
+      <header className={styles.header} role="banner">
+
+        <div className={styles.headerContainer}>
+
+          <a 
+            href="/"
+            className={styles.brandNameAndLogo}
+            aria-label="LingapLink - Healthcare Platform Philippines"
+          >
+
+            <i className="fas fa-heartbeat" aria-hidden="true"></i>
+
+            <h2>LingapLink</h2>
+
+            <div 
+              className={styles.logoBadge} 
+              aria-label="Philippines"
+              >
+                <p>
+                  PH
+                </p>
+            </div>
+
           </a>
           
           {/* Mobile Menu Toggle */}
           <button 
             ref={mobileMenuToggleRef}
-            className="mobile-menu-toggle"
+            className={styles.mobileMenuToggle}
             onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
             onKeyDown={handleMobileMenuToggleKeyDown}
             aria-label="Toggle mobile navigation menu"
             aria-expanded={isMobileMenuOpen}
           >
-            <span className={`hamburger ${isMobileMenuOpen ? 'open' : ''}`}>
+            <span className={`${styles.hamburger} ${isMobileMenuOpen ? styles.open : ''}`}>
               <span></span>
               <span></span>
               <span></span>
             </span>
           </button>
           
-          <nav className={`header-actions ${isMobileMenuOpen ? 'mobile-open' : ''}`} role="navigation" aria-label="Main navigation">
-            <button 
-              onClick={() => {
-                navigate('/quick-appointments')
-                setIsMobileMenuOpen(false)
-              }}
-              className="quick-appointment-btn" 
-              aria-label="Book a quick appointment without signing up"
-            >
-              <i className="fas fa-calendar-plus" aria-hidden="true"></i>
-              Quick Appointment
-            </button>
-            <button 
-              ref={loginButtonRef}
-              onClick={() => {
-                navigate('/patient-sign-in')
-                setIsMobileMenuOpen(false)
-              }}
-              onKeyDown={handleLoginButtonKeyDown}
-              className="login-btn" 
-              aria-label="Sign in to your patient account"
-            >
-              Login
-            </button>
-            <button 
-              ref={registerButtonRef}
-              onClick={() => {
-                navigate('/patient-sign-up')
-                setIsMobileMenuOpen(false)
-              }}
-              onKeyDown={handleRegisterButtonKeyDown}
-              className="register-btn" 
-              aria-label="Create a new patient account"
-            >
-              Register
-            </button>
+          <nav
+            className={`header-actions ${isMobileMenuOpen ? 'mobile-open' : ''}`}
+            role="navigation"
+            aria-label="Main navigation"
+          >
+            <div className={`${styles.headerButtonContainer} ${isMobileMenuOpen ? styles.isOpen : ''}`}>
+              <button 
+                onClick={() => {
+                  navigate('/quick-appointments')
+                  setIsMobileMenuOpen(false)
+                }}
+                className={styles.quickApptBtn}
+                aria-label="Book a quick appointment without signing up"
+              >
+                <i className="fas fa-calendar-plus" aria-hidden="true"></i>
+                Quick Appointment
+              </button>
+
+              <button 
+                ref={loginButtonRef}
+                onClick={() => {
+                  navigate('/patient-sign-in')
+                  setIsMobileMenuOpen(false)
+                }}
+                onKeyDown={handleLoginButtonKeyDown}
+                className={styles.loginBtn}
+                aria-label="Sign in to your patient account"
+              >
+                Login
+              </button>
+              
+              <button 
+                ref={registerButtonRef}
+                onClick={() => {
+                  navigate('/patient-sign-up')
+                  setIsMobileMenuOpen(false)
+                }}
+                onKeyDown={handleRegisterButtonKeyDown}
+                className={styles.registerBtn} 
+                aria-label="Create a new patient account"
+              >
+                Register
+              </button>
+            </div>
+            
+
           </nav>
         </div>
         
         {/* Mobile Menu Overlay */}
         {isMobileMenuOpen && (
           <div 
-            className="mobile-menu-overlay"
+            className={styles.mobileMenuOverlay}
             onClick={() => setIsMobileMenuOpen(false)}
             aria-hidden="true"
             role="presentation"
@@ -1492,53 +1475,55 @@ const LandingPage: React.FC = React.memo(() => {
       </header>
 
       {/* Main Content */}
-      <main id="main-content" className="main-hero hero-gold-gradient" role="main">
-        <div className="hero-container">
-          <div className="hero-content">
-            <div className="hero-left">
-              <h1>Get Your Consultation Online</h1>
-              <h2>Connect with top healthcare facilities from home</h2>
+      <main id="main-content" role="main">
+        <div className={styles.goldContainer}>
+          <img src="src\styles\hero_bg.svg" alt="" />
 
-              
+          <div className={styles.heroContent}>
 
+            <div className={styles.left}>
+              <div className={styles.top}>
+                <h1>Get Your Consultation Online</h1>
+                <h2>Connect with top healthcare facilities from home</h2>
+              </div>
               
-              <div className="online-stats" role="region" aria-label="Healthcare facilities statistics">
+              <div className={styles.onlineStats} role="region" aria-label="Healthcare facilities statistics">
                 <div className="doctor-avatars" aria-label="Healthcare professionals">
-                  <div className="avatar">
+                  <div className={styles.avatars}>
                     <img src={slmcImage} 
-                         alt="St. Luke's Medical Center" 
-                         loading="lazy"
-                         width="50" 
-                         height="50"
-                         onError={(e) => {
-                           console.warn('Failed to load SLMC image:', e);
-                           e.currentTarget.style.display = 'none';
-                         }} />
+                        alt="St. Luke's Medical Center" 
+                        loading="lazy"
+                        width="50" 
+                        height="50"
+                        onError={(e) => {
+                          console.warn('Failed to load SLMC image:', e);
+                          e.currentTarget.style.display = 'none';
+                        }} />
                   </div>
-                  <div className="avatar">
+                  <div className={styles.avatars}>
                     <img src={tmcImage} 
-                         alt="The Medical City" 
-                         loading="lazy"
-                         width="50" 
-                         height="50"
-                         onError={(e) => {
-                           console.warn('Failed to load TMC image:', e);
-                           e.currentTarget.style.display = 'none';
-                         }} />
+                        alt="The Medical City" 
+                        loading="lazy"
+                        width="50" 
+                        height="50"
+                        onError={(e) => {
+                          console.warn('Failed to load TMC image:', e);
+                          e.currentTarget.style.display = 'none';
+                        }} />
                   </div>
-                  <div className="avatar">
+                  <div className={styles.avatars}>
                     <img src={ahmcImage} 
-                         alt="Asian Hospital and Medical Center" 
-                         loading="lazy"
-                         width="50" 
-                         height="50"
-                         onError={(e) => {
-                           console.warn('Failed to load AHMC image:', e);
-                           e.currentTarget.style.display = 'none';
-                         }} />
+                        alt="Asian Hospital and Medical Center" 
+                        loading="lazy"
+                        width="50" 
+                        height="50"
+                        onError={(e) => {
+                          console.warn('Failed to load AHMC image:', e);
+                          e.currentTarget.style.display = 'none';
+                        }} />
                   </div>
                 </div>
-                <p className="stats-text" aria-live="polite">
+                <p aria-live="polite">
                   {isLoadingFacilities 
                     ? 'Loading healthcare facilities...' 
                     : facilities.length > 0 
@@ -1548,36 +1533,24 @@ const LandingPage: React.FC = React.memo(() => {
                 </p>
               </div>
             </div>
-            
-            <div className="hero-right">
-              <div className="medical-team">
-                <picture className="doctor-main">
-                  <img src={drWillieOngImage} 
-                       alt="Photo of Dr. Willie Ong" 
-                       loading="eager"
-                       width="400" 
-                       height="500" 
-                       decoding="async"
-                       onError={(e) => {
-                         console.warn('Failed to load Dr. Willie Ong image:', e);
-                         e.currentTarget.style.display = 'none';
-                       }} />
-                </picture>
-                <picture className="doctor-secondary">
-                  <img src={drAlvinFranciscoImage} 
-                       alt="Photo of Dr. Alvin Francisco" 
-                       loading="lazy"
-                       width="400" 
-                       height="500" 
-                       decoding="async"
-                       onError={(e) => {
-                         console.warn('Failed to load Dr. Alvin Francisco image:', e);
-                         e.currentTarget.style.display = 'none';
-                       }} />
-                </picture>
-              </div>
+          
+            <div className={styles.right}>
+
+              <img
+                className={styles.doctors}
+                src='src\styles\Untitled design (1).png'
+                alt="Photo of Dr. Willie Ong" 
+                loading="eager"
+                decoding="async"
+                onError={(e) => {
+                  console.warn('Failed to load Dr. Willie Ong image:', e);
+                  e.currentTarget.style.display = 'none';
+                }} />
+
             </div>
+
           </div>
+          
         </div>
 
         {/* Search Section */}
@@ -1665,11 +1638,6 @@ const LandingPage: React.FC = React.memo(() => {
                 aria-label="Search healthcare facilities"
                 disabled={isSearching}
                 onKeyDown={handleSearchButtonKeyDown}
-                style={{
-                  backgroundColor: 'var(--primary-blue)',
-                  color: 'white',
-                  border: 'none'
-                }}
               >
                 {isSearching ? 'Searching...' : 'Search'}
               </button>
@@ -1772,7 +1740,7 @@ const LandingPage: React.FC = React.memo(() => {
                     <div className="facility-details">
                       <h3>{facility.name}</h3>
                       <p className="facility-type">{facility.type} | {getExperienceYears(facility.createdAt)}</p>
-                      <span className="specialty-tag" style={{ color: 'white' }} aria-label="Specialty: {getPrimarySpecialty(facility.specialties, facility.services)}">{getPrimarySpecialty(facility.specialties, facility.services)}</span>
+                      <span className="specialty-tag" aria-label="Specialty: {getPrimarySpecialty(facility.specialties, facility.services)}">{getPrimarySpecialty(facility.specialties, facility.services)}</span>
                     </div>
                   </div>
                   
@@ -2071,7 +2039,7 @@ const LandingPage: React.FC = React.memo(() => {
 
       {/* Toast Container for Notifications */}
       <div id="toast-container" className="toast-container" aria-live="polite" aria-atomic="false"></div>
-    </>
+    </div>
   )
 })
 

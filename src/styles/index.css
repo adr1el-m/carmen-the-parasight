@@ -29,8 +29,6 @@
   --border-radius: 12px;
   --border-radius-sm: 8px;
   --border-radius-lg: 16px;
-  --footer-text: #e2e8f0; /* Light grey for footer text on dark background */
-  --footer-text-hover: #ffffff; /* White for footer text hover states */
 }
 
 /* Reset and Base Styles */
@@ -45,13 +43,12 @@
   position: absolute;
   top: -40px;
   left: 6px;
-  background: var(--primary-color);
-  color: white;
   padding: 8px;
   text-decoration: none;
   border-radius: 4px;
   z-index: 10001;
   transition: top 0.3s;
+  opacity: 0; /* Add opacity */
 }
 
 .skip-link:focus {
@@ -112,326 +109,6 @@ body {
   max-width: 1280px; /* Increased max-width for modern screens */
   margin: 0 auto;
   padding: 0 24px;
-}
-
-/* Header */
-.header {
-  background: var(--bg-primary);
-  padding: 1.5rem 0; /* Increased padding for more space */
-  position: sticky;
-  top: 0;
-  z-index: 50;
-  backdrop-filter: blur(10px);
-  background-color: rgba(255, 255, 255, 0.8);
-  transition: all 0.3s ease; /* Smooth transition for header changes */
-}
-
-/* Scrolled state for the header */
-.header.scrolled {
-  padding: 1rem 0;
-  box-shadow: var(--shadow-md);
-  background-color: rgba(255, 255, 255, 0.95);
-}
-
-.header-container {
-  max-width: 1280px;
-  margin: 0 auto;
-  padding: 0 24px;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-}
-
-.header .logo {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  font-size: 1.5rem;
-  font-weight: 700;
-  color: #0040e7 !important;
-}
-
-.header .logo i.fas.fa-heartbeat {
-  font-size: 1.8rem;
-  color: #0040e7 !important;
-}
-
-.header .logo span {
-  color: #0040e7 !important;
-}
-
-.header .logo .logo-badge {
-  background: #0040e7 !important;
-  color: #ffffff !important;
-  padding: 0.3rem 0.5rem;
-  border-radius: 6px;
-  font-size: 0.75rem;
-  font-weight: 700;
-  margin-left: 0.5rem;
-  display: inline-block !important;
-  opacity: 1 !important;
-  visibility: visible !important;
-  text-shadow: none !important;
-  border: 1px solid rgba(255, 255, 255, 0.3);
-  text-align: center !important;
-  min-width: 2rem !important;
-  height: 1.5rem !important;
-  line-height: 1.5rem !important;
-  vertical-align: middle !important;
-  box-sizing: border-box !important;
-}
-
-/* Fallback for any remaining logo styles */
-.logo {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  font-size: 1.5rem;
-  font-weight: 700;
-  color: #0040e7 !important;
-}
-
-.logo i {
-  font-size: 1.8rem;
-  color: #0040e7 !important;
-}
-
-/* Only apply to header logo, not signup/signin logos */
-.header .logo span {
-  color: #0040e7 !important;
-}
-
-.logo-badge {
-  background: #0040e7 !important;
-  color: #ffffff !important;
-  padding: 0.3rem 0.5rem;
-  border-radius: 6px;
-  font-size: 0.75rem;
-  font-weight: 700;
-  margin-left: 0.5rem;
-  display: inline-block !important;
-  opacity: 1 !important;
-  visibility: visible !important;
-  text-shadow: none;
-  border: 1px solid rgba(255, 255, 255, 0.3);
-}
-
-.header-actions {
-  display: flex;
-  align-items: center;
-  gap: 1.25rem;
-  padding: 0.5rem 0;
-}
-
-.login-btn {
-  color: var(--text-secondary);
-  text-decoration: none;
-  font-weight: 600;
-  padding: 0.75rem 1.5rem;
-  border-radius: 12px;
-  border: 2px solid transparent;
-  background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-  position: relative;
-  overflow: hidden;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
-  font-size: 0.95rem;
-  letter-spacing: 0.025em;
-}
-
-.login-btn::before {
-  content: '';
-  position: absolute;
-  top: 0;
-  left: -100%;
-  width: 100%;
-  height: 100%;
-  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.4), transparent);
-  transition: left 0.5s ease;
-}
-
-.login-btn:hover {
-  color: var(--primary-dark);
-  background: linear-gradient(135deg, #ffffff 0%, #f1f5f9 100%);
-  transform: translateY(-2px);
-  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.12);
-  border-color: var(--primary-blue);
-}
-
-.login-btn:hover::before {
-  left: 100%;
-}
-
-.login-btn:active {
-  transform: translateY(0);
-  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
-}
-
-.register-btn {
-  background: var(--primary-blue);
-  color: white;
-  padding: 0.75rem 1.75rem;
-  border-radius: 12px;
-  text-decoration: none;
-  font-weight: 700;
-  font-size: 0.95rem;
-  letter-spacing: 0.025em;
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-  box-shadow: 0 4px 15px rgba(0, 64, 231, 0.3);
-  position: relative;
-  overflow: hidden;
-  border: 2px solid transparent;
-}
-
-.register-btn::before {
-  content: '';
-  position: absolute;
-  top: 0;
-  left: -100%;
-  width: 100%;
-  height: 100%;
-  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
-  transition: left 0.5s ease;
-}
-
-.register-btn:hover {
-  background: #0033cc;
-  transform: translateY(-3px);
-  box-shadow: 0 12px 35px rgba(0, 64, 231, 0.4);
-  border-color: rgba(255, 255, 255, 0.2);
-}
-
-.register-btn:hover::before {
-  left: 100%;
-}
-
-.register-btn:active {
-  transform: translateY(-1px);
-  box-shadow: 0 6px 20px rgba(0, 64, 231, 0.3);
-}
-
-.quick-appointment-btn {
-  background: linear-gradient(135deg, #10b981 0%, #059669 100%);
-  color: white;
-  padding: 0.75rem 1.5rem;
-  border-radius: 12px;
-  text-decoration: none;
-  font-weight: 600;
-  font-size: 0.9rem;
-  letter-spacing: 0.025em;
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-  box-shadow: 0 4px 15px rgba(16, 185, 129, 0.3);
-  position: relative;
-  overflow: hidden;
-  border: 2px solid transparent;
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-}
-
-.quick-appointment-btn::before {
-  content: '';
-  position: absolute;
-  top: 0;
-  left: -100%;
-  width: 100%;
-  height: 100%;
-  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
-  transition: left 0.5s ease;
-}
-
-.quick-appointment-btn:hover {
-  background: linear-gradient(135deg, #059669 0%, #047857 100%);
-  transform: translateY(-3px);
-  box-shadow: 0 12px 35px rgba(16, 185, 129, 0.4);
-  border-color: rgba(255, 255, 255, 0.2);
-}
-
-.quick-appointment-btn:hover::before {
-  left: 100%;
-}
-
-.quick-appointment-btn:active {
-  transform: translateY(-1px);
-  box-shadow: 0 6px 20px rgba(16, 185, 129, 0.3);
-}
-
-.quick-appointment-btn i {
-  font-size: 1rem;
-}
-
-/* Mobile Menu Toggle */
-.mobile-menu-toggle {
-  display: none;
-  background: none;
-  border: none;
-  cursor: pointer;
-  padding: 0.5rem;
-  z-index: 1001;
-}
-
-/* Hide mobile menu toggle on desktop */
-@media (min-width: 768px) {
-  .mobile-menu-toggle {
-    display: none !important;
-  }
-  
-  .header-actions {
-    display: flex !important;
-    position: static !important;
-    width: auto !important;
-    height: auto !important;
-    flex-direction: row !important;
-    padding: 0.5rem 0 !important;
-    box-shadow: none !important;
-    transform: none !important;
-    background: transparent !important;
-  }
-  
-  .mobile-menu-overlay {
-    display: none !important;
-  }
-}
-
-.hamburger {
-  display: flex;
-  flex-direction: column;
-  width: 25px;
-  height: 20px;
-  justify-content: space-between;
-  transition: all 0.3s ease;
-}
-
-.hamburger span {
-  display: block;
-  height: 3px;
-  width: 100%;
-  background: var(--primary-blue);
-  border-radius: 2px;
-  transition: all 0.3s ease;
-}
-
-.hamburger.open span:nth-child(1) {
-  transform: rotate(45deg) translate(7px, 7px);
-}
-
-.hamburger.open span:nth-child(2) {
-  opacity: 0;
-}
-
-.hamburger.open span:nth-child(3) {
-  transform: rotate(-45deg) translate(6px, -6px);
-}
-
-.mobile-menu-overlay {
-  display: none;
-  position: fixed;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  background: rgba(0, 0, 0, 0.5);
-  z-index: 998;
 }
 
 /* Fixed Emergency Button */
@@ -531,12 +208,12 @@ body {
 
 /* Main Hero Section */
 .main-hero {
-  background-color: var(--bg-secondary);
+  /* background-color: var(--bg-secondary); */
   position: relative;
   padding-bottom: 8rem;
 }
 
-.hero-gold-gradient {
+/* .hero-gold-gradient {
   background-color: #b89e4f;
   background-image:
     radial-gradient(at 2% 17%, hsla(38, 79%, 65%, 1) 0px, transparent 50%),
@@ -547,7 +224,7 @@ body {
     radial-gradient(at 86% 49%, hsla(43, 75%, 55%, 1) 0px, transparent 50%),
     radial-gradient(at 13% 86%, hsla(38, 79%, 65%, 1) 0px, transparent 50%),
     radial-gradient(at 62% 92%, hsla(43, 75%, 55%, 1) 0px, transparent 50%);
-}
+} */
 
 .hero-container {
   max-width: 1280px;
@@ -684,7 +361,7 @@ body {
 .search-section {
   position: relative;
   z-index: 10;
-  margin-top: -10px;
+  margin-top: -15px;
   padding-bottom: 4rem;
 }
 
@@ -780,7 +457,7 @@ body {
 }
 
 .search-button {
-  background: var(--primary-blue);
+  background: var(--gradient-primary);
   color: white;
   border: none;
   padding: 1rem 2rem;
@@ -792,7 +469,6 @@ body {
 }
 
 .search-button:hover {
-  background: var(--primary-dark);
   transform: translateY(-2px);
   box-shadow: var(--shadow-lg);
 }
@@ -823,8 +499,6 @@ body {
 .quick-appointment-cta .cta-text p {
   color: var(--text-secondary);
   margin: 0;
-  font-weight: 500;
-  line-height: 1.6;
 }
 
 .cta-quick-appointment-btn {
@@ -841,6 +515,7 @@ body {
   align-items: center;
   gap: 0.5rem;
   box-shadow: 0 4px 15px rgba(245, 158, 11, 0.3);
+  white-space: nowrap;
 }
 
 .cta-quick-appointment-btn:hover {
@@ -955,57 +630,12 @@ body {
 
 .specialty-tag {
   background: var(--primary-light);
-  color: white !important;
+  color: white;
   padding: 0.25rem 0.75rem;
   border-radius: 20px;
   font-size: 0.8rem;
   font-weight: 500;
   display: inline-block;
-}
-
-/* Ensure specialty tag is white on landing page */
-.landing-page .specialty-tag,
-.signup-container .specialty-tag,
-.main-hero .specialty-tag {
-  color: white !important;
-}
-
-/* Specific rule for facility cards */
-.facility-card .specialty-tag {
-  color: white !important;
-}
-
-/* Override any conflicting styles */
-.recommended-facilities .specialty-tag {
-  color: white !important;
-}
-
-/* Override logo colors to ensure primary-blue */
-.logo .logo-icon,
-.logo .logo-text {
-  color: #0040e7 !important;
-}
-
-/* More specific logo overrides */
-.signup-container .logo .logo-icon,
-.signup-container .logo .logo-text,
-.patient-signin .logo .logo-icon,
-.patient-signin .logo .logo-text {
-  color: #0040e7 !important;
-}
-
-/* Highest specificity for logo colors */
-div[class*="signup-container"] .logo .logo-icon,
-div[class*="signup-container"] .logo .logo-text,
-div[class*="patient-signin"] .logo .logo-icon,
-div[class*="patient-signin"] .logo .logo-text {
-  color: #0040e7 !important;
-}
-
-/* Direct hex color override for all logo elements */
-.signup-container .logo span,
-.patient-signin .logo span {
-  color: #0040e7 !important;
 }
 
 .facility-schedule {
@@ -1165,7 +795,6 @@ div[class*="patient-signin"] .logo .logo-text {
   color: var(--text-secondary);
   margin-bottom: 2rem;
   line-height: 1.6;
-  font-weight: 500;
 }
 
 .cta-features {
@@ -1186,9 +815,8 @@ div[class*="patient-signin"] .logo .logo-text {
 }
 
 .cta-feature span {
-  font-weight: 600;
+  font-weight: 500;
   color: var(--text-secondary);
-  line-height: 1.5;
 }
 
 .cta-action {
@@ -1202,7 +830,7 @@ div[class*="patient-signin"] .logo .logo-text {
   display: inline-flex;
   align-items: center;
   gap: 0.75rem;
-  background: var(--primary-blue);
+  background: var(--gradient-primary);
   color: white;
   padding: 1.25rem 2.5rem;
   border-radius: var(--border-radius-sm);
@@ -1215,7 +843,6 @@ div[class*="patient-signin"] .logo .logo-text {
 }
 
 .partner-btn:hover {
-  background: var(--primary-dark);
   transform: translateY(-2px);
   box-shadow: var(--shadow-xl);
 }
@@ -1232,8 +859,6 @@ div[class*="patient-signin"] .logo .logo-text {
 .cta-note {
   color: var(--text-secondary);
   font-size: 0.9rem;
-  font-weight: 500;
-  line-height: 1.5;
 }
 
 /* Footer */
@@ -1245,17 +870,12 @@ div[class*="patient-signin"] .logo .logo-text {
 
 .footer-main {
   padding: 3rem 0;
-  max-width: 1200px;
-  margin: 0 auto;
 }
 
 .footer-grid {
   display: grid;
   grid-template-columns: 2fr 1fr 1fr 1.5fr;
-  gap: 4rem;
-  max-width: 1200px;
-  margin: 0 auto;
-  align-items: start;
+  gap: 3rem;
 }
 
 .footer-brand .footer-logo {
@@ -1265,7 +885,6 @@ div[class*="patient-signin"] .logo .logo-text {
   gap: 0.5rem;
   font-size: 1.5rem;
   font-weight: 700;
-  margin-bottom: 1rem;
 }
 
 .footer-brand .footer-logo i {
@@ -1292,9 +911,9 @@ div[class*="patient-signin"] .logo .logo-text {
 }
 
 .footer-description {
-  color: var(--footer-text);
+  color: var(--text-muted);
   line-height: 1.6;
-  margin: 1rem 0 2rem 0;
+  margin: 1rem 0;
   max-width: 350px;
 }
 
@@ -1303,9 +922,6 @@ div[class*="patient-signin"] .logo .logo-text {
   font-weight: 600;
   margin-bottom: 1.5rem;
   color: white;
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
 }
 
 .footer-nav ul {
@@ -1319,11 +935,9 @@ div[class*="patient-signin"] .logo .logo-text {
 }
 
 .footer-nav a {
-  color: var(--footer-text);
+  color: var(--text-muted);
   text-decoration: none;
   transition: color 0.3s ease;
-  font-weight: 500; /* Slightly bolder for better readability */
-  line-height: 1.5; /* Better line spacing */
 }
 
 .footer-nav a:hover {
@@ -1333,20 +947,17 @@ div[class*="patient-signin"] .logo .logo-text {
 .footer-nav button {
   background: none;
   border: none;
-  color: var(--footer-text);
+  color: var(--text-secondary);
   cursor: pointer;
   padding: 0;
   font-size: inherit;
   font-family: inherit;
-  font-weight: 500; /* Slightly bolder for better readability */
   text-align: left;
   transition: color 0.3s ease;
-  line-height: 1.5; /* Better line spacing */
-  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.1); /* Subtle shadow for better readability */
 }
 
 .footer-nav button:hover {
-  color: var(--footer-text-hover);
+  color: var(--primary-blue);
 }
 
 .footer-bottom {
@@ -1363,7 +974,7 @@ div[class*="patient-signin"] .logo .logo-text {
 }
 
 .copyright p {
-  color: var(--footer-text);
+  color: var(--text-muted);
   font-size: 0.9rem;
 }
 
@@ -1380,7 +991,7 @@ div[class*="patient-signin"] .logo .logo-text {
   height: 40px;
   background: #374151;
   border-radius: 50%;
-  color: var(--footer-text);
+  color: var(--text-muted);
   text-decoration: none;
   transition: all 0.3s ease;
 }
@@ -1658,11 +1269,6 @@ div[class*="patient-signin"] .logo .logo-text {
   .search-section {
     margin-top: 20px;
     padding-bottom: 2rem;
-  }
-  
-  .search-container {
-    padding: 0 16px;
-    margin: 0 auto;
   }
   
   .search-bar {
@@ -1997,18 +1603,13 @@ div[class*="patient-signin"] .logo .logo-text {
   color: var(--text-dark);
   padding: 2rem 0;
   margin-bottom: 2rem;
-  max-width: 1200px;
-  margin-left: auto;
-  margin-right: auto;
 }
 
 .footer-cta-content {
   display: flex;
   justify-content: space-between;
-  align-items: flex-start;
-  gap: 3rem;
-  max-width: 1200px;
-  margin: 0 auto;
+  align-items: center;
+  gap: 2rem;
 }
 
 .cta-text-section h3 {
@@ -2021,11 +1622,9 @@ div[class*="patient-signin"] .logo .logo-text {
 }
 
 .cta-text-section p {
-  opacity: 1;
+  opacity: 0.9;
   margin: 0;
-  color: var(--footer-text);
-  font-weight: 500;
-  line-height: 1.6;
+  color: var(--text-secondary);
 }
 
 .cta-actions-section {
@@ -2074,10 +1673,8 @@ div[class*="patient-signin"] .logo .logo-text {
 /* Footer stats */
 .footer-stats {
   display: flex;
-  gap: 2.5rem;
+  gap: 2rem;
   margin-top: 1rem;
-  justify-content: flex-start;
-  align-items: center;
 }
 
 .stat-item {
@@ -2093,7 +1690,7 @@ div[class*="patient-signin"] .logo .logo-text {
 
 .stat-label {
   font-size: 0.8rem;
-  color: var(--footer-text);
+  color: var(--text-secondary);
   text-transform: uppercase;
   letter-spacing: 0.5px;
 }
@@ -2112,7 +1709,7 @@ div[class*="patient-signin"] .logo .logo-text {
 .footer-nav a {
   background: none;
   border: none;
-  color: #e2e8f0; /* Light grey for better contrast on dark background */
+  color: var(--text-secondary);
   cursor: pointer;
   padding: 0;
   font-size: 0.9rem;
@@ -2121,7 +1718,7 @@ div[class*="patient-signin"] .logo .logo-text {
 }
 
 .footer-nav a:hover {
-  color: var(--footer-text-hover);
+  color: var(--primary-blue);
 }
 
 .footer-nav .featured a {
@@ -2143,9 +1740,6 @@ div[class*="patient-signin"] .logo .logo-text {
 /* Contact methods */
 .contact-methods {
   margin-bottom: 1.5rem;
-  display: flex;
-  flex-direction: column;
-  gap: 0.75rem;
 }
 
 .contact-item {
@@ -2153,14 +1747,12 @@ div[class*="patient-signin"] .logo .logo-text {
   align-items: center;
   gap: 0.5rem;
   margin-bottom: 0.5rem;
-  color: var(--footer-text);
+  color: var(--text-secondary);
   text-decoration: none;
-  font-weight: 500; /* Slightly bolder for better readability */
-  line-height: 1.5; /* Better line spacing */
 }
 
 .contact-item:hover {
-  color: var(--footer-text-hover);
+  color: var(--primary-blue);
 }
 
 .footer-links-section {
@@ -2172,18 +1764,12 @@ div[class*="patient-signin"] .logo .logo-text {
   font-weight: 600;
   margin-bottom: 0.75rem;
   color: white;
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
 }
 
 .quick-links {
   list-style: none;
   padding: 0;
   margin: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 0.5rem;
 }
 
 .quick-links li {
@@ -2193,35 +1779,31 @@ div[class*="patient-signin"] .logo .logo-text {
 .quick-links a {
   background: none;
   border: none;
-  color: var(--footer-text);
+  color: var(--text-secondary);
   cursor: pointer;
   padding: 0;
   font-size: 0.8rem;
   transition: color 0.3s ease;
   text-decoration: none;
-  font-weight: 500; /* Slightly bolder for better readability */
-  line-height: 1.5; /* Better line spacing */
 }
 
 .quick-links button {
   background: none;
   border: none;
-  color: var(--footer-text);
+  color: var(--text-secondary);
   cursor: pointer;
   padding: 0;
   font-size: 0.8rem;
   transition: color 0.3s ease;
   text-decoration: none;
-  font-weight: 500; /* Slightly bolder for better readability */
-  line-height: 1.5; /* Better line spacing */
 }
 
 .quick-links a:hover {
-  color: var(--footer-text-hover);
+  color: var(--primary-blue);
 }
 
 .quick-links button:hover {
-  color: var(--footer-text-hover);
+  color: var(--primary-blue);
 }
 
 /* Social links */
@@ -2237,7 +1819,7 @@ div[class*="patient-signin"] .logo .logo-text {
   width: 40px;
   height: 40px;
   background: var(--bg-tertiary);
-  color: var(--footer-text);
+  color: var(--text-secondary);
   border-radius: 50%;
   text-decoration: none;
   transition: all 0.3s ease;
@@ -2826,23 +2408,5 @@ div[class*="patient-signin"] .logo .logo-text {
   background: #0040e7 !important;
   color: #ffffff !important;
   border: 1px solid rgba(255, 255, 255, 0.3) !important;
-}
-
-/* Ensure header logo badge text is white */
-.header .logo .logo-badge,
-.header-container .logo .logo-badge,
-.header .logo .logo-badge[style*="color"],
-.header-container .logo .logo-badge[style*="color"] {
-  color: #ffffff !important;
-  text-shadow: none !important;
-  font-weight: 700 !important;
-}
-
-/* Ensure header logo heart icon and text are primary blue */
-.header .logo i.fas.fa-heartbeat,
-.header .logo span:not(.logo-badge),
-.header .logo i.fas.fa-heartbeat[style*="color"],
-.header .logo span:not(.logo-badge)[style*="color"] {
-  color: #0040e7 !important;
 }
 

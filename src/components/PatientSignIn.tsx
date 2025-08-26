@@ -628,6 +628,20 @@ const PatientSignIn: React.FC = React.memo(() => {
               className="close-link" 
               onClick={handleClose}
               aria-label="Close and return to home page"
+              style={{ 
+                backgroundColor: 'var(--primary-blue)', 
+                color: 'white',
+                border: 'none',
+                borderRadius: '50%',
+                width: '32px',
+                height: '32px',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                cursor: 'pointer',
+                fontSize: '18px',
+                fontWeight: 'bold'
+              }}
             >
               ×
             </button>
@@ -635,8 +649,8 @@ const PatientSignIn: React.FC = React.memo(() => {
           
           <div className="signup-content">
             <div className="signup-header">
-              <h1>Patient Sign In</h1>
-              <p>New to LingapLink? <a href="/patient-sign-up" className="login-link">Sign up</a></p>
+              <h1 style={{ color: 'var(--primary-blue)' }}>Welcome Back</h1>
+              <p>New to LingapLink? <a href="/patient-sign-up" className="login-link" style={{ color: 'var(--primary-blue)' }}>Sign up</a></p>
             </div>
 
             <form 
@@ -752,7 +766,7 @@ const PatientSignIn: React.FC = React.memo(() => {
                   disabled={isLoading}
                   aria-describedby="remember-help"
                 />
-                <label htmlFor="remember">Remember me</label>
+                <label htmlFor="remember" style={{ color: 'var(--primary-blue)' }}>Remember me</label>
                 <div id="remember-help" className="sr-only">
                   Keep me signed in on this device
                 </div>

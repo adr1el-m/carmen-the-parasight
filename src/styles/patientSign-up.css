@@ -1,18 +1,15 @@
 /* Patient Sign-Up Page - Split Layout Design */
 
-/* Import standardized breakpoints */
-@import url('./breakpoints.css');
-
 :root {
-    --primary-color: #2d5a6b; /* Darker teal blue for WCAG AA compliance */
-    --secondary-color: #4a6b8a; /* Darker light blue for better contrast */
-    --accent-color: #1e7e34; /* Darker green for WCAG AA compliance */
-    --text-color: #1a202c; /* Darker text for WCAG AA compliance */
-    --text-light: #4a5568; /* Darker medium gray for better contrast */
-    --text-muted: #718096; /* Darker light gray for WCAG AA compliance */
-    --background-color: #f7fafc; /* Slightly darker for better contrast */
+    --primary-color: #4A90A4; /* Teal blue */
+    --secondary-color: #6B9AC7; /* Light blue */
+    --accent-color: #34A853; /* Green for success */
+    --text-color: #333333; /* Dark gray */
+    --text-light: #666666; /* Medium gray */
+    --text-muted: #999999; /* Light gray */
+    --background-color: #f8f9fa; /* Light background */
     --white: #ffffff;
-    --border-color: #e2e8f0; /* Darker border for better contrast */
+    --border-color: #e1e1e1;
     --border-radius: 8px;
     --font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
     --shadow-light: 0 2px 8px rgba(0, 0, 0, 0.1);
@@ -486,17 +483,17 @@ body {
 }
 
 .social-btn.facebook-btn:hover {
-    border-color: #0052cc; /* Darker blue for WCAG AA compliance */
+    border-color: #1877F2;
 }
 
 .social-btn.apple-btn:hover {
-    border-color: #1a202c; /* Darker black for WCAG AA compliance */
+    border-color: #000000;
 }
 
 /* Error and Success Messages */
 .error-message {
     background: rgba(220, 53, 69, 0.1);
-    color: #dc2626; /* Darker red for WCAG AA compliance */
+    color: #dc3545;
     padding: 12px 16px;
     border-radius: var(--border-radius);
     border: 1px solid rgba(220, 53, 69, 0.2);
@@ -728,7 +725,7 @@ body {
 .success-message {
   background-color: rgba(240, 253, 244, 0.95);
   border: 1px solid #bbf7d0;
-  color: #059669; /* Darker green for WCAG AA compliance */
+  color: #16a34a;
   border-left: 4px solid #16a34a;
 }
 
@@ -932,7 +929,7 @@ body {
   transform: translateY(-50%);
   background: none;
   border: none;
-  color: #4a5568; /* Darker gray for WCAG AA compliance */
+  color: #6b7280;
   cursor: pointer;
   padding: 0.5rem;
   border-radius: 0.375rem;
@@ -1020,7 +1017,7 @@ body {
   border: 1px solid rgba(255, 255, 255, 0.2);
 }
 
-/* Responsive improvements - Small Mobile */
+/* Responsive improvements */
 @media (max-width: 640px) {
   .social-buttons {
     flex-direction: column;
@@ -1083,14 +1080,14 @@ body {
 
 .terms-header h3 {
   margin: 0 0 0.5rem 0;
-  color: #1a202c; /* Darker text for WCAG AA compliance */
+  color: #1e293b;
   font-size: 1.25rem;
   font-weight: 600;
 }
 
 .terms-subtitle {
   margin: 0 0 1.5rem 0;
-  color: #4a5568; /* Darker gray for WCAG AA compliance */
+  color: #64748b;
   font-size: 0.875rem;
   line-height: 1.5;
 }
@@ -1128,7 +1125,7 @@ body {
 .terms-label {
   font-size: 0.875rem;
   line-height: 1.5;
-  color: #2d3748; /* Darker gray for WCAG AA compliance */
+  color: #374151;
   cursor: pointer;
   user-select: none;
 }
@@ -1211,7 +1208,7 @@ body {
   background: none;
   border: none;
   font-size: 1.5rem;
-  color: #4a5568; /* Darker gray for WCAG AA compliance */
+  color: #6b7280;
   cursor: pointer;
   padding: 0.25rem;
   border-radius: 4px;
@@ -1231,21 +1228,21 @@ body {
 
 .modal-body h3 {
   margin: 0 0 1rem 0;
-  color: #1a202c; /* Darker text for WCAG AA compliance */
+  color: #1f2937;
   font-size: 1.25rem;
   font-weight: 600;
 }
 
 .modal-body h4 {
   margin: 1.5rem 0 0.75rem 0;
-  color: #2d3748; /* Darker gray for WCAG AA compliance */
+  color: #374151;
   font-size: 1rem;
   font-weight: 600;
 }
 
 .modal-body p {
   margin: 0 0 1rem 0;
-  color: #374151; /* Darker gray for WCAG AA compliance */
+  color: #4b5563;
   line-height: 1.6;
 }
 
@@ -1256,7 +1253,7 @@ body {
 
 .modal-body li {
   margin: 0.5rem 0;
-  color: #374151; /* Darker gray for WCAG AA compliance */
+  color: #4b5563;
   line-height: 1.5;
 }
 
@@ -1280,7 +1277,7 @@ body {
 }
 
 .modal-btn:hover {
-  background: #1e40af; /* Darker blue for WCAG AA compliance */
+  background: #1d4ed8;
 }
 
 /* Responsive adjustments */
@@ -1309,15 +1306,15 @@ body {
 .google-signup-note {
   margin-top: 10px;
   padding: 12px;
-  background-color: #fef3c7; /* Darker yellow background for better contrast */
-  border: 1px solid #f59e0b; /* Darker yellow border for better contrast */
+  background-color: #fff3cd;
+  border: 1px solid #ffeaa7;
   border-radius: 6px;
   text-align: center;
 }
 
 .google-signup-note p {
   margin: 0;
-  color: #92400e; /* Darker yellow text for WCAG AA compliance */
+  color: #856404;
   font-size: 14px;
   font-weight: 500;
 }
@@ -1326,14 +1323,14 @@ body {
 .form-section {
   margin-bottom: 24px;
   padding: 20px;
-  background-color: #f7fafc; /* Slightly darker for better contrast */
+  background-color: #f8f9fa;
   border-radius: 8px;
-  border: 1px solid #e2e8f0; /* Darker border for better contrast */
+  border: 1px solid #e9ecef;
 }
 
 .form-section h4 {
   margin: 0 0 16px 0;
-  color: #374151; /* Darker gray for WCAG AA compliance */
+  color: #495057;
   font-size: 16px;
   font-weight: 600;
   display: flex;
@@ -1350,7 +1347,7 @@ body {
   align-items: center;
   gap: 8px;
   font-weight: 500;
-  color: #374151; /* Darker gray for WCAG AA compliance */
+  color: #495057;
   cursor: pointer;
 }
 
@@ -1389,13 +1386,13 @@ body {
 }
 
 .alert-info {
-  background-color: #d1ecf1; /* Keep light blue background */
+  background-color: #d1ecf1;
   border: 1px solid #bee5eb;
-  color: #0c5460; /* Keep dark blue text for good contrast */
+  color: #0c5460;
 }
 
 .alert i {
-  color: #0c5460; /* Darker blue for WCAG AA compliance */
+  color: #17a2b8;
   margin-top: 2px;
 }
 
@@ -1428,7 +1425,7 @@ body {
   display: block;
   margin-bottom: 8px;
   font-weight: 500;
-  color: #374151; /* Darker gray for WCAG AA compliance */
+  color: #495057;
   font-size: 14px;
 }
 
@@ -1437,12 +1434,12 @@ body {
 .modal-content[style*="maxWidth: 900px"] .form-group textarea {
   width: 100%;
   padding: 12px 16px;
-  border: 2px solid #e2e8f0; /* Darker border for better contrast */
+  border: 2px solid #e9ecef;
   border-radius: 8px;
   font-size: 14px;
   transition: border-color 0.2s ease, box-shadow 0.2s ease;
   background-color: #fff;
-  color: #374151; /* Darker gray for WCAG AA compliance */
+  color: #495057;
 }
 
 .modal-content[style*="maxWidth: 900px"] .form-group input:focus,
@@ -1455,7 +1452,7 @@ body {
 
 .modal-content[style*="maxWidth: 900px"] .form-group input::placeholder,
 .modal-content[style*="maxWidth: 900px"] .form-group textarea::placeholder {
-  color: #718096; /* Darker gray for WCAG AA compliance */
+  color: #adb5bd;
 }
 
 .modal-content[style*="maxWidth: 900px"] .form-group select {
@@ -1478,14 +1475,14 @@ body {
 .modal-content[style*="maxWidth: 900px"] .form-section {
   margin-bottom: 32px;
   padding: 24px;
-  background-color: #f7fafc; /* Slightly darker for better contrast */
+  background-color: #f8f9fa;
   border-radius: 12px;
-  border: 1px solid #e2e8f0; /* Darker border for better contrast */
+  border: 1px solid #e9ecef;
 }
 
 .modal-content[style*="maxWidth: 900px"] .form-section h4 {
   margin: 0 0 20px 0;
-  color: #374151; /* Darker gray for WCAG AA compliance */
+  color: #495057;
   font-size: 18px;
   font-weight: 600;
   display: flex;

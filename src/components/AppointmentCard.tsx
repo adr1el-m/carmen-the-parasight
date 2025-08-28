@@ -5,6 +5,7 @@ interface AppointmentCardProps {
   appointment: any
   onEdit: (appointment: any) => void
   onDelete: (appointmentId: string) => void
+  onViewUpdates?: (appointment: any) => void
   formatTime: (time: string) => string
   formatDateTime: (dateTime: string) => string
 }
@@ -13,6 +14,7 @@ const AppointmentCard: React.FC<AppointmentCardProps> = ({
   appointment, 
   onEdit, 
   onDelete, 
+  onViewUpdates, 
   formatTime, 
   formatDateTime
 }) => {
@@ -28,42 +30,12 @@ const AppointmentCard: React.FC<AppointmentCardProps> = ({
       </div>
       
       <div className="appointment-info">
-        <h4>{appointment.doctor || 'Doctor TBD'}</h4>
+        <h4>{appointment.doctor || 'Doctor To Be Determined'}</h4>
         <p>{appointment.type || 'Consultation'}</p>
         <div className="appointment-time">{formatTime(appointment.time)}</div>
-        <div className="appointment-facility">{appointment.facilityName || 'Facility TBD'}</div>
+        <div className="appointment-facility">{appointment.facilityName || 'Facility To Be Determined'}</div>
         
-        {/* Show modification indicator if appointment was modified by facility */}
-        {appointment.updatedBy === 'facility' && appointment.modificationHistory && appointment.modificationHistory.length > 0 && (
-          <div className="appointment-modification-info">
-            <div className="modification-indicator">
-              <i className="fas fa-edit"></i>
-              <span>Modified by {appointment.facilityName || 'Healthcare Facility'}</span>
-            </div>
-            <div className="modification-details">
-              {appointment.modificationHistory[appointment.modificationHistory.length - 1]?.changes && (
-                <div className="changes-list">
-                  {Object.entries(appointment.modificationHistory[appointment.modificationHistory.length - 1].changes).map(([field, change]: [string, any]) => {
-                    if (change && change.from !== change.to) {
-                      return (
-                        <div key={field} className="change-item">
-                          <span className="change-field">{field.charAt(0).toUpperCase() + field.slice(1)}:</span>
-                          <span className="change-from">{change.from}</span>
-                          <i className="fas fa-arrow-right"></i>
-                          <span className="change-to">{change.to}</span>
-                        </div>
-                      )
-                    }
-                    return null
-                  })}
-                </div>
-              )}
-              <small className="modification-time">
-                Updated: {formatDateTime(appointment.updatedAt)}
-              </small>
-            </div>
-          </div>
-        )}
+
         
         {/* Show completion/cancellation timestamp */}
         {(appointment.status === 'completed' || appointment.status === 'cancelled') && appointment.updatedAt && (
@@ -84,6 +56,22 @@ const AppointmentCard: React.FC<AppointmentCardProps> = ({
            appointment.status === 'cancelled' ? 'Cancelled' : appointment.status}
         </div>
         <div className="action-buttons">
+
+
+          
+          {/* Show View Updates button if there are modifications or facility notes */}
+          {(appointment.updatedBy === 'facility' || appointment.facilityNotes) && onViewUpdates && (
+            <button 
+              className="btn btn-info btn-sm"
+              onClick={() => onViewUpdates(appointment)}
+              title="View appointment updates and facility notes"
+              aria-label="View appointment updates and facility notes"
+            >
+              <i className="fas fa-history" aria-hidden="true"></i>
+              View Updates
+            </button>
+          )}
+          
           {/* Only show edit/delete for upcoming appointments */}
           {['scheduled', 'confirmed', 'pending'].includes(appointment.status) && (
             <>

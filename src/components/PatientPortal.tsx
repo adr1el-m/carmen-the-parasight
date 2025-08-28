@@ -66,7 +66,8 @@ interface AppointmentData {
   doctor: string;
   type: string;
   status: string;
-  notes: string;
+  patientNotes: string; // Notes from the patient when booking
+  facilityNotes: string; // Notes/remarks from healthcare facility staff
   facilityId: string;
   facilityName: string;
   createdAt: string;
@@ -229,7 +230,7 @@ const PatientPortal: React.FC = () => {
     date: '',
     time: '',
     type: '',
-    notes: '',
+    patientNotes: '', // Notes from the patient when booking
     // New fields for booking for different people
     isBookingForOther: false,
     patientForAppointment: {
@@ -300,8 +301,11 @@ const PatientPortal: React.FC = () => {
     date: '',
     time: '',
     type: '',
-    notes: ''
+    patientNotes: '' // Notes from the patient when booking
   })
+  
+  // Appointment updates modal state
+  const [viewingAppointmentUpdates, setViewingAppointmentUpdates] = useState<any>(null)
   
   // Facilities state
   const [facilities, setFacilities] = useState<FacilityData[]>([])
@@ -684,11 +688,17 @@ const PatientPortal: React.FC = () => {
     setActiveAppointmentsTab(tab)
   }, [])
 
-  const openModal = useCallback((modalType: string) => {
-    console.log('🔘 openModal called with:', modalType)
+  const openModal = useCallback((modalType: string, additionalData?: any) => {
+    console.log('🔘 openModal called with:', modalType, additionalData)
     console.log('Current showModal state before:', showModal)
     setShowModal(modalType)
     console.log('Setting showModal to:', modalType)
+    
+    // Handle document-specific modals
+    if (modalType === 'viewDocument' && additionalData) {
+      console.log('📄 Setting viewing document:', additionalData)
+      setViewingDocument(additionalData)
+    }
     
     // Load facilities if opening Book Appointment modal (regardless of current section)
     if (modalType === 'bookAppointment' && user) {
@@ -727,7 +737,7 @@ const PatientPortal: React.FC = () => {
       date: '',
       time: '',
       type: '',
-      notes: '',
+      patientNotes: '', // Notes from the patient when booking
       // Reset new fields for booking for different people
       isBookingForOther: false,
       patientForAppointment: {
@@ -747,7 +757,7 @@ const PatientPortal: React.FC = () => {
       date: '',
       time: '',
       type: '',
-      notes: ''
+      patientNotes: '' // Notes from the patient when booking
     })
     setEditingAppointment(null)
     // Reset consultation history form
@@ -763,6 +773,8 @@ const PatientPortal: React.FC = () => {
     setDocumentName('')
     setUploadProgress(0)
     setIsUploadingDocument(false)
+    // Reset appointment updates viewer
+    setViewingAppointmentUpdates(null)
   }, [])
 
   // Notification function - simplified since we moved the complex logic to NotificationSystem
@@ -776,24 +788,51 @@ const PatientPortal: React.FC = () => {
   // Check for appointment modifications and show notifications
   const checkForAppointmentModifications = useCallback((appointments: any[]) => {
     appointments.forEach(appointment => {
-      if (appointment.updatedBy === 'facility' && appointment.modificationHistory && appointment.modificationHistory.length > 0) {
-        const lastModification = appointment.modificationHistory[appointment.modificationHistory.length - 1]
-        const modificationTime = new Date(lastModification.timestamp)
-        const now = new Date()
+      // Skip appointments that don't have meaningful modification history
+      if (!appointment.updatedBy || 
+          !appointment.modificationHistory || 
+          appointment.modificationHistory.length === 0) {
+        return
+      }
+      
+      // Skip if this appears to be an initial appointment creation (all 'to' values are undefined)
+      const lastModification = appointment.modificationHistory[appointment.modificationHistory.length - 1]
+      if (!lastModification?.changes) {
+        return
+      }
+      
+      // Check if this is just an initial creation (all 'to' values are undefined)
+      const allChangesUndefined = Object.values(lastModification.changes).every(change => {
+        const typedChange = change as { from: any; to: any } | null
+        return !typedChange || typedChange.to === undefined || typedChange.to === null
+      })
+      
+      if (allChangesUndefined) {
+        return // Skip initial appointment creation
+      }
+      
+      const modificationTime = new Date(lastModification.timestamp)
+      const now = new Date()
+      
+      // Show notification if modification was made in the last 5 minutes
+      if (now.getTime() - modificationTime.getTime() < 5 * 60 * 1000) {
+        const changes = Object.entries(lastModification.changes)
+          .filter(([field, change]) => {
+            const typedChange = change as { from: any; to: any } | null
+            // Filter out changes where 'to' is undefined (initial creation) or where from equals to (no actual change)
+            return typedChange && 
+                   typedChange.to !== undefined && 
+                   typedChange.from !== typedChange.to &&
+                   typedChange.to !== null
+          })
+          .map(([field, change]) => {
+            const typedChange = change as { from: any; to: any }
+            return `${field}: ${formatTimeForDisplay(typedChange.from) || '—'} → ${formatTimeForDisplay(typedChange.to)}`
+          })
+          .join(', ')
         
-        // Show notification if modification was made in the last 5 minutes
-        if (now.getTime() - modificationTime.getTime() < 5 * 60 * 1000) {
-          const changes = Object.entries(lastModification.changes)
-            .filter(([field, change]) => {
-              const typedChange = change as { from: any; to: any } | null
-              return typedChange && typedChange.from !== typedChange.to
-            })
-            .map(([field, change]) => {
-              const typedChange = change as { from: any; to: any }
-              return `${field}: ${typedChange.from} → ${typedChange.to}`
-            })
-            .join(', ')
-          
+        // Only show notification if there are actual meaningful changes
+        if (changes.trim()) {
           showNotification(`Your appointment has been updated by ${appointment.facilityName || 'the healthcare facility'}: ${changes}`, 'info')
         }
       }
@@ -850,11 +889,12 @@ const PatientPortal: React.FC = () => {
         facilityName: appointmentForm.facilityName,
         patientName: appointmentForm.isBookingForOther ? appointmentForm.patientForAppointment.name : (user.displayName || patientData?.personalInfo?.fullName || 'Patient'),
         patientEmail: user.email || patientData?.email || '',
-        doctor: appointmentForm.doctor || 'TBD',
+        doctor: appointmentForm.doctor || 'To Be Determined',
         date: appointmentForm.date,
         time: appointmentForm.time,
         type: appointmentForm.type,
-        notes: appointmentForm.notes || '',
+        patientNotes: appointmentForm.patientNotes || '', // Notes from the patient when booking
+        facilityNotes: '', // Initialize empty facility notes
         status: 'scheduled',
         // New fields for booking for different people
         isBookingForOther: appointmentForm.isBookingForOther,
@@ -896,22 +936,23 @@ const PatientPortal: React.FC = () => {
         console.warn('⚠️ Could not refresh patient data:', refreshError)
         // Try to update local state manually
         if (patientData) {
-          const newAppointment = {
-            id: typeof result === 'object' && result?.id ? result.id : `appointment_${Date.now()}`,
-            patientId: user.uid,
-            patientName: appointmentData.patientName,
-            patientEmail: appointmentData.patientEmail,
-            date: appointmentData.date,
-            time: appointmentData.time,
-            doctor: appointmentData.doctor,
-            type: appointmentData.type,
-            status: appointmentData.status,
-            notes: appointmentData.notes,
-            facilityId: appointmentData.facilityId,
-            facilityName: appointmentData.facilityName,
-            createdAt: new Date().toISOString(),
-            updatedAt: new Date().toISOString()
-          }
+                  const newAppointment = {
+          id: typeof result === 'object' && result?.id ? result.id : `appointment_${Date.now()}`,
+          patientId: user.uid,
+          patientName: appointmentData.patientName,
+          patientEmail: appointmentData.patientEmail,
+          date: appointmentData.date,
+          time: appointmentData.time,
+          doctor: appointmentData.doctor,
+          type: appointmentData.type,
+          status: appointmentData.status,
+          patientNotes: appointmentData.patientNotes,
+          facilityNotes: appointmentData.facilityNotes,
+          facilityId: appointmentData.facilityId,
+          facilityName: appointmentData.facilityName,
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString()
+        }
           setPatientData(prev => prev ? {
             ...prev,
             activity: {
@@ -924,7 +965,7 @@ const PatientPortal: React.FC = () => {
         }
       }
       
-      showNotification('Appointment booked successfully! Check the Dashboard "My Consults" section to see your appointment.', 'success')
+              showNotification('Appointment booked successfully!', 'success')
       closeModal()
       
     } catch (error: any) {
@@ -1029,6 +1070,8 @@ const PatientPortal: React.FC = () => {
       if (user) {
         try {
           console.log('📦 Attempting Firebase update...')
+          console.log('🔐 User authentication status:', user.uid, user.email)
+          
           const { updatePatientPersonalInfo, getPatientData, createPatientDocument } = await import('../services/firestoredb.js')
           
           // First check if patient document exists
@@ -1052,8 +1095,20 @@ const PatientPortal: React.FC = () => {
         } catch (firebaseError: any) {
           console.warn('⚠️ Firebase update failed:', firebaseError)
           
-          // Show a simple error message without quota references
-          showNotification('Profile updated locally! Server sync failed. Your changes are saved.', 'info')
+          // Show more specific error information
+          let errorMessage = 'Profile updated locally! Server sync failed. Your changes are saved.'
+          
+          if (firebaseError.code === 'permission-denied') {
+            errorMessage = 'Profile updated locally! Permission denied. Please check your authentication.'
+          } else if (firebaseError.code === 'unauthenticated') {
+            errorMessage = 'Profile updated locally! Please sign in again to sync with server.'
+          } else if (firebaseError.code === 'resource-exhausted') {
+            errorMessage = 'Profile updated locally! Firebase quota exceeded. Please try again later.'
+          } else if (firebaseError.message) {
+            errorMessage = `Profile updated locally! ${firebaseError.message}`
+          }
+          
+          showNotification(errorMessage, 'info')
         }
       } else {
         // No user logged in - local only
@@ -1263,9 +1318,21 @@ const PatientPortal: React.FC = () => {
       setPatientData(prev => {
         if (!prev) return prev
         
-        const updatedConditions = {
-          ...prev.medicalInfo?.conditions,
-          [category]: prev.medicalInfo?.conditions?.[category]?.filter(c => c !== condition) || []
+        const currentConditions = prev.medicalInfo?.conditions || {}
+        const updatedConditionsInCategory = currentConditions[category]?.filter(c => c !== condition) || []
+        
+        let updatedConditions;
+        if (updatedConditionsInCategory.length === 0) {
+          // Remove the entire category if it's empty
+          const { [category]: removedCategory, ...remainingConditions } = currentConditions;
+          updatedConditions = remainingConditions;
+          console.log(`Category "${category}" removed completely from local state as it's now empty`);
+        } else {
+          // Keep the category with remaining conditions
+          updatedConditions = {
+            ...currentConditions,
+            [category]: updatedConditionsInCategory
+          };
         }
         
         return {
@@ -1348,6 +1415,12 @@ const PatientPortal: React.FC = () => {
     setViewingDocument(document)
     setShowModal('viewDocument')
   }, [])
+  
+  const handleViewAppointmentUpdates = useCallback((appointment: any) => {
+    console.log('🔍 Opening appointment updates viewer for:', appointment)
+    setViewingAppointmentUpdates(appointment)
+    setShowModal('viewAppointmentUpdates')
+  }, [])
 
   const handleOpenDocument = useCallback((document: any) => {
     try {
@@ -1379,6 +1452,49 @@ const PatientPortal: React.FC = () => {
     } catch (error) {
       console.error('❌ Error opening document:', error)
       showNotification('Failed to open document. Please try downloading it instead.', 'error')
+    }
+  }, [])
+  
+  const handleDownloadDocument = useCallback((document: any) => {
+    try {
+      console.log('🔍 Downloading document:', document)
+      
+      // Convert base64 to blob
+      const base64Data = document.url.split(',')[1] // Remove data:application/pdf;base64, prefix
+      const byteCharacters = atob(base64Data)
+      const byteNumbers = new Array(byteCharacters.length)
+      
+      for (let i = 0; i < byteCharacters.length; i++) {
+        byteNumbers[i] = byteCharacters.charCodeAt(i)
+      }
+      
+      const byteArray = new Uint8Array(byteNumbers)
+      const blob = new Blob([byteArray], { type: document.type })
+      
+      // Create blob URL
+      const blobUrl = URL.createObjectURL(blob)
+      
+      // Create download link
+      const downloadLink = document.createElement('a')
+      downloadLink.href = blobUrl
+      downloadLink.download = document.originalName || document.name
+      downloadLink.style.display = 'none'
+      
+      // Append to body, click, and remove
+      document.body.appendChild(downloadLink)
+      downloadLink.click()
+      document.body.removeChild(downloadLink)
+      
+      // Clean up blob URL after a delay
+      setTimeout(() => {
+        URL.revokeObjectURL(blobUrl)
+      }, 1000)
+      
+      showNotification('Document download started!', 'success')
+      
+    } catch (error) {
+      console.error('❌ Error downloading document:', error)
+      showNotification('Failed to download document. Please try again.', 'error')
     }
   }, [])
 
@@ -1471,11 +1587,12 @@ const PatientPortal: React.FC = () => {
         facilityName: editAppointmentForm.facilityName,
         patientName: user.displayName || patientData?.personalInfo?.fullName || 'Patient',
         patientEmail: user.email || patientData?.email || '',
-        doctor: editAppointmentForm.doctor || 'TBD',
+        doctor: editAppointmentForm.doctor || 'To Be Determined',
         date: editAppointmentForm.date,
         time: editAppointmentForm.time,
         type: editAppointmentForm.type,
-        notes: editAppointmentForm.notes || '',
+        patientNotes: editAppointmentForm.patientNotes || '', // Notes from the patient when booking
+        facilityNotes: editingAppointment.facilityNotes || '', // Preserve existing facility notes
         status: editingAppointment.status || 'scheduled'
       }
       
@@ -1767,6 +1884,22 @@ const PatientPortal: React.FC = () => {
 
   const getTimeAgo = useCallback((timestamp: string) => {
     return timestamp // For now, return as is. Could implement actual time calculation
+  }, [])
+
+  // Helper function to format time for display (convert 24-hour to 12-hour with AM/PM)
+  const formatTimeForDisplay = useCallback((time: string) => {
+    if (!time || typeof time !== 'string') return time
+    
+    // Check if it's a time value (HH:MM format)
+    if (time.match(/^\d{1,2}:\d{2}$/)) {
+      const [hours, minutes] = time.split(':')
+      const hour = parseInt(hours)
+      const ampm = hour >= 12 ? 'PM' : 'AM'
+      const displayHour = hour === 0 ? 12 : hour > 12 ? hour - 12 : hour
+      return `${displayHour}:${minutes} ${ampm}`
+    }
+    
+    return time
   }, [])
 
   // Keyboard navigation support
@@ -2061,11 +2194,12 @@ const PatientPortal: React.FC = () => {
                     date: appointment.date || '',
                     time: appointment.time || '',
                     type: appointment.type || '',
-                    notes: appointment.notes || ''
+                    patientNotes: appointment.patientNotes || '' // Notes from the patient when booking
                   })
                   openModal('editAppointment')
                 }}
                 onDeleteAppointment={handleDeleteAppointment}
+                onViewUpdates={handleViewAppointmentUpdates}
               />
             </Suspense>
           )}
@@ -2081,6 +2215,9 @@ const PatientPortal: React.FC = () => {
                 onOpenModal={openModal}
                 onRemoveCondition={handleRemoveCondition}
                 consultationHistory={consultationHistory}
+                onRemoveConsultation={handleRemoveConsultation}
+                onDownloadDocument={handleDownloadDocument}
+                onRemoveDocument={handleRemoveDocument}
               />
             </Suspense>
           )}
@@ -2791,14 +2928,17 @@ const PatientPortal: React.FC = () => {
                     </small>
                   </div>
                 <div className="form-group">
-                  <label htmlFor="appointmentNotes">Notes</label>
+                  <label htmlFor="appointmentNotes">Patient Notes</label>
                   <textarea 
                     id="appointmentNotes" 
                     rows={3}
-                    placeholder="Any additional information..."
-                    value={appointmentForm.notes}
-                    onChange={(e) => setAppointmentForm(prev => ({ ...prev, notes: e.target.value }))}
+                    placeholder="Any additional information about your appointment..."
+                    value={appointmentForm.patientNotes}
+                    onChange={(e) => setAppointmentForm(prev => ({ ...prev, patientNotes: e.target.value }))}
                   ></textarea>
+                  <small style={{ color: '#4a5568', fontSize: '12px' }}>
+                    These notes are for your reference and will be shared with the healthcare facility.
+                  </small>
                 </div>
               </form>
             </div>
@@ -3305,14 +3445,17 @@ const PatientPortal: React.FC = () => {
                   </small>
                 </div>
                 <div className="form-group">
-                  <label htmlFor="editAppointmentNotes">Notes</label>
+                  <label htmlFor="editAppointmentNotes">Patient Notes</label>
                   <textarea 
                     id="editAppointmentNotes" 
                     rows={3}
-                    placeholder="Any additional information..."
-                    value={editAppointmentForm.notes}
-                    onChange={(e) => setEditAppointmentForm(prev => ({ ...prev, notes: e.target.value }))}
+                    placeholder="Any additional information about your appointment..."
+                    value={editAppointmentForm.patientNotes}
+                    onChange={(e) => setEditAppointmentForm(prev => ({ ...prev, patientNotes: e.target.value }))}
                   ></textarea>
+                  <small style={{ color: '#4a5568', fontSize: '12px' }}>
+                    These notes are for your reference and will be shared with the healthcare facility.
+                  </small>
                 </div>
               </form>
             </div>
@@ -3548,46 +3691,186 @@ const PatientPortal: React.FC = () => {
         </div>
       )}
 
-      {/* Download Records Modal */}
-      {showModal === 'downloadRecords' && (
-        <div className="modal">
-          <div className="modal-content">
-            <div className="modal-header">
-              <h3>Download Medical Records</h3>
-              <button className="close-btn" onClick={closeModal}>
-                <i className="fas fa-times"></i>
-              </button>
-            </div>
-            <div className="modal-body">
-              <div className="records-list">
-                <div className="record-item">
-                  <input type="checkbox" id="record1" />
-                  <label htmlFor="record1">Lab Results - March 2024</label>
-                </div>
-                <div className="record-item">
-                  <input type="checkbox" id="record2" />
-                  <label htmlFor="record2">Prescription History</label>
-                </div>
-                <div className="record-item">
-                  <input type="checkbox" id="record3" />
-                  <label htmlFor="record3">Medical Reports</label>
-                </div>
-              </div>
-              <div className="form-group">
-                <label htmlFor="fileFormat">File Format</label>
-                <select id="fileFormat">
-                  <option value="pdf">PDF</option>
-                  <option value="csv">CSV</option>
-                </select>
-              </div>
-            </div>
-            <div className="modal-footer">
-              <button className="btn-secondary" onClick={closeModal}>Cancel</button>
-              <button className="btn-primary">Download Selected</button>
-            </div>
-          </div>
-        </div>
-      )}
+             {/* View Appointment Updates Modal */}
+       {showModal === 'viewAppointmentUpdates' && viewingAppointmentUpdates && (
+         <div className="modal" style={{ display: 'block' }}>
+           <div className="modal-content appointment-updates-modal">
+             <div className="modal-header">
+               <h3>Appointment Updates & Notes</h3>
+               <button className="close-btn" onClick={closeModal}>
+                 <i className="fas fa-times"></i>
+               </button>
+             </div>
+             <div className="modal-body">
+               <div className="appointment-updates-content">
+                 {/* Basic Appointment Info */}
+                 <div className="appointment-info-section">
+                   <h4><i className="fas fa-calendar-alt"></i> Appointment Details</h4>
+                   <div className="info-grid">
+                     <div className="info-item">
+                       <label>Date:</label>
+                       <span>{new Date(viewingAppointmentUpdates.date).toLocaleDateString()}</span>
+                     </div>
+                     <div className="info-item">
+                       <label>Time:</label>
+                       <span>{viewingAppointmentUpdates.time}</span>
+                     </div>
+                     <div className="info-item">
+                       <label>Doctor:</label>
+                       <span>{viewingAppointmentUpdates.doctor || 'To Be Determined'}</span>
+                     </div>
+                     <div className="info-item">
+                       <label>Type:</label>
+                       <span>{viewingAppointmentUpdates.type}</span>
+                     </div>
+                     <div className="info-item">
+                       <label>Status:</label>
+                       <span className={`status-badge ${viewingAppointmentUpdates.status}`}>
+                         {viewingAppointmentUpdates.status}
+                       </span>
+                     </div>
+                     <div className="info-item">
+                       <label>Facility:</label>
+                       <span>{viewingAppointmentUpdates.facilityName}</span>
+                     </div>
+                   </div>
+                 </div>
+
+                 {/* Patient Notes */}
+                 {viewingAppointmentUpdates.patientNotes && (
+                   <div className="notes-section">
+                     <h4><i className="fas fa-user"></i> Your Notes</h4>
+                     <div className="notes-content">
+                       <p>{viewingAppointmentUpdates.patientNotes}</p>
+                       <small className="notes-timestamp">
+                         Added when booking appointment
+                       </small>
+                     </div>
+                   </div>
+                 )}
+
+                 {/* Facility Notes */}
+                 {viewingAppointmentUpdates.facilityNotes && (
+                   <div className="notes-section">
+                     <h4><i className="fas fa-stethoscope"></i> Facility Notes</h4>
+                     <div className="notes-content">
+                       <p>{viewingAppointmentUpdates.facilityNotes}</p>
+                       <small className="notes-timestamp">
+                         Added by healthcare facility staff
+                       </small>
+                     </div>
+                   </div>
+                 )}
+
+                 {/* Modification History */}
+                 {viewingAppointmentUpdates.modificationHistory && viewingAppointmentUpdates.modificationHistory.length > 0 && (
+                   <div className="modification-history-section">
+                     <h4><i className="fas fa-history"></i> Update History</h4>
+                     <div className="modification-timeline">
+                       {viewingAppointmentUpdates.modificationHistory.map((modification: any, index: number) => {
+                         // Skip initial creation entries
+                         if (!modification.changes) return null
+                         
+                         const allChangesUndefined = Object.values(modification.changes).every((change: any) => {
+                           return !change || change.to === undefined || change.to === null
+                         })
+                         
+                         if (allChangesUndefined) return null
+                         
+                         const meaningfulChanges = Object.entries(modification.changes).filter(([field, change]: [string, any]) => {
+                           return change && 
+                                  change.to !== undefined && 
+                                  change.from !== change.to &&
+                                  change.to !== null
+                         })
+                         
+                         if (meaningfulChanges.length === 0) return null
+                         
+                         return (
+                           <div key={index} className="modification-entry">
+                             <div className="modification-header">
+                               <span className="modification-time">
+                                 {new Date(modification.timestamp).toLocaleString()}
+                               </span>
+                               <span className="modification-author">
+                                 Modified by {viewingAppointmentUpdates.facilityName || 'Healthcare Facility'}
+                               </span>
+                             </div>
+                             <div className="changes-list">
+                               {meaningfulChanges.map(([field, change]: [string, any]) => (
+                                 <div key={field} className="change-item">
+                                   <span className="change-field">{field.charAt(0).toUpperCase() + field.slice(1)}:</span>
+                                   <span className="change-from">{formatTimeForDisplay(change.from) || '—'}</span>
+                                   <i className="fas fa-arrow-right"></i>
+                                   <span className="change-to">{formatTimeForDisplay(change.to)}</span>
+                                 </div>
+                               ))}
+                             </div>
+                           </div>
+                         )
+                       })}
+                     </div>
+                   </div>
+                 )}
+
+                 {/* No Updates Message */}
+                 {(!viewingAppointmentUpdates.facilityNotes && 
+                   (!viewingAppointmentUpdates.modificationHistory || 
+                    viewingAppointmentUpdates.modificationHistory.length === 0)) && (
+                   <div className="no-updates-message">
+                     <i className="fas fa-info-circle"></i>
+                     <p>No updates or notes have been added to this appointment yet.</p>
+                   </div>
+                 )}
+               </div>
+             </div>
+             <div className="modal-footer">
+               <button className="btn-secondary" onClick={closeModal}>Close</button>
+             </div>
+           </div>
+         </div>
+       )}
+
+       {/* Download Records Modal */}
+       {showModal === 'downloadRecords' && (
+         <div className="modal">
+           <div className="modal-content">
+             <div className="modal-header">
+               <h3>Download Medical Records</h3>
+               <button className="close-btn" onClick={closeModal}>
+                 <i className="fas fa-times"></i>
+               </button>
+             </div>
+             <div className="modal-body">
+               <div className="records-list">
+                 <div className="record-item">
+                   <input type="checkbox" id="record1" />
+                   <label htmlFor="record1">Lab Results - March 2024</label>
+                 </div>
+                 <div className="record-item">
+                   <input type="checkbox" id="record2" />
+                   <label htmlFor="record2">Prescription History</label>
+                 </div>
+                 <div className="record-item">
+                   <input type="checkbox" id="record3" />
+                   <label htmlFor="record3">Medical Reports</label>
+                 </div>
+               </div>
+               <div className="form-group">
+                 <label htmlFor="fileFormat">File Format</label>
+                 <select id="fileFormat">
+                   <option value="pdf">PDF</option>
+                   <option value="csv">CSV</option>
+                 </select>
+               </div>
+             </div>
+             <div className="modal-footer">
+               <button className="btn-secondary" onClick={closeModal}>Cancel</button>
+               <button className="btn-primary">Download Selected</button>
+             </div>
+           </div>
+         </div>
+       )}
     </div>
   )
 }

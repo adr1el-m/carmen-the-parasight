@@ -589,18 +589,27 @@ const LandingPage: React.FC = React.memo(() => {
     if (openDays.length === 0) return 'Closed'
     if (openDays.length === 7) return '24/7 Available'
     
+    // Helper function to convert 24-hour format to 12-hour format with AM/PM
+    const formatTime = (time: string) => {
+      const [hours, minutes] = time.split(':')
+      const hour = parseInt(hours)
+      const ampm = hour >= 12 ? 'PM' : 'AM'
+      const displayHour = hour === 0 ? 12 : hour > 12 ? hour - 12 : hour
+      return `${displayHour}:${minutes} ${ampm}`
+    }
+    
     const firstDay = openDays[0]
     const lastDay = openDays[openDays.length - 1]
     
     if (openDays.length === 1) {
       const day = operatingHours[firstDay as keyof typeof operatingHours]
-      return `${firstDay.charAt(0).toUpperCase() + firstDay.slice(1)} ${day.open}-${day.close}`
+      return `${firstDay.charAt(0).toUpperCase() + firstDay.slice(1)} ${formatTime(day.open)} - ${formatTime(day.close)}`
     }
     
     const firstDayHours = operatingHours[firstDay as keyof typeof operatingHours]
     const lastDayHours = operatingHours[lastDay as keyof typeof operatingHours]
     
-    return `${firstDay.charAt(0).toUpperCase() + firstDay.slice(1)}-${lastDay.charAt(0).toUpperCase() + lastDay.slice(1)} ${firstDayHours.open}-${lastDayHours.close}`
+    return `${firstDay.charAt(0).toUpperCase() + firstDay.slice(1)}-${lastDay.charAt(0).toUpperCase() + lastDay.slice(1)} ${formatTime(firstDayHours.open)} - ${formatTime(lastDayHours.close)}`
   }, [])
 
   // Get primary specialty for display

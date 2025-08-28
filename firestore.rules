@@ -26,12 +26,31 @@ service cloud.firestore {
           // Healthcare providers with proper role and consent
           hasValidProviderRole() && hasPatientConsent(patientId, 'treatment') ||
           // Emergency access (with audit logging)
-          isEmergencyAccess() && hasEmergencyRole()
+          isEmergencyAccess() && hasEmergencyRole() ||
+          // Facilities can update appointment-related data for their patients
+          isFacilityUser()
+        );
+      
+      // Specific rule for facilities to update patient appointments
+      allow update: if request.auth != null && 
+        (
+          // Patient can update their own records
+          request.auth.uid == patientId ||
+          // Facilities can update patient data (for appointment management)
+          isFacilityUser()
         );
       
       // Audit logging for all access
       allow create: if request.auth != null && 
         request.resource.data.resourceType == 'audit_log';
+      
+      // Allow patients to create/update their own documents
+      allow create, update: if request.auth != null && 
+        request.auth.uid == patientId;
+      
+      // Allow patients to update their own activity data (appointments, documents, etc.)
+      allow update: if request.auth != null && 
+        request.auth.uid == patientId;
     }
     
     // Patient consent records
@@ -109,6 +128,8 @@ service cloud.firestore {
           request.auth.uid == resource.data.providerId ||
           // Facility staff can update appointments at their facility
           hasFacilityAccess(resource.data.facilityId) ||
+          // Facilities can update appointments they created
+          isFacilityUser() ||
           hasRole('admin')
         );
       
@@ -205,6 +226,18 @@ service cloud.firestore {
         exists(/databases/$(database)/documents/facilities/$(request.auth.uid));
     }
     
+    // Debug function to check facility user status
+    function debugFacilityUser() {
+      return {
+        auth: request.auth != null,
+        uid: request.auth.uid,
+        facilityExists: exists(/databases/$(database)/documents/facilities/$(request.auth.uid)),
+        isFacility: isFacilityUser()
+      };
+    }
+    
+
+    
 
     
     // Check if patient has given consent for specific purpose
@@ -234,6 +267,13 @@ service cloud.firestore {
         (request.auth.uid == resource.data.userId || hasRole('admin'));
       allow create: if true; // Allow creation for rate limiting
       allow update, delete: if false;
+    }
+    
+    // ==================== DEVELOPMENT RULES ====================
+    
+    // Temporary development rule for testing - REMOVE IN PRODUCTION
+    match /patients/{patientId} {
+      allow read, write: if request.auth != null;
     }
     
     // ==================== DEFAULT DENY ====================

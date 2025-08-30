@@ -401,7 +401,12 @@ const ProfileSection: React.FC<ProfileSectionProps> = ({
                         </button>
                         <button 
                           className="btn btn-danger btn-sm"
-                          onClick={() => onRemoveDocument && onRemoveDocument(document.id)}
+                          onClick={() => {
+                            console.log('🔍 Delete button clicked for document:', document)
+                            console.log('🔍 Document ID:', document.id)
+                            console.log('🔍 Document object:', document)
+                            onRemoveDocument && onRemoveDocument(document.id)
+                          }}
                           aria-label="Delete document"
                           title="Delete document"
                         >

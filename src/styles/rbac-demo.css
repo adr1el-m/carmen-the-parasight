@@ -1,0 +1,167 @@
+/* RBAC Demo Styles */
+.encryption-demo-section {
+  background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
+  padding: 4rem 0;
+  margin: 2rem 0;
+}
+
+.encryption-demo-content {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 2rem;
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 0 1rem;
+}
+
+.encryption-demo-text h2 {
+  color: #1e293b;
+  font-size: 2rem;
+  font-weight: 700;
+  margin-bottom: 1rem;
+}
+
+.encryption-demo-text p {
+  color: #64748b;
+  font-size: 1.1rem;
+  line-height: 1.6;
+  margin: 0;
+}
+
+.encryption-demo-btn {
+  background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%);
+  color: white;
+  border: none;
+  padding: 1rem 2rem;
+  border-radius: 8px;
+  font-size: 1.1rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
+}
+
+.encryption-demo-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(59, 130, 246, 0.4);
+}
+
+.encryption-demo-btn i {
+  font-size: 1.2rem;
+}
+
+/* Responsive adjustments for the demo */
+@media (max-width: 768px) {
+  .encryption-demo-content {
+    flex-direction: column;
+    text-align: center;
+  }
+  
+  .encryption-demo-text h2 {
+    font-size: 1.5rem;
+  }
+  
+  .encryption-demo-text p {
+    font-size: 1rem;
+  }
+  
+  .encryption-demo-btn {
+    width: 100%;
+    justify-content: center;
+  }
+}
+
+/* Simple focus states */
+button:focus,
+input:focus {
+  outline: 2px solid #3b82f6;
+  outline-offset: 2px;
+}
+
+/* Clean card styling */
+.bg-white {
+  transition: box-shadow 0.2s ease;
+}
+
+.bg-white:hover {
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+/* Subtle button transitions */
+button {
+  transition: all 0.2s ease;
+}
+
+/* Role selection button styling */
+.role-selection-btn {
+  transition: all 0.3s ease;
+}
+
+.role-selection-btn:hover {
+  transform: translateY(-2px);
+}
+
+.role-selection-btn.selected {
+  border-color: #3b82f6;
+  background-color: #eff6ff;
+}
+
+/* Access result styling */
+.access-result {
+  min-height: 120px;
+  padding: 1rem;
+  background-color: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+}
+
+.access-granted {
+  color: #059669;
+  font-weight: 600;
+}
+
+.access-denied {
+  color: #dc2626;
+  font-weight: 600;
+}
+
+/* Loading animation */
+.loading-spinner {
+  display: inline-block;
+  width: 1rem;
+  height: 1rem;
+  border: 2px solid #e5e7eb;
+  border-radius: 50%;
+  border-top-color: #3b82f6;
+  animation: spin 1s ease-in-out infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+/* Security features grid */
+.security-features .grid > div {
+  transition: all 0.3s ease;
+}
+
+.security-features .grid > div:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+/* Step-by-step process styling */
+.process-step {
+  transition: all 0.3s ease;
+}
+
+.process-step:hover {
+  transform: translateX(5px);
+  background-color: #f8fafc;
+}
+
+

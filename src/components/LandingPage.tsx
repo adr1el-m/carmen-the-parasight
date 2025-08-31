@@ -1441,6 +1441,8 @@ const LandingPage: React.FC = React.memo(() => {
                 Quick Appointment
               </button>
 
+
+
               <button 
                 ref={loginButtonRef}
                 onClick={() => {
@@ -1846,6 +1848,72 @@ const LandingPage: React.FC = React.memo(() => {
         </div>
       </section>
 
+      {/* Encryption Demo Section */}
+      <section className="encryption-demo-section" aria-labelledby="encryption-demo-heading">
+        <div className="container">
+          <div className="encryption-demo-content">
+            <div className="encryption-demo-text">
+              <h2 id="encryption-demo-heading">See How We Protect Your Data</h2>
+              <p>Experience LingapLink's military-grade encryption in action. Watch how your sensitive healthcare information is protected from input to storage.</p>
+            </div>
+            <div className="encryption-demo-action">
+              <button 
+                onClick={() => navigate('/encryption-demo')}
+                className="encryption-demo-btn"
+                aria-label="View end-to-end encryption demo"
+              >
+                <i className="fas fa-shield-alt" aria-hidden="true"></i>
+                Try Encryption Demo
+              </button>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* RBAC Demo Section */}
+      <section className="rbac-demo-section" aria-labelledby="rbac-demo-heading">
+        <div className="container">
+          <div className="rbac-demo-content">
+            <div className="rbac-demo-text">
+              <h2 id="rbac-demo-heading">Experience Smart Access Control</h2>
+              <p>See how LingapLink ensures data security through intelligent role-based permissions. Different user types access only what they need.</p>
+            </div>
+            <div className="rbac-demo-action">
+              <button 
+                onClick={() => navigate('/rbac-demo')}
+                className="rbac-demo-btn"
+                aria-label="View role-based access control demo"
+              >
+                <i className="fas fa-user-shield" aria-hidden="true"></i>
+                Try RBAC Demo
+              </button>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* File Upload Security Demo Section */}
+      <section className="file-upload-security-demo-section" aria-labelledby="file-upload-security-demo-heading">
+        <div className="container">
+          <div className="file-upload-security-demo-content">
+            <div className="file-upload-security-demo-text">
+              <h2 id="file-upload-security-demo-heading">Advanced File Upload Protection</h2>
+              <p>See how LingapLink protects against malicious file uploads and ensures secure document handling. Every file is analyzed for threats in real-time.</p>
+            </div>
+            <div className="file-upload-security-demo-action">
+              <button 
+                onClick={() => navigate('/file-upload-security-demo')}
+                className="file-upload-security-demo-btn"
+                aria-label="View file upload security demo"
+              >
+                <i className="fas fa-shield-alt" aria-hidden="true"></i>
+                Try File Security Demo
+              </button>
+            </div>
+          </div>
+        </div>
+      </section>
+
       {/* Footer */}
       <footer className="footer" role="contentinfo">
         <div className="container">
@@ -1962,6 +2030,7 @@ const LandingPage: React.FC = React.memo(() => {
                     <li><a href="#" aria-label="Read our privacy policy">Privacy Policy</a></li>
                     <li><a href="#" aria-label="Read our terms of service">Terms of Service</a></li>
                     <li><a href="#" aria-label="Learn about HIPAA compliance">HIPAA Compliance</a></li>
+                    <li><button onClick={() => navigate('/encryption-demo')} className="text-link" aria-label="View end-to-end encryption demo">Encryption Demo</button></li>
                   </ul>
                 </div>
               </div>
@@ -2014,6 +2083,203 @@ const LandingPage: React.FC = React.memo(() => {
       </footer>
 
       {/* Emergency Call Button - Fixed Position */}
+      <style>{`
+        .encryption-demo-section {
+          background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
+          padding: 4rem 0;
+          margin: 2rem 0;
+        }
+        
+        .encryption-demo-content {
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          gap: 2rem;
+          max-width: 1200px;
+          margin: 0 auto;
+          padding: 0 1rem;
+        }
+        
+        .encryption-demo-text h2 {
+          color: #1e293b;
+          font-size: 2rem;
+          font-weight: 700;
+          margin-bottom: 1rem;
+        }
+        
+        .encryption-demo-text p {
+          color: #64748b;
+          font-size: 1.1rem;
+          line-height: 1.6;
+          margin: 0;
+        }
+        
+        .encryption-demo-btn {
+          background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%);
+          color: white;
+          border: none;
+          padding: 1rem 2rem;
+          border-radius: 8px;
+          font-size: 1.1rem;
+          font-weight: 600;
+          cursor: pointer;
+          transition: all 0.3s ease;
+          display: flex;
+          align-items: center;
+          gap: 0.5rem;
+          box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
+        }
+        
+        .encryption-demo-btn:hover {
+          transform: translateY(-2px);
+          box-shadow: 0 6px 20px rgba(59, 130, 246, 0.4);
+        }
+        
+        .encryption-demo-btn i {
+          font-size: 1.2rem;
+        }
+        
+        /* RBAC Demo Section Styles */
+        .rbac-demo-section {
+          background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%);
+          padding: 4rem 0;
+          margin: 2rem 0;
+        }
+        
+        .rbac-demo-content {
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          gap: 2rem;
+          max-width: 1200px;
+          margin: 0 auto;
+          padding: 0 1rem;
+        }
+        
+        .rbac-demo-text h2 {
+          color: #1e293b;
+          font-size: 2rem;
+          font-weight: 700;
+          margin-bottom: 1rem;
+        }
+        
+        .rbac-demo-text p {
+          color: #64748b;
+          font-size: 1.1rem;
+          line-height: 1.6;
+          margin: 0;
+        }
+        
+        .rbac-demo-btn {
+          background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+          color: white;
+          border: none;
+          padding: 1rem 2rem;
+          border-radius: 8px;
+          font-size: 1.1rem;
+          font-weight: 600;
+          cursor: pointer;
+          transition: all 0.3s ease;
+          display: flex;
+          align-items: center;
+          gap: 0.5rem;
+          box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);
+        }
+        
+        .rbac-demo-btn:hover {
+          transform: translateY(-2px);
+          box-shadow: 0 6px 20px rgba(16, 185, 129, 0.4);
+        }
+        
+        .rbac-demo-btn i {
+          font-size: 1.2rem;
+        }
+        
+        /* File Upload Security Demo Section Styles */
+        .file-upload-security-demo-section {
+          background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
+          padding: 4rem 0;
+          margin: 2rem 0;
+        }
+        
+        .file-upload-security-demo-content {
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          gap: 2rem;
+          max-width: 1200px;
+          margin: 0 auto;
+          padding: 0 1rem;
+        }
+        
+        .file-upload-security-demo-text h2 {
+          color: #1e293b;
+          font-size: 2rem;
+          font-weight: 700;
+          margin-bottom: 1rem;
+        }
+        
+        .file-upload-security-demo-text p {
+          color: #64748b;
+          font-size: 1.1rem;
+          line-height: 1.6;
+          margin: 0;
+        }
+        
+        .file-upload-security-demo-btn {
+          background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+          color: white;
+          border: none;
+          padding: 1rem 2rem;
+          border-radius: 8px;
+          font-size: 1.1rem;
+          font-weight: 600;
+          cursor: pointer;
+          transition: all 0.3s ease;
+          display: flex;
+          align-items: center;
+          gap: 0.5rem;
+          box-shadow: 0 4px 12px rgba(245, 158, 11, 0.3);
+        }
+        
+        .file-upload-security-demo-btn:hover {
+          transform: translateY(-2px);
+          box-shadow: 0 6px 20px rgba(245, 158, 11, 0.4);
+        }
+        
+        .file-upload-security-demo-btn i {
+          font-size: 1.2rem;
+        }
+        
+        @media (max-width: 768px) {
+          .encryption-demo-content,
+          .rbac-demo-content,
+          .file-upload-security-demo-content {
+            flex-direction: column;
+            text-align: center;
+          }
+          
+          .encryption-demo-text h2,
+          .rbac-demo-text h2,
+          .file-upload-security-demo-text h2 {
+            font-size: 1.5rem;
+          }
+          
+          .encryption-demo-text p,
+          .rbac-demo-text p,
+          .file-upload-security-demo-text p {
+            font-size: 1rem;
+          }
+          
+          .encryption-demo-btn,
+          .rbac-demo-btn,
+          .file-upload-security-demo-btn {
+            width: 100%;
+            justify-content: center;
+          }
+        }
+      `}</style>
+      
       <div className="emergency-call-fixed">
         <button 
           className="emergency-call-btn-fixed"

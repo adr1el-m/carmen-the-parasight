@@ -49,7 +49,7 @@ const RBACDemo: React.FC = () => {
       userType: 'Patient Juan Dela Cruz',
       role: userRoles[0],
       actions: ['View own medical records', 'Book appointment with Dr. Santos', 'Update personal information'],
-      restrictedActions: ['View other patients\' data', 'Access medical tools', 'Modify medical records', 'Prescribe medications'],
+      restrictedActions: ['View other patients\' data', 'Access medical tools', 'Modify medical records', 'Update medical history', 'Prescribe medications'],
       explanation: 'Patients can only access their own information and basic platform features. They cannot see other patients\' data or use medical professional tools.'
     },
          {
@@ -92,7 +92,7 @@ const RBACDemo: React.FC = () => {
     const actions = [
       'View patient records',
       'Book appointment',
-      'Update medical history',
+      'Update personal information',
       'Access admin panel',
       'View system logs'
     ];
@@ -211,7 +211,7 @@ const RBACDemo: React.FC = () => {
             <div>
               <h3 className="font-semibold text-gray-800 mb-2">Test Specific Actions</h3>
               <div className="space-y-2">
-                {['View patient records', 'Book appointment', 'Update medical history', 'Access admin panel'].map((action) => (
+                {['View patient records', 'Book appointment', 'Update personal information', 'Access admin panel'].map((action) => (
                   <button
                     key={action}
                     onClick={() => simulateAccessCheck(action)}

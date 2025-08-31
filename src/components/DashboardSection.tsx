@@ -8,6 +8,7 @@ interface DashboardSectionProps {
   onOpenModal: (modalType: string) => void
   onEditAppointment: (appointment: any) => void
   onDeleteAppointment: (appointmentId: string) => void
+  onViewUpdates?: (appointment: any) => void
 }
 
 const DashboardSection: React.FC<DashboardSectionProps> = ({
@@ -16,7 +17,8 @@ const DashboardSection: React.FC<DashboardSectionProps> = ({
   onAppointmentsTabClick,
   onOpenModal,
   onEditAppointment,
-  onDeleteAppointment
+  onDeleteAppointment,
+  onViewUpdates
 }) => {
 
   // Filter appointments based on active tab
@@ -176,6 +178,7 @@ const DashboardSection: React.FC<DashboardSectionProps> = ({
                 appointment={appointment}
                 onEdit={onEditAppointment}
                 onDelete={onDeleteAppointment}
+                onViewUpdates={onViewUpdates}
                 formatTime={formatTime}
                 formatDateTime={formatDateTime}
               />

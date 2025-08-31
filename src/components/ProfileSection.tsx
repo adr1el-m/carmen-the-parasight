@@ -1,12 +1,16 @@
 import React, { useState, useCallback } from 'react'
 import { formatDate } from '../utils/dateUtils'
+import '../styles/profileSection.css'
 
 interface ProfileSectionProps {
   patientData: any
   user: any
-  onOpenModal: (modalType: string) => void
+  onOpenModal: (modalType: string, additionalData?: any) => void
   onRemoveCondition: (category: string, condition: string) => void
   consultationHistory?: any[]
+  onRemoveConsultation?: (consultationId: string) => void
+  onDownloadDocument?: (document: any) => void
+  onRemoveDocument?: (documentId: string) => void
 }
 
 const ProfileSection: React.FC<ProfileSectionProps> = ({
@@ -14,7 +18,10 @@ const ProfileSection: React.FC<ProfileSectionProps> = ({
   user,
   onOpenModal,
   onRemoveCondition,
-  consultationHistory = []
+  consultationHistory = [],
+  onRemoveConsultation,
+  onDownloadDocument,
+  onRemoveDocument
 }) => {
   const [activeTab, setActiveTab] = useState<'general' | 'consultation-history' | 'patient-documents'>('general')
 
@@ -172,7 +179,7 @@ const ProfileSection: React.FC<ProfileSectionProps> = ({
               <div className="info-grid">
                 <div className="info-item">
                   <label>Patient ID</label>
-                  <span style={{ fontFamily: 'monospace', fontWeight: 'bold', color: '#0040e7' }}>{getUniquePatientId()}</span>
+                  <span className="long-text" style={{ fontFamily: 'monospace', fontWeight: 'bold', color: '#0040e7' }}>{getUniquePatientId()}</span>
                 </div>
                 <div className="info-item">
                   <label>Name</label>
@@ -196,7 +203,7 @@ const ProfileSection: React.FC<ProfileSectionProps> = ({
                 </div>
                 <div className="info-item">
                   <label>Email Address</label>
-                  <span>{getUserEmail()}</span>
+                  <span className="long-text">{getUserEmail()}</span>
                 </div>
                 <div className="info-item">
                   <label>Address</label>
@@ -241,7 +248,7 @@ const ProfileSection: React.FC<ProfileSectionProps> = ({
                 {patientData?.medicalInfo?.conditions && Object.keys(patientData.medicalInfo.conditions).length > 0 ? (
                   Object.entries(patientData.medicalInfo.conditions).map(([category, conditions]) => (
                     <div key={category} className="disease-category">
-                      <h4>{category}</h4>
+                      <h4>{category.replace(/\b\w/g, l => l.toUpperCase())}</h4>
                       <div className="disease-tags">
                         {conditions.map((condition: string, index: number) => (
                           <span 
@@ -281,11 +288,25 @@ const ProfileSection: React.FC<ProfileSectionProps> = ({
               
               {consultationHistory.length > 0 ? (
                 <div className="consultation-list">
-                  {consultationHistory.map((consultation, index) => (
+                  {consultationHistory
+                    .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
+                    .map((consultation, index) => (
                     <div key={index} className="consultation-item">
                       <div className="consultation-header">
-                        <h5>{consultation.type || 'Consultation'}</h5>
-                        <span className={`badge ${consultation.status}`}>{consultation.status}</span>
+                        <h5>{(consultation.type || 'Consultation').replace(/\b\w/g, l => l.toUpperCase())}</h5>
+                        <div className="consultation-header-controls">
+                          <span className={`badge ${consultation.status}`}>{consultation.status}</span>
+                        </div>
+                        {onRemoveConsultation && (
+                          <button
+                            className="btn btn-danger btn-sm"
+                            onClick={() => onRemoveConsultation(consultation.id || index.toString())}
+                            aria-label="Delete consultation"
+                            title="Delete consultation"
+                          >
+                            <i className="fas fa-trash"></i>
+                          </button>
+                        )}
                       </div>
                       <div className="consultation-details">
                         <div className="detail-row">
@@ -341,8 +362,68 @@ const ProfileSection: React.FC<ProfileSectionProps> = ({
               </button>
             </div>
             
-            {/* This will be handled by a separate PatientDocuments component */}
-            <p>Patient documents content will be rendered here</p>
+            {/* Display actual patient documents */}
+            {patientData?.activity?.documents && patientData.activity.documents.length > 0 ? (
+              <div className="documents-list">
+                {patientData.activity.documents.map((document: any, index: number) => (
+                  <div key={index} className="document-item">
+                    <div className="document-header">
+                      <div className="document-info">
+                        <h5>{document.name}</h5>
+                        <div className="document-meta">
+                          <span className="document-type">{document.type}</span>
+                          <span className="document-size">{(document.size / 1024 / 1024).toFixed(2)} MB</span>
+                          <span className="document-date">
+                            {new Date(document.uploadDate).toLocaleDateString('en-US', { 
+                              year: 'numeric', 
+                              month: 'short', 
+                              day: 'numeric' 
+                            })}
+                          </span>
+                        </div>
+                      </div>
+                      <div className="document-actions">
+                        <button 
+                          className="btn btn-outline btn-sm"
+                          onClick={() => onOpenModal('viewDocument', document)}
+                          aria-label="View document"
+                          title="View document"
+                        >
+                          <i className="fas fa-eye"></i> View
+                        </button>
+                        <button 
+                          className="btn btn-outline btn-sm"
+                          onClick={() => onDownloadDocument && onDownloadDocument(document)}
+                          aria-label="Download document"
+                          title="Download document"
+                        >
+                          <i className="fas fa-download"></i> Download
+                        </button>
+                        <button 
+                          className="btn btn-danger btn-sm"
+                          onClick={() => {
+                            console.log('🔍 Delete button clicked for document:', document)
+                            console.log('🔍 Document ID:', document.id)
+                            console.log('🔍 Document object:', document)
+                            onRemoveDocument && onRemoveDocument(document.id)
+                          }}
+                          aria-label="Delete document"
+                          title="Delete document"
+                        >
+                          <i className="fas fa-trash"></i> Delete
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="empty-state">
+                <i className="fas fa-file-medical"></i>
+                <p>No documents uploaded yet</p>
+                <small>Upload your first medical document to get started.</small>
+              </div>
+            )}
           </div>
         )}
       </div>

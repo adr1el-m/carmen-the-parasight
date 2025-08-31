@@ -2,7 +2,7 @@
 // ⚠️ SECURITY: All sensitive configuration is loaded from environment variables
 import { initializeApp, getApps, getApp } from 'firebase/app';
 import { getAuth, connectAuthEmulator } from 'firebase/auth';
-import { getFirestore, connectFirestoreEmulator } from 'firebase/firestore';
+import { getFirestore, connectFirestoreEmulator, enableNetwork } from 'firebase/firestore';
 import { getStorage, connectStorageEmulator } from 'firebase/storage';
 import { getAnalytics, isSupported } from 'firebase/analytics';
 
@@ -95,8 +95,17 @@ try {
   
   // Initialize Firebase services
   auth = getAuth(app);
+  
+  // Initialize Firestore with additional settings for better compatibility
   db = getFirestore(app);
+  
+  // Initialize Storage
   storage = getStorage(app);
+  
+  // Enable Firestore offline persistence and network retry
+  enableNetwork(db);
+  
+  console.log('🌐 Firestore network enabled');
   
   console.log('🚀 Firebase services initialized successfully');
 } catch (error) {

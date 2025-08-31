@@ -341,7 +341,7 @@
 .heroContent .left {
   display: flex;
   flex-direction: column;
-  color: white;
+  color: #1a202c;
   row-gap: 24px;
   max-width: 50%;
 }

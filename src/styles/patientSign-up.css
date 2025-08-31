@@ -314,7 +314,9 @@ body {
     padding: 4px;
     transition: color 0.2s ease;
     z-index: 2;
-    margin-top: 12px; /* Offset for label */
+    display: flex;
+    align-items: center;
+    justify-content: center;
 }
 
 .password-toggle:hover {

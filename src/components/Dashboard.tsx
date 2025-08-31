@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react'
+ import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { auth } from '../config/firebase'
 import { signOut } from 'firebase/auth'
@@ -6,7 +6,7 @@ import '../styles/shared-header.css'
 import '../styles/dashboard.css'
 import '../styles/csp-utilities.css'
 import { getAITriageConfig } from '../config/ai-triage.config'
-import { migrateExistingAppointments, getMigrationStatistics } from '../services/appointment-migration.service'
+
 
 // Types for better type safety
 interface User {
@@ -23,6 +23,8 @@ interface Appointment {
   patientName: string
   type: string
   status: 'confirmed' | 'pending' | 'virtual'
+  patientNotes?: string // Notes from the patient when booking
+  facilityNotes?: string // Notes/remarks from healthcare facility staff
 }
 
 
@@ -33,6 +35,7 @@ interface DashboardStats {
   totalPatients: number
   staffMembers: number
   todayAppointments: number
+  totalAppointments: number
 }
 
 interface UrgencyData {
@@ -82,7 +85,7 @@ const Dashboard: React.FC = React.memo(() => {
     time: '',
     doctor: '',
     type: 'consultation',
-    notes: '',
+    facilityNotes: '', // Notes/remarks from healthcare facility staff
     status: 'scheduled'
   })
   const [isCreatingAppointment, setIsCreatingAppointment] = useState(false)
@@ -95,7 +98,7 @@ const Dashboard: React.FC = React.memo(() => {
     time: '',
     doctor: '',
     status: 'scheduled',
-    notes: ''
+    facilityNotes: '' // Notes/remarks from healthcare facility staff
   })
   const [isEditingAppointment, setIsEditingAppointment] = useState(false)
   
@@ -142,18 +145,17 @@ const Dashboard: React.FC = React.memo(() => {
   })
   const [isSavingProfile, setIsSavingProfile] = useState(false)
   
-  // Migration state
-  const [migrationStats, setMigrationStats] = useState<{
-    totalPatients: number
-    totalAppointments: number
-    migratedAppointments: number
-    migrationProgress: number
-  } | null>(null)
-  const [isMigrating, setIsMigrating] = useState(false)
+
   
   // Document viewer state
   const [viewingDocument, setViewingDocument] = useState<any>(null)
   const [showDocumentModal, setShowDocumentModal] = useState(false)
+  
+  // Add Note modal state
+  const [showAddNoteModal, setShowAddNoteModal] = useState(false)
+  const [selectedAppointmentForNote, setSelectedAppointmentForNote] = useState<any>(null)
+  const [noteText, setNoteText] = useState('')
+  const [isAddingNote, setIsAddingNote] = useState(false)
   
   const sidebarRef = useRef<HTMLElement>(null)
   const sidebarOverlayRef = useRef<HTMLDivElement>(null)
@@ -174,12 +176,43 @@ const Dashboard: React.FC = React.memo(() => {
 
 
 
-  // Dashboard statistics
-  const dashboardStats: DashboardStats = useMemo(() => ({
-    totalPatients: 2547,
-    staffMembers: 45,
-    todayAppointments: facilityAppointments.length
-  }), [facilityAppointments])
+  // Dashboard statistics - calculated from real data
+  const dashboardStats: DashboardStats = useMemo(() => {
+    // Calculate unique patients from appointments
+    const uniquePatients = new Set()
+    facilityAppointments.forEach(appointment => {
+      if (appointment.patientId) {
+        uniquePatients.add(appointment.patientId)
+      }
+    })
+    
+    // Get staff count from facility data
+    const staffCount = facilityData?.staff?.totalStaff || 0
+    
+    // Get today's appointments count
+    const today = new Date()
+    const todayString = today.toISOString().split('T')[0]
+    const todayAppts = facilityAppointments.filter(appointment => 
+      appointment.date === todayString
+    ).length
+    
+    // If no data yet, show loading state
+    if (facilityAppointments.length === 0 && !isLoadingAppointments) {
+      return {
+        totalPatients: 0,
+        staffMembers: staffCount,
+        todayAppointments: 0,
+        totalAppointments: 0
+      }
+    }
+    
+    return {
+      totalPatients: uniquePatients.size,
+      staffMembers: staffCount,
+      todayAppointments: todayAppts,
+      totalAppointments: facilityAppointments.length
+    }
+  }, [facilityAppointments, facilityData, isLoadingAppointments])
 
   // Quick actions configuration
   const quickActions: QuickAction[] = useMemo(() => [
@@ -309,6 +342,10 @@ const Dashboard: React.FC = React.memo(() => {
 
 
   const openAppointmentModal = useCallback(async (appointment: any) => {
+    console.log('🔍 Opening appointment modal for:', appointment)
+    console.log('🔍 Appointment patientId:', appointment.patientId)
+    console.log('🔍 Full appointment object:', appointment)
+    
     setSelectedAppointment(appointment)
     setShowAppointmentModal(true)
     setAppointmentModalTab('details')
@@ -322,6 +359,9 @@ const Dashboard: React.FC = React.memo(() => {
         // Load basic patient data
         const patientData = await getPatientData(appointment.patientId)
         console.log('📋 Basic patient data loaded:', patientData)
+        console.log('📋 Medical Info:', patientData?.medicalInfo)
+        console.log('📋 Medical Conditions:', patientData?.medicalInfo?.conditions)
+        console.log('📋 Patient ID being used:', appointment.patientId)
         
         // Load consultation history
         let consultationHistory: any[] = []
@@ -377,7 +417,7 @@ const Dashboard: React.FC = React.memo(() => {
       time: '',
       doctor: '',
       type: 'consultation',
-      notes: '',
+      facilityNotes: '', // Notes/remarks from healthcare facility staff
       status: 'scheduled'
     })
     setPatientValidationError('')
@@ -391,7 +431,7 @@ const Dashboard: React.FC = React.memo(() => {
       time: '',
       doctor: '',
       type: 'consultation',
-      notes: '',
+      facilityNotes: '', // Notes/remarks from healthcare facility staff
       status: 'scheduled'
     })
     setPatientValidationError('')
@@ -404,7 +444,7 @@ const Dashboard: React.FC = React.memo(() => {
       time: appointment.time || '',
       doctor: appointment.doctor || '',
       status: appointment.status || 'scheduled',
-      notes: appointment.notes || ''
+      facilityNotes: appointment.facilityNotes || '' // Notes/remarks from healthcare facility staff
     })
     setShowEditAppointmentModal(true)
   }, [])
@@ -416,7 +456,7 @@ const Dashboard: React.FC = React.memo(() => {
       time: '',
       doctor: '',
       status: 'scheduled',
-      notes: ''
+      facilityNotes: '' // Notes/remarks from healthcare facility staff
     })
     setSelectedAppointment(null)
   }, [])
@@ -514,6 +554,21 @@ const Dashboard: React.FC = React.memo(() => {
     setShowDocumentModal(false)
     setViewingDocument(null)
   }, [])
+  
+  // Add Note modal functions
+  const openAddNoteModal = useCallback((appointment: any) => {
+    setSelectedAppointmentForNote(appointment)
+    setNoteText(appointment.facilityNotes || '')
+    setShowAddNoteModal(true)
+  }, [])
+
+  const closeAddNoteModal = useCallback(() => {
+    setShowAddNoteModal(false)
+    setSelectedAppointmentForNote(null)
+    setNoteText('')
+  }, [])
+  
+
 
   // Keyboard navigation handlers
   const handleTabKeyDown = useCallback((e: React.KeyboardEvent, isFirstTab: boolean, isLastTab: boolean) => {
@@ -860,6 +915,41 @@ const Dashboard: React.FC = React.memo(() => {
       default: return '#3b82f6'
     }
   }, [])
+  
+  const handleAddNote = useCallback(async () => {
+    if (!selectedAppointmentForNote || !noteText.trim()) {
+      showNotification('Please enter a note', 'error')
+      return
+    }
+    
+    setIsAddingNote(true)
+    
+    try {
+      const firestoreModule: any = await import('../services/firestoredb.js')
+      
+      await firestoreModule.updateAppointmentByFacility(
+        selectedAppointmentForNote.id,
+        selectedAppointmentForNote.patientId,
+        {
+          facilityNotes: noteText.trim()
+        },
+        user?.uid || ''
+      )
+      
+      showNotification('Note added successfully!', 'success')
+      closeAddNoteModal()
+      
+      // The real-time listener will automatically update the appointments list
+      console.log('✅ Note added successfully, real-time listener will update the UI')
+      
+    } catch (error: unknown) {
+      console.error('Error adding note:', error)
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred'
+      showNotification(`Failed to add note: ${errorMessage}`, 'error')
+    } finally {
+      setIsAddingNote(false)
+    }
+  }, [selectedAppointmentForNote, noteText, user?.uid, closeAddNoteModal, showNotification])
 
   const handleSaveProfile = useCallback(async () => {
     if (!user?.uid || !facilityData) {
@@ -921,67 +1011,26 @@ const Dashboard: React.FC = React.memo(() => {
     setIsRefreshing(true)
     showNotification('Refreshing dashboard data...', 'info')
     
-    // Simulate data refresh
-    setTimeout(() => {
-      setIsRefreshing(false)
-      showNotification('Dashboard refreshed successfully!', 'success')
-    }, 1500)
-  }, [showNotification])
-
-  const handleMigration = useCallback(async () => {
-    if (!user?.uid) return
-    
-    setIsMigrating(true)
-    showNotification('Starting appointment migration...', 'info')
-    
-    try {
-      const results = await migrateExistingAppointments()
-      
-      showNotification(
-        `Migration completed! ${results.migratedCount} appointments migrated.`, 
-        'success'
-      )
-      
-      // Refresh migration stats
-      try {
-        const stats = await getMigrationStatistics()
-        setMigrationStats(stats)
-      } catch (statsError) {
-        console.warn('⚠️ Failed to refresh migration stats:', statsError)
-      }
-      
-      // Refresh appointments to show updated urgency levels
-      if (user.uid) {
-        try {
-          await loadUserAppointments(user.uid)
-        } catch (appointmentError) {
-          console.warn('⚠️ Failed to refresh appointments after migration:', appointmentError)
+    // Refresh appointments and re-evaluate urgency
+    if (user?.uid) {
+      loadUserAppointments(user.uid).then(() => {
+        // Force urgency re-evaluation for all appointments
+        if (filteredAppointments.length > 0) {
+          console.log('🔄 Forcing urgency re-evaluation for all appointments...')
+          // Clear existing urgency data to force re-evaluation
+          setUrgencyData({})
+          // The useEffect will trigger re-evaluation
         }
-      }
-      
-    } catch (error) {
-      console.error('Migration failed:', error)
-      showNotification('Migration failed. Please try again.', 'error')
-    } finally {
-      setIsMigrating(false)
-    }
-  }, [user?.uid, showNotification, loadUserAppointments])
-
-  const loadMigrationStats = useCallback(async () => {
-    try {
-      const stats = await getMigrationStatistics()
-      setMigrationStats(stats)
-    } catch (error) {
-      console.warn('⚠️ Failed to load migration stats (this is normal if no appointments exist):', error)
-      // Set default stats to prevent UI errors
-      setMigrationStats({
-        totalPatients: 0,
-        totalAppointments: 0,
-        migratedAppointments: 0,
-        migrationProgress: 100
       })
     }
-  }, [])
+    
+    setTimeout(() => {
+      setIsRefreshing(false)
+      showNotification('Dashboard refreshed and urgency levels updated!', 'success')
+    }, 1500)
+  }, [showNotification, user?.uid, loadUserAppointments, filteredAppointments.length])
+
+
 
   const handleCreateAppointment = useCallback(async () => {
     // Validate form
@@ -1006,14 +1055,14 @@ const Dashboard: React.FC = React.memo(() => {
     try {
       const firestoreModule: any = await import('../services/firestoredb.js')
       
-      await firestoreModule.createAppointmentForPatient(
+      const newAppointment = await firestoreModule.createAppointmentForPatient(
         newAppointmentForm.patientUid,
         {
           date: newAppointmentForm.date,
           time: newAppointmentForm.time,
           doctor: newAppointmentForm.doctor,
           type: newAppointmentForm.type,
-          notes: newAppointmentForm.notes,
+          facilityNotes: newAppointmentForm.facilityNotes, // Notes/remarks from healthcare facility staff
           status: newAppointmentForm.status
         },
         user?.uid || '',
@@ -1023,10 +1072,9 @@ const Dashboard: React.FC = React.memo(() => {
       showNotification('Appointment created successfully!', 'success')
       closeNewAppointmentModal()
       
-      // Refresh appointments list
-      if (user?.uid) {
-        loadUserAppointments(user.uid)
-      }
+      // The real-time listener will automatically update the appointments list
+      // No need to manually refresh or update local state
+      console.log('✅ Appointment created successfully, real-time listener will update the UI')
       
     } catch (error: any) {
       console.error('Error creating appointment:', error)
@@ -1052,16 +1100,28 @@ const Dashboard: React.FC = React.memo(() => {
     try {
       const firestoreModule: any = await import('../services/firestoredb.js')
       
+      // Clean the data to remove undefined values and ensure all fields are valid
+      const cleanedAppointmentData = {
+        date: editAppointmentForm.date || '',
+        time: editAppointmentForm.time || '',
+        doctor: editAppointmentForm.doctor || '',
+        status: editAppointmentForm.status || 'scheduled',
+        facilityNotes: editAppointmentForm.facilityNotes || '' // Notes/remarks from healthcare facility staff
+      }
+      
+      // Remove any fields that are empty strings or undefined
+      const finalAppointmentData = Object.fromEntries(
+        Object.entries(cleanedAppointmentData).filter(([_, value]) => 
+          value !== undefined && value !== null && value !== ''
+        )
+      )
+      
+      console.log('🔍 Cleaned appointment data for update:', finalAppointmentData)
+      
       await firestoreModule.updateAppointmentByFacility(
         selectedAppointment.id,
         selectedAppointment.patientId,
-        {
-          date: editAppointmentForm.date,
-          time: editAppointmentForm.time,
-          doctor: editAppointmentForm.doctor,
-          status: editAppointmentForm.status,
-          notes: editAppointmentForm.notes
-        },
+        finalAppointmentData,
         user?.uid || ''
       )
       
@@ -1069,33 +1129,69 @@ const Dashboard: React.FC = React.memo(() => {
       closeEditAppointmentModal()
       closeAppointmentModal() // Also close the details modal
       
-      // Refresh appointments list
-      if (user?.uid) {
-        loadUserAppointments(user.uid)
-      }
+      // The real-time listener will automatically update the appointments list
+      console.log('✅ Appointment updated successfully, real-time listener will update the UI')
       
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Error updating appointment:', error)
-      showNotification(`Failed to update appointment: ${error.message}`, 'error')
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred'
+      showNotification(`Failed to update appointment: ${errorMessage}`, 'error')
     } finally {
       setIsEditingAppointment(false)
     }
-  }, [selectedAppointment, editAppointmentForm, user?.uid, closeEditAppointmentModal, closeAppointmentModal, loadUserAppointments, showNotification])
+  }, [selectedAppointment, editAppointmentForm, user?.uid, closeEditAppointmentModal, closeAppointmentModal, showNotification])
 
   useEffect(() => {
     handleNavClick('dashboard')
     handleRefresh()
+  }, [handleNavClick, handleRefresh])
+
+  // Helper function for fallback urgency evaluation
+  const evaluateUrgencyFallback = useCallback((appointment: any): { level: 'RED' | 'ORANGE' | 'GREEN', urgency: string } => {
+    const text = `${appointment.facilityNotes || ''} ${appointment.patientNotes || ''} ${appointment.type || ''} ${appointment.status || ''}`.toLowerCase()
     
-    // Load migration stats with error handling
-    const loadStatsSafely = async () => {
-      try {
-        await loadMigrationStats()
-      } catch (error) {
-        console.warn('⚠️ Failed to load migration stats on mount:', error)
+    console.log(`🔍 Fallback evaluation for appointment ${appointment.id}:`, { text, facilityNotes: appointment.facilityNotes, patientNotes: appointment.patientNotes })
+    
+    // Critical/Red indicators - LIFE-THREATENING
+    const redKeywords = [
+      'chest pain', 'heart attack', 'stroke', 'severe bleeding', 'internal bleeding', 'bleeding', 'hemorrhage', 'unconscious',
+      'difficulty breathing', 'severe trauma', 'overdose', 'suicide', 'seizure',
+      'cardiac arrest', 'respiratory failure', 'anaphylaxis', 'severe burns',
+      'emergency', 'critical', 'urgent', 'immediate', 'life-threatening',
+      'blood loss', 'excessive bleeding', 'profuse bleeding', 'uncontrolled bleeding',
+      'heart attack', 'myocardial infarction', 'cardiac arrest', 'respiratory arrest'
+    ]
+    
+    // Urgent/Orange indicators - SERIOUS
+    const orangeKeywords = [
+      'high fever', 'severe headache', 'broken bone', 'deep cut', 'infection',
+      'dehydration', 'severe pain', 'allergic reaction', 'meningitis symptoms',
+      'appendicitis', 'gallbladder', 'kidney stone', 'pneumonia symptoms',
+      'urgent', 'serious', 'acute', 'moderate pain', 'fever',
+      'minor bleeding', 'light bleeding', 'spotting', 'moderate pain',
+      'fracture', 'broken', 'dislocation', 'sprain'
+    ]
+    
+    // Check for red level first
+    for (const keyword of redKeywords) {
+      if (text.includes(keyword)) {
+        console.log(`🚨 RED keyword detected: "${keyword}" in appointment ${appointment.id}`)
+        return { level: 'RED', urgency: 'CRITICAL' }
       }
     }
-    loadStatsSafely()
-  }, [handleNavClick, handleRefresh, loadMigrationStats])
+    
+    // Check for orange level
+    for (const keyword of orangeKeywords) {
+      if (text.includes(keyword)) {
+        console.log(`🟠 ORANGE keyword detected: "${keyword}" in appointment ${appointment.id}`)
+        return { level: 'ORANGE', urgency: 'VERY URGENT' }
+      }
+    }
+    
+    // Default to green for routine appointments
+    console.log(`🟢 No urgent keywords detected, marking as ROUTINE for appointment ${appointment.id}`)
+    return { level: 'GREEN', urgency: 'ROUTINE' }
+  }, [])
 
   // Use stored urgency levels from Firestore instead of re-evaluating
   useEffect(() => {
@@ -1105,42 +1201,49 @@ const Dashboard: React.FC = React.memo(() => {
       const newUrgencyData: UrgencyData = {}
       
       try {
-        // Extract urgency data from appointments (already stored in Firestore)
-      for (const appointment of filteredAppointments) {
+        console.log(`🔍 Processing ${filteredAppointments.length} appointments for urgency evaluation...`)
+        
+        for (const appointment of filteredAppointments) {
           console.log(`🔍 Processing appointment ${appointment.id}:`, {
             hasUrgency: !!appointment.urgency,
             urgencyData: appointment.urgency,
-            notes: appointment.notes,
-            type: appointment.type
+            facilityNotes: appointment.facilityNotes,
+            patientNotes: appointment.patientNotes,
+            type: appointment.type,
+            status: appointment.status
           })
           
-          if (appointment.urgency && appointment.urgency.level) {
+          // Check if appointment already has stored urgency data
+          if (appointment.urgency && appointment.urgency.level && appointment.urgency.description) {
             // Use stored urgency from Firestore
             newUrgencyData[appointment.id] = {
               level: appointment.urgency.level || 'GREEN',
               urgency: appointment.urgency.description || 'ROUTINE'
             }
-            console.log(`🚨 Using stored urgency for appointment ${appointment.id}:`, appointment.urgency)
-                    } else {
-            // No stored urgency - try AI evaluation first, then fallback
-            console.log(`🤖 Attempting AI evaluation for appointment ${appointment.id}...`)
-            console.log(`📝 Appointment data:`, {
-              id: appointment.id,
-              notes: appointment.notes,
-              type: appointment.type,
-              status: appointment.status
-            })
+            console.log(`✅ Using stored urgency for appointment ${appointment.id}:`, appointment.urgency)
+          } else {
+            // Force re-evaluation for appointments with critical symptoms
+            const notes = appointment.facilityNotes || appointment.patientNotes || ''
+            const hasCriticalSymptoms = notes.toLowerCase().includes('internal bleeding') || 
+                                      notes.toLowerCase().includes('bleeding') ||
+                                      notes.toLowerCase().includes('hemorrhage') ||
+                                      notes.toLowerCase().includes('chest pain') ||
+                                      notes.toLowerCase().includes('heart attack')
+            
+            if (hasCriticalSymptoms) {
+              console.log(`🚨 Critical symptoms detected in appointment ${appointment.id}, forcing re-evaluation`)
+              // Don't use stored data, force re-evaluation
+            }
+            // No stored urgency - evaluate using AI or fallback
+            console.log(`🤖 Evaluating urgency for appointment ${appointment.id}...`)
             
             try {
               // Try AI evaluation first
-              console.log(`🔧 Importing triage service...`)
               const { evaluateAppointmentUrgency } = await import('../services/triage.service.ts')
-              console.log(`✅ Triage service imported successfully`)
               
-              console.log(`🧠 Calling AI evaluation...`)
               const aiResult = await evaluateAppointmentUrgency({
                 id: appointment.id,
-                notes: appointment.notes || '',
+                notes: appointment.facilityNotes || appointment.patientNotes || '',
                 type: appointment.type || '',
                 status: appointment.status || '',
                 date: appointment.date || '',
@@ -1151,57 +1254,73 @@ const Dashboard: React.FC = React.memo(() => {
                 level: aiResult.level,
                 urgency: aiResult.urgency
               }
+              
               console.log(`✅ AI evaluation successful for appointment ${appointment.id}:`, aiResult)
+              
+              // Save the urgency data back to Firestore for future use
+              try {
+                const { updateAppointmentByFacility } = await import('../services/firestoredb.js')
+                await updateAppointmentByFacility(
+                  appointment.id,
+                  appointment.patientId,
+                  {
+                    urgency: {
+                      level: aiResult.level,
+                      description: aiResult.urgency,
+                      evaluatedAt: new Date().toISOString(),
+                      method: 'AI'
+                    }
+                  },
+                  user?.uid || ''
+                )
+                console.log(`💾 Urgency data saved to Firestore for appointment ${appointment.id}`)
+              } catch (saveError) {
+                console.warn(`⚠️ Failed to save urgency data to Firestore for appointment ${appointment.id}:`, saveError)
+                // Continue with the evaluation even if saving fails
+              }
               
             } catch (aiError) {
               console.log(`⚠️ AI evaluation failed for appointment ${appointment.id}, using fallback:`, aiError)
               
               // Fallback to keyword-based evaluation
-              const text = `${appointment.notes || ''} ${appointment.type || ''}`.toLowerCase();
+              const fallbackResult = evaluateUrgencyFallback(appointment)
+              newUrgencyData[appointment.id] = fallbackResult
               
-              // Critical/Red indicators
-              const redKeywords = [
-                'chest pain', 'heart attack', 'stroke', 'severe bleeding', 'unconscious',
-                'difficulty breathing', 'severe trauma', 'overdose', 'suicide', 'seizure',
-                'cardiac arrest', 'respiratory failure', 'anaphylaxis', 'severe burns'
-              ];
+              console.log(`⚠️ Using fallback for appointment ${appointment.id}: ${fallbackResult.level} - ${fallbackResult.urgency}`)
               
-              // Urgent/Orange indicators
-              const orangeKeywords = [
-                'high fever', 'severe headache', 'broken bone', 'deep cut', 'infection',
-                'dehydration', 'severe pain', 'allergic reaction', 'meningitis symptoms',
-                'appendicitis', 'gallbladder', 'kidney stone', 'pneumonia symptoms'
-              ];
-              
-              let fallbackLevel: 'RED' | 'ORANGE' | 'GREEN' = 'GREEN';
-              let fallbackUrgency = 'ROUTINE';
-              
-              // Check for red level
-              if (redKeywords.some(keyword => text.includes(keyword))) {
-                fallbackLevel = 'RED';
-                fallbackUrgency = 'CRITICAL';
+              // Save fallback urgency data to Firestore
+              try {
+                const { updateAppointmentByFacility } = await import('../services/firestoredb.js')
+                await updateAppointmentByFacility(
+                  appointment.id,
+                  appointment.patientId,
+                  {
+                    urgency: {
+                      level: fallbackResult.level,
+                      description: fallbackResult.urgency,
+                      evaluatedAt: new Date().toISOString(),
+                      method: 'FALLBACK'
+                    }
+                  },
+                  user?.uid || ''
+                )
+                console.log(`💾 Fallback urgency data saved to Firestore for appointment ${appointment.id}`)
+              } catch (saveError) {
+                console.warn(`⚠️ Failed to save fallback urgency data to Firestore for appointment ${appointment.id}:`, saveError)
               }
-              // Check for orange level
-              else if (orangeKeywords.some(keyword => text.includes(keyword))) {
-                fallbackLevel = 'ORANGE';
-                fallbackUrgency = 'VERY URGENT';
-              }
-              
-              newUrgencyData[appointment.id] = { 
-                level: fallbackLevel, 
-                urgency: fallbackUrgency 
-              }
-              console.log(`⚠️ Using fallback for appointment ${appointment.id}: ${fallbackLevel} - ${fallbackUrgency}`)
             }
+          }
         }
-      }
-      
-      setUrgencyData(newUrgencyData)
+        
+        setUrgencyData(newUrgencyData)
+        console.log(`✅ Urgency processing completed for ${Object.keys(newUrgencyData).length} appointments`)
+        
       } catch (error) {
-        console.warn('⚠️ Error processing urgency data, using fallback:', error)
-        // Set fallback urgency for all appointments
+        console.error('❌ Error processing urgency data:', error)
+        // Set fallback urgency for all appointments if processing fails
         filteredAppointments.forEach(appointment => {
-          newUrgencyData[appointment.id] = { level: 'GREEN', urgency: 'ROUTINE' }
+          const fallbackResult = evaluateUrgencyFallback(appointment)
+          newUrgencyData[appointment.id] = fallbackResult
         })
         setUrgencyData(newUrgencyData)
       }
@@ -1209,27 +1328,80 @@ const Dashboard: React.FC = React.memo(() => {
     
     // Call the async function
     processUrgencyData()
-  }, [filteredAppointments])
+  }, [filteredAppointments, user?.uid, evaluateUrgencyFallback])
 
-  // Real-time listener for appointments (both facility and patient)
+  // Load appointments once when component mounts
   useEffect(() => {
     if (!user?.uid) return
     
-    // COMPLETELY DISABLE real-time listeners to prevent console errors
-    console.log('🔍 Real-time listeners disabled - using periodic refresh only')
-    
-    // Load appointments once and set up periodic refresh
+    // Load appointments once on mount
+    console.log('🔍 Loading appointments on component mount')
     loadUserAppointments(user.uid)
+  }, [user?.uid, loadUserAppointments])
+
+  // Set up real-time listeners for appointments
+  useEffect(() => {
+    if (!user?.uid) return
     
-    // Set up periodic refresh every 30 seconds instead of real-time
-    const refreshInterval = setInterval(() => {
-      if (user?.uid) {
+    console.log('🔍 Setting up real-time listeners for appointments...')
+    
+    const setupRealTimeListener = async () => {
+      try {
+        // Import the real-time listener functions
+        const { listenToFacilityAppointments, listenToPatientData } = await import('../services/firestoredb.js')
+        
+        // Check if user is a facility or patient
+        const { getFirestore, doc, getDoc } = await import('firebase/firestore')
+        const db = getFirestore()
+        const facilityDoc = await getDoc(doc(db, 'facilities', user.uid))
+        
+        if (facilityDoc.exists()) {
+          // User is a facility - listen to facility appointments
+          console.log('🏥 Setting up facility appointments listener')
+          const unsubscribe = listenToFacilityAppointments(user.uid, (appointments: any[]) => {
+            console.log('🔄 Real-time facility update received:', appointments.length, 'appointments')
+            setFacilityAppointments(appointments)
+            setIsLoadingAppointments(false)
+          })
+          
+          // Store the unsubscribe function for cleanup
+          setAppointmentListener(() => unsubscribe)
+          
+        } else {
+          // User is a patient - listen to patient data
+          console.log('👤 Setting up patient data listener')
+          const unsubscribe = listenToPatientData(user.uid, (patientData: any) => {
+            if (patientData?.activity?.appointments) {
+              console.log('🔄 Real-time patient update received:', patientData.activity.appointments.length, 'appointments')
+              setFacilityAppointments(patientData.activity.appointments)
+              setIsLoadingAppointments(false)
+            }
+          })
+          
+          // Store the unsubscribe function for cleanup
+          setAppointmentListener(() => unsubscribe)
+        }
+        
+        console.log('✅ Real-time listener set up successfully')
+        
+      } catch (error) {
+        console.warn('⚠️ Could not set up real-time listener:', error)
+        // Fallback to regular loading if real-time fails
         loadUserAppointments(user.uid)
       }
-    }, 30000)
+    }
     
+    // Set loading state while setting up real-time listener
+    setIsLoadingAppointments(true)
+    setupRealTimeListener()
+    
+    // Cleanup function
     return () => {
-      clearInterval(refreshInterval)
+      if (appointmentListener) {
+        console.log('🧹 Cleaning up real-time listener')
+        appointmentListener()
+        setAppointmentListener(null)
+      }
     }
   }, [user?.uid, loadUserAppointments])
 
@@ -1541,29 +1713,33 @@ const Dashboard: React.FC = React.memo(() => {
               </div>
             
               <div className="stats-grid" ref={statsRef} role="region" aria-label="Dashboard statistics">
-                <div className="stat-card" role="article" aria-label="Total patients statistic">
+                <div className="stat-card" role="article" aria-label="Total patients statistic" title="Unique patients who have appointments at this facility">
                   <div className="stat-icon">
                     <i className="fas fa-users" aria-hidden="true"></i>
                   </div>
                   <div className="stat-info">
                     <h3 className="stat-number" data-target={dashboardStats.totalPatients}>
-                      {dashboardStats.totalPatients.toLocaleString()}
+                      {isLoadingAppointments ? (
+                        <i className="fas fa-spinner fa-spin" style={{ fontSize: '0.8em' }}></i>
+                      ) : (
+                        dashboardStats.totalPatients.toLocaleString()
+                      )}
                     </h3>
                     <p>Total Patients</p>
+                    {!isLoadingAppointments && facilityAppointments.length === 0 && (
+                      <small style={{ color: '#6b7280', fontSize: '12px' }}>
+                        No appointments yet
+                      </small>
+                    )}
+                    {!isLoadingAppointments && facilityAppointments.length > 0 && (
+                      <small style={{ color: '#059669', fontSize: '12px' }}>
+                        From {facilityAppointments.length} total appointments
+                      </small>
+                    )}
                   </div>
                 </div>
                 
-                <div className="stat-card" role="article" aria-label="Staff members statistic">
-                  <div className="stat-icon">
-                    <i className="fas fa-id-badge" aria-hidden="true"></i>
-                  </div>
-                  <div className="stat-info">
-                    <h3 className="stat-number" data-target={dashboardStats.staffMembers}>
-                      {dashboardStats.staffMembers}
-                    </h3>
-                    <p>Staff Members</p>
-                  </div>
-                </div>
+
                 
                 <div className="stat-card" role="article" aria-label="Today's appointments statistic">
                   <div className="stat-icon">
@@ -1571,9 +1747,39 @@ const Dashboard: React.FC = React.memo(() => {
                   </div>
                   <div className="stat-info">
                     <h3 className="stat-number" data-target={dashboardStats.todayAppointments}>
-                      {dashboardStats.todayAppointments}
+                      {isLoadingAppointments ? (
+                        <i className="fas fa-spinner fa-spin" style={{ fontSize: '0.8em' }}></i>
+                      ) : (
+                        dashboardStats.todayAppointments
+                      )}
                     </h3>
                     <p>Today's Appointments</p>
+                    {!isLoadingAppointments && dashboardStats.todayAppointments === 0 && (
+                      <small style={{ color: '#6b7280', fontSize: '12px' }}>
+                        No appointments today
+                      </small>
+                      )}
+                  </div>
+                </div>
+                
+                <div className="stat-card" role="article" aria-label="Total appointments statistic">
+                  <div className="stat-icon">
+                    <i className="fas fa-calendar-alt" aria-hidden="true"></i>
+                  </div>
+                  <div className="stat-info">
+                    <h3 className="stat-number" data-target={dashboardStats.totalAppointments}>
+                      {isLoadingAppointments ? (
+                        <i className="fas fa-spinner fa-spin" style={{ fontSize: '0.8em' }}></i>
+                      ) : (
+                        dashboardStats.totalAppointments.toLocaleString()
+                      )}
+                    </h3>
+                    <p>Total Appointments</p>
+                    {!isLoadingAppointments && dashboardStats.totalAppointments === 0 && (
+                      <small style={{ color: '#6b7280', fontSize: '12px' }}>
+                        No appointments yet
+                      </small>
+                    )}
                   </div>
                 </div>
                 
@@ -1596,62 +1802,10 @@ const Dashboard: React.FC = React.memo(() => {
                     </button>
                   ))}
                   
-                  {/* Migration Button */}
-                  {migrationStats && migrationStats.migrationProgress < 100 && (
-                    <button 
-                      className="btn btn-warning action-btn"
-                      onClick={handleMigration}
-                      disabled={isMigrating}
-                      title="Migrate existing appointments to include urgency levels"
-                    >
-                      <i className={`fas ${isMigrating ? 'fa-spinner fa-spin' : 'fa-database'}`} aria-hidden="true"></i>
-                      <span>
-                        {isMigrating ? 'Migrating...' : `Migrate Appointments (${migrationStats.migrationProgress}%)`}
-                      </span>
-                    </button>
-                  )}
-                  
-                  {/* Development Mode Indicator */}
-                  {import.meta.env?.DEV && (
-                    <div style={{ 
-                      marginTop: '1rem', 
-                      padding: '0.5rem', 
-                      backgroundColor: '#dcfce7', 
-                      borderRadius: '4px',
-                      border: '1px solid #bbf7d0',
-                      fontSize: '0.75rem',
-                      color: '#166534',
-                      textAlign: 'center'
-                    }}>
-                      <i className="fas fa-code"></i> Development Mode - Real-time listeners disabled, using periodic refresh (30s)
-                </div>
-                  )}
+
                 </div>
                 
-                {/* Migration Status */}
-                {migrationStats && (
-                  <div style={{ 
-                    marginTop: '1rem', 
-                    padding: '0.75rem', 
-                    backgroundColor: '#f8fafc', 
-                    borderRadius: '6px',
-                    border: '1px solid #e2e8f0',
-                    fontSize: '0.875rem'
-                  }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                      <span>📊 Appointment Migration Status:</span>
-                      <span style={{ 
-                        fontWeight: 'bold',
-                        color: migrationStats.migrationProgress === 100 ? '#059669' : '#d97706' /* Darker orange for WCAG AA compliance */
-                      }}>
-                        {migrationStats.migrationProgress}% Complete
-                      </span>
-                    </div>
-                    <div style={{ marginTop: '0.5rem', color: '#4a5568' }}> {/* Darker gray for WCAG AA compliance */}
-                      {migrationStats.migratedAppointments} of {migrationStats.totalAppointments} appointments migrated
-                    </div>
-                  </div>
-                )}
+
               </div>
               
               {/* Quick Appointments Section */}
@@ -1771,7 +1925,23 @@ const Dashboard: React.FC = React.memo(() => {
               )}
               
               <div className="dashboard-section" role="region" aria-label="Today's schedule">
-                <h3>Today's Schedule</h3>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '15px' }}>
+                  <h3>Today's Schedule</h3>
+                  <div style={{ 
+                    fontSize: '12px', 
+                    padding: '4px 8px', 
+                    borderRadius: '4px',
+                    backgroundColor: '#dcfce7',
+                    color: '#166534',
+                    border: '1px solid #bbf7d0',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '6px'
+                  }}>
+                    <i className="fas fa-broadcast-tower" style={{ fontSize: '10px' }}></i>
+                    Real-time Updates Active
+                  </div>
+                </div>
                 
                 {/* Triage Legend */}
                 <div style={{ 
@@ -1862,19 +2032,15 @@ const Dashboard: React.FC = React.memo(() => {
                       
                       return (
                         <div key={appointment.id} className="appointment-card" role="listitem">
-                          {/* Triage Urgency Indicator */}
-                          <div className="urgency-indicator" style={urgencyStyles}>
-                            <div className="urgency-level">{urgency.level}</div>
-                            <div className="urgency-text">{urgency.urgency}</div>
-                          </div>
-                          
+                          {/* Triage Urgency Indicator - Positioned before date to avoid overlap */}
+                          <div className="urgency-indicator" style={urgencyStyles}></div>
                           <div className="appointment-date" aria-label={`Appointment time: ${appointment.time}`}>
                             <span className="date">{formatTime(appointment.time).split(' ')[0]}</span>
                             <span className="month">{formatTime(appointment.time).split(' ')[1]}</span>
                           </div>
                           <div className="appointment-info">
-                            <h4>{appointment.doctor || 'Doctor TBD'}</h4>
-                            <p>{appointment.type} - {appointment.facilityName || 'Facility'}</p>
+                            <h4>{appointment.doctor || 'Doctor To Be Determined'}</h4>
+                            <p>{(appointment.type || 'consultation').replace(/\b\w/g, (l: string) => l.toUpperCase())} - {appointment.facilityName || 'Facility'}</p>
                             <div className="appointment-time">Patient: {appointment.patientName}</div>
                           </div>
                           <div className="appointment-actions">
@@ -1910,16 +2076,6 @@ const Dashboard: React.FC = React.memo(() => {
                   </p>
                 </div>
                 <div className="section-controls">
-                  <button 
-                    className="btn btn-outline" 
-                    onClick={() => user && loadUserAppointments(user.uid)}
-                    disabled={isLoadingAppointments}
-                    title="Refresh appointments list"
-                  >
-                    <i className={`fas ${isLoadingAppointments ? 'fa-spinner fa-spin' : 'fa-sync-alt'}`}></i>
-                    {isLoadingAppointments ? ' Refreshing...' : ' Refresh Appointments'}
-                  </button>
-
                   <button className="btn btn-primary" onClick={openNewAppointmentModal} aria-label="Create a new appointment">
                     <i className="fas fa-plus"></i> New Appointment
                   </button>
@@ -1987,6 +2143,36 @@ const Dashboard: React.FC = React.memo(() => {
                 </div>
               </div>
               
+              <div style={{ 
+                marginBottom: '20px', 
+                padding: '15px', 
+                backgroundColor: '#f0f9ff', 
+                borderRadius: '8px',
+                border: '1px solid #bae6fd',
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'center'
+              }}>
+                <div style={{ fontSize: '14px', color: '#0369a1' }}>
+                  <i className="fas fa-info-circle" style={{ marginRight: '8px' }}></i>
+                  <strong>Real-time Updates:</strong> New appointments and changes appear automatically without refreshing
+                </div>
+                <div style={{ 
+                  fontSize: '12px', 
+                  padding: '4px 8px', 
+                  borderRadius: '4px',
+                  backgroundColor: '#dcfce7',
+                  color: '#166534',
+                  border: '1px solid #bbf7d0',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '6px'
+                }}>
+                  <i className="fas fa-broadcast-tower" style={{ fontSize: '10px' }}></i>
+                  Live
+                </div>
+              </div>
+
               <div className="content-tabs" role="tablist" aria-label="Appointment consultation tabs">
                 <button 
                   ref={firstTabRef}
@@ -2047,8 +2233,8 @@ const Dashboard: React.FC = React.memo(() => {
                         <p style={{ fontSize: '14px', color: '#4a5568', marginTop: '8px' }}> {/* Darker gray for WCAG AA compliance */}
                           <i className="fas fa-info-circle"></i> 
                           {facilityData ? 
-                            'Patients can book appointments through the PatientPortal. Use the refresh button above to check for new appointments.' :
-                            'You can book appointments through the PatientPortal. Use the refresh button above to check for new appointments.'
+                            'Patients can book appointments through the PatientPortal. New appointments appear automatically in real-time.' :
+                            'You can book appointments through the PatientPortal. New appointments appear automatically in real-time.'
                           }
                         </p>
                         <button className="btn btn-primary" onClick={openNewAppointmentModal} aria-label="Schedule a new appointment">
@@ -2070,24 +2256,20 @@ const Dashboard: React.FC = React.memo(() => {
                     
                     return (
                       <div key={appointment.id} className="record-item-card">
-                        {/* Triage Urgency Indicator */}
-                        <div className="urgency-indicator" style={urgencyStyles}>
-                          <div className="urgency-level">{urgency.level}</div>
-                          <div className="urgency-text">{urgency.urgency}</div>
-                        </div>
-                        
                         <div className="date-box">
                           <span className="day">{new Date(appointment.date).toLocaleDateString('en-US', { weekday: 'short' })}</span>
                           <span className="date-num">{new Date(appointment.date).getDate()}</span>
                         </div>
                         <div className="record-divider-v"></div>
                         <div className="record-details-grid">
-                          <div className="detail-item-flex">
+                          <div className="detail-item-flex" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                            {/* Triage Urgency Indicator */}
+                            <div className="urgency-indicator" style={urgencyStyles}></div>
                             <i className="far fa-clock"></i>
                             <span>{formatTime(appointment.time)}</span>
                           </div>
                           <div className="detail-item-flex">
-                            <span>Type: {appointment.type}</span>
+                            <span>Type: {(appointment.type || 'consultation').replace(/\b\w/g, (l: string) => l.toUpperCase())}</span>
                           </div>
                           <div className="detail-item-flex">
                             <i className="far fa-user"></i>
@@ -2102,13 +2284,23 @@ const Dashboard: React.FC = React.memo(() => {
                               <span>{appointment.doctor}</span>
                             </div>
                           )}
-                          {appointment.notes && (
+                          {appointment.patientNotes && (
                             <div className="detail-item-flex">
                               <span 
-                                className={appointment.notes.length > 100 ? 'long-notes' : ''}
-                                title={appointment.notes.length > 100 ? appointment.notes : ''}
+                                className={appointment.patientNotes.length > 100 ? 'long-notes' : ''}
+                                title={appointment.patientNotes.length > 100 ? appointment.patientNotes : ''}
                               >
-                                Notes: {appointment.notes}
+                                Patient Notes: {appointment.patientNotes}
+                              </span>
+                            </div>
+                          )}
+                          {appointment.facilityNotes && (
+                            <div className="detail-item-flex">
+                              <span 
+                                className={appointment.facilityNotes.length > 100 ? 'long-notes' : ''}
+                                title={appointment.facilityNotes.length > 100 ? appointment.facilityNotes : ''}
+                              >
+                                Facility Notes: {appointment.facilityNotes}
                               </span>
                             </div>
                           )}
@@ -2122,11 +2314,30 @@ const Dashboard: React.FC = React.memo(() => {
                           >
                             <i className="fas fa-eye" aria-hidden="true"></i> View Details
                           </button>
+                          
+                          {/* Add Note Button - Only show for healthcare providers */}
+                          {facilityData && (
+                            <button 
+                              className="btn btn-primary btn-sm"
+                              onClick={() => openAddNoteModal(appointment)}
+                              style={{ marginBottom: '8px' }}
+                              aria-label="Add note to appointment"
+                            >
+                              <i className="fas fa-sticky-note" aria-hidden="true"></i> Add Note
+                            </button>
+                          )}
+                          
                           <select 
                             value={appointment.status}
                             onChange={async (e) => {
                               const newStatus = e.target.value
-                              console.log('Status changed to:', newStatus)
+                              console.log('🔄 Status change requested:', { 
+                                appointmentId: appointment.id, 
+                                oldStatus: appointment.status, 
+                                newStatus,
+                                patientId: appointment.patientId,
+                                facilityId: user?.uid
+                              })
                               
                               try {
                                 // Import the update function
@@ -2143,14 +2354,26 @@ const Dashboard: React.FC = React.memo(() => {
                                 // Show success notification
                                 showNotification(`Appointment status updated to ${newStatus}`, 'success')
                                 
-                                // Reload appointments to reflect the change
-                                if (user?.uid) {
-                                  loadUserAppointments(user.uid)
-                                }
+                                // The real-time listener will automatically update the appointments list
+                                console.log('✅ Appointment status updated successfully, real-time listener will update the UI')
                                 
-                              } catch (error) {
-                                console.error('Error updating appointment status:', error)
-                                showNotification('Failed to update appointment status', 'error')
+                                // Force a small delay to ensure the update is processed
+                                setTimeout(() => {
+                                  console.log('🔄 Checking if real-time update was received...')
+                                }, 1000)
+                                
+                              } catch (error: unknown) {
+                                console.error('❌ Error updating appointment status:', error)
+                                const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred'
+                                const errorCode = error instanceof Error && 'code' in error ? (error as any).code : 'unknown'
+                                const errorStack = error instanceof Error ? error.stack : 'No stack trace'
+                                
+                                console.error('❌ Error details:', {
+                                  message: errorMessage,
+                                  code: errorCode,
+                                  stack: errorStack
+                                })
+                                showNotification(`Failed to update appointment status: ${errorMessage}`, 'error')
                               }
                             }}
                           >
@@ -2562,9 +2785,17 @@ const Dashboard: React.FC = React.memo(() => {
           onKeyDown={(e) => handleModalKeyDown(e, editAppointmentModalRef)}
           tabIndex={-1}
         >
-          <div className="modal-content" style={{ maxWidth: '800px', maxHeight: '90vh', overflow: 'hidden' }}>
-            <div className="modal-header">
-              <h3>Appointment Details</h3>
+          <div className="modal-content" style={{ maxWidth: '1000px', height: '90vh', overflow: 'hidden' }}>
+            <div className="modal-header" style={{ 
+              padding: '20px', 
+              borderBottom: '1px solid #e5e7eb', 
+              backgroundColor: '#ffffff',
+              height: '70px',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between'
+            }}>
+              <h3 style={{ margin: '0', fontSize: '18px', fontWeight: '600' }}>Appointment Details</h3>
               <button className="close-btn" onClick={closeAppointmentModal} aria-label="Close appointment details modal">
                 <i className="fas fa-times"></i>
               </button>
@@ -2572,7 +2803,15 @@ const Dashboard: React.FC = React.memo(() => {
             
             <div className="modal-body" style={{ padding: '0', overflow: 'hidden' }}>
               {/* Modal Tabs */}
-              <div className="modal-tabs" role="tablist" aria-label="Appointment information tabs">
+              <div className="modal-tabs" role="tablist" aria-label="Appointment information tabs" style={{ 
+                borderBottom: '1px solid #e5e7eb', 
+                backgroundColor: '#f9fafb',
+                padding: '0 20px',
+                height: '50px',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '0'
+              }}>
                 <button 
                   className={`modal-tab ${appointmentModalTab === 'details' ? 'active' : ''}`}
                   onClick={() => setAppointmentModalTab('details')}
@@ -2621,7 +2860,7 @@ const Dashboard: React.FC = React.memo(() => {
               </div>
 
               {/* Tab Content */}
-              <div className="modal-tab-content" style={{ padding: '20px', maxHeight: '60vh', overflow: 'auto' }}>
+              <div className="modal-tab-content" style={{ padding: '20px', height: 'calc(90vh - 190px)', overflow: 'auto' }}>
                 {/* Appointment Details Tab */}
                 {appointmentModalTab === 'details' && (
                   <div className="tab-panel">
@@ -2643,7 +2882,7 @@ const Dashboard: React.FC = React.memo(() => {
                         </div>
                         <div className="detail-item">
                           <label>Type:</label>
-                          <span className={`badge ${selectedAppointment.type}`}>{selectedAppointment.type}</span>
+                          <span className={`badge ${selectedAppointment.type}`}>{(selectedAppointment.type || 'consultation').replace(/\b\w/g, (l: string) => l.toUpperCase())}</span>
                         </div>
                         <div className="detail-item">
                           <label>Status:</label>
@@ -2655,10 +2894,16 @@ const Dashboard: React.FC = React.memo(() => {
                             <span>{selectedAppointment.doctor}</span>
                           </div>
                         )}
-                        {selectedAppointment.notes && (
+                        {selectedAppointment.patientNotes && (
                           <div className="detail-item">
-                            <label>Notes:</label>
-                            <span>{selectedAppointment.notes}</span>
+                            <label>Patient Notes:</label>
+                            <span>{selectedAppointment.patientNotes}</span>
+                          </div>
+                        )}
+                        {selectedAppointment.facilityNotes && (
+                          <div className="detail-item">
+                            <label>Facility Notes:</label>
+                            <span>{selectedAppointment.facilityNotes}</span>
                           </div>
                         )}
                       </div>
@@ -2807,7 +3052,7 @@ const Dashboard: React.FC = React.memo(() => {
                         {selectedPatientData.activity.consultationHistory.map((consultation: any, index: number) => (
                           <div key={index} className="consultation-item">
                             <div className="consultation-header">
-                              <h5>{consultation.title || consultation.type || 'Consultation'}</h5>
+                              <h5>{consultation.title || (consultation.type || 'Consultation').replace(/\b\w/g, (l: string) => l.toUpperCase()) || 'Consultation'}</h5>
                               <span className={`badge ${consultation.status}`}>{consultation.status}</span>
                             </div>
                             <div className="consultation-details">
@@ -2826,7 +3071,7 @@ const Dashboard: React.FC = React.memo(() => {
                               </div>
                               <div className="detail-row">
                                 <span className="detail-label"><i className="fas fa-stethoscope"></i> Type:</span>
-                                <span className="detail-value">{consultation.type || 'General consultation'}</span>
+                                <span className="detail-value">{(consultation.type || 'General consultation').replace(/\b\w/g, (l: string) => l.toUpperCase())}</span>
                               </div>
                               {consultation.notes && (
                                 <div className="detail-row">
@@ -2918,7 +3163,16 @@ const Dashboard: React.FC = React.memo(() => {
               </div>
             </div>
 
-            <div className="modal-footer">
+            <div className="modal-footer" style={{ 
+              padding: '20px', 
+              borderTop: '1px solid #e5e7eb', 
+              backgroundColor: '#f9fafb',
+              height: '70px',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'flex-end',
+              gap: '12px'
+            }}>
               <button className="btn btn-secondary" onClick={closeAppointmentModal} aria-label="Close appointment details">
                 Close
               </button>
@@ -3040,14 +3294,17 @@ const Dashboard: React.FC = React.memo(() => {
               </div>
 
               <div className="form-group">
-                <label htmlFor="appointmentNotes">Notes</label>
+                <label htmlFor="appointmentNotes">Facility Notes</label>
                 <textarea
                   id="appointmentNotes"
-                  value={newAppointmentForm.notes}
-                  onChange={(e) => handleNewAppointmentFormChange('notes', e.target.value)}
-                  placeholder="Additional notes about the appointment..."
+                  value={newAppointmentForm.facilityNotes}
+                  onChange={(e) => handleNewAppointmentFormChange('facilityNotes', e.target.value)}
+                  placeholder="Additional notes/remarks from healthcare facility staff..."
                   rows={3}
                 />
+                <small style={{ color: '#4a5568', fontSize: '12px' }}>
+                  These notes are for healthcare staff reference and will be visible to patients.
+                </small>
               </div>
             </div>
 
@@ -3161,14 +3418,17 @@ const Dashboard: React.FC = React.memo(() => {
               </div>
 
               <div className="form-group">
-                <label htmlFor="editAppointmentNotes">Notes</label>
+                <label htmlFor="editAppointmentNotes">Facility Notes</label>
                 <textarea
                   id="editAppointmentNotes"
-                  value={editAppointmentForm.notes}
-                  onChange={(e) => handleEditAppointmentFormChange('notes', e.target.value)}
-                  placeholder="Additional notes about the appointment..."
+                  value={editAppointmentForm.facilityNotes}
+                  onChange={(e) => handleEditAppointmentFormChange('facilityNotes', e.target.value)}
+                  placeholder="Additional notes/remarks from healthcare facility staff..."
                   rows={3}
                 />
+                <small style={{ color: '#4a5568', fontSize: '12px' }}>
+                  These notes are for healthcare staff reference and will be visible to patients.
+                </small>
               </div>
 
               <div className="alert alert-info">
@@ -3399,6 +3659,16 @@ const Dashboard: React.FC = React.memo(() => {
                     id="facilitySpecialties"
                     value={editProfileForm.specialties.join(', ')}
                     onChange={(e) => {
+                      // Allow free typing, only process when user finishes
+                      const inputValue = e.target.value
+                      // Don't split immediately - let user type commas freely
+                      setEditProfileForm(prev => ({ 
+                        ...prev, 
+                        specialties: inputValue ? [inputValue] : [] 
+                      }))
+                    }}
+                    onBlur={(e) => {
+                      // Process the comma-separated values when user leaves the field
                       const specialties = e.target.value.split(',').map(s => s.trim()).filter(s => s)
                       setEditProfileForm(prev => ({ ...prev, specialties }))
                     }}
@@ -3420,6 +3690,16 @@ const Dashboard: React.FC = React.memo(() => {
                     id="facilityServices"
                     value={editProfileForm.services.join(', ')}
                     onChange={(e) => {
+                      // Allow free typing, only process when user finishes
+                      const inputValue = e.target.value
+                      // Don't split immediately - let user type commas freely
+                      setEditProfileForm(prev => ({ 
+                        ...prev, 
+                        services: inputValue ? [inputValue] : [] 
+                      }))
+                    }}
+                    onBlur={(e) => {
+                      // Process the comma-separated values when user leaves the field
                       const services = e.target.value.split(',').map(s => s.trim()).filter(s => s)
                       setEditProfileForm(prev => ({ ...prev, services }))
                     }}
@@ -3790,6 +4070,89 @@ const Dashboard: React.FC = React.memo(() => {
             
             <div className="modal-footer">
               <button className="btn btn-secondary" onClick={closeDocumentModal}>Close</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Add Note Modal */}
+      {showAddNoteModal && selectedAppointmentForNote && (
+        <div 
+          className="modal" 
+          style={{ display: 'block' }}
+          onKeyDown={(e) => handleModalKeyDown(e, documentModalRef)}
+          tabIndex={-1}
+        >
+          <div className="modal-content" style={{ maxWidth: '600px' }}>
+            <div className="modal-header">
+              <h3>Add Note to Appointment</h3>
+              <button className="close-btn" onClick={closeAddNoteModal}>
+                <i className="fas fa-times"></i>
+              </button>
+            </div>
+            
+            <div className="modal-body">
+              <div className="appointment-info" style={{ marginBottom: '20px', padding: '15px', backgroundColor: '#f8f9fa', borderRadius: '8px' }}>
+                <h4 style={{ margin: '0 0 10px 0', color: '#495057' }}>
+                  <i className="fas fa-calendar" style={{ marginRight: '8px' }}></i>
+                  Appointment Details
+                </h4>
+                <div style={{ fontSize: '14px', color: '#6c757d' }}>
+                  <div><strong>Patient:</strong> {selectedAppointmentForNote.patientName}</div>
+                  <div><strong>Date:</strong> {new Date(selectedAppointmentForNote.date).toLocaleDateString()}</div>
+                  <div><strong>Time:</strong> {formatTime(selectedAppointmentForNote.time)}</div>
+                  <div><strong>Type:</strong> {(selectedAppointmentForNote.type || 'consultation').replace(/\b\w/g, (l: string) => l.toUpperCase())}</div>
+                </div>
+              </div>
+
+              <div className="form-group">
+                <label htmlFor="noteText" style={{ display: 'block', marginBottom: '8px', fontWeight: '600', color: '#495057' }}>
+                  <i className="fas fa-sticky-note" style={{ marginRight: '8px' }}></i>
+                  Note for Patient
+                </label>
+                <textarea
+                  id="noteText"
+                  value={noteText}
+                  onChange={(e) => setNoteText(e.target.value)}
+                  placeholder="Enter a note for the patient (e.g., 'Please bring ₱100 for the appointment', 'Bring your previous test results', etc.)"
+                  rows={4}
+                  style={{
+                    width: '100%',
+                    padding: '12px',
+                    border: '1px solid #ced4da',
+                    borderRadius: '6px',
+                    fontSize: '14px',
+                    resize: 'vertical'
+                  }}
+                />
+                <small style={{ display: 'block', marginTop: '8px', color: '#6c757d', fontSize: '12px' }}>
+                  <i className="fas fa-info-circle" style={{ marginRight: '4px' }}></i>
+                  This note will be visible to the patient in their portal and can include important information like payment requirements, preparation instructions, or reminders.
+                </small>
+              </div>
+            </div>
+
+            <div className="modal-footer">
+              <button className="btn btn-secondary" onClick={closeAddNoteModal}>
+                Cancel
+              </button>
+              <button 
+                className="btn btn-primary" 
+                onClick={handleAddNote}
+                disabled={isAddingNote || !noteText.trim()}
+              >
+                {isAddingNote ? (
+                  <>
+                    <i className="fas fa-spinner fa-spin"></i>
+                    Adding Note...
+                  </>
+                ) : (
+                  <>
+                    <i className="fas fa-sticky-note"></i>
+                    Add Note
+                  </>
+                )}
+              </button>
             </div>
           </div>
         </div>

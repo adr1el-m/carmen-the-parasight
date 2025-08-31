@@ -3,6 +3,8 @@ import { useNavigate } from 'react-router-dom'
 import YearUpdater from './YearUpdater'
 import '../styles/index.css'
 import styles from './LandingPage.module.css';
+import doctorsImage from '../styles/Untitled design (1).png';
+import heroBgImage from '../styles/hero_bg.svg';
 
 // Extend Window interface for Google API
 declare global {
@@ -15,8 +17,6 @@ declare global {
 import slmcImage from '../assets/img/SLMC.jpg'
 import tmcImage from '../assets/img/TMC.jpg'
 import ahmcImage from '../assets/img/AHMC.jpeg'
-import drWillieOngImage from '../assets/img/Dr. Willie Ong.jpg'
-import drAlvinFranciscoImage from '../assets/img/Dr. Alvin Francisco.jpg'
 
 // Facility interface based on Firestore data
 interface Facility {
@@ -1477,7 +1477,7 @@ const LandingPage: React.FC = React.memo(() => {
       {/* Main Content */}
       <main id="main-content" role="main">
         <div className={styles.goldContainer}>
-          <img src="src\styles\hero_bg.svg" alt="" />
+          <img src={heroBgImage} alt="" />
 
           <div className={styles.heroContent}>
 
@@ -1538,7 +1538,7 @@ const LandingPage: React.FC = React.memo(() => {
 
               <img
                 className={styles.doctors}
-                src='src\styles\Untitled design (1).png'
+                src={doctorsImage}
                 alt="Photo of Dr. Willie Ong" 
                 loading="eager"
                 decoding="async"

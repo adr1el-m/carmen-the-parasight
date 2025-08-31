@@ -1,0 +1,58 @@
+/* Encryption Demo Styles */
+.text-link {
+  background: none;
+  border: none;
+  color: #3b82f6;
+  text-decoration: underline;
+  cursor: pointer;
+  padding: 0;
+  font: inherit;
+}
+
+.text-link:hover {
+  color: #1d4ed8;
+}
+
+/* Responsive adjustments for the demo */
+@media (max-width: 768px) {
+  .encryption-demo .grid {
+    grid-template-columns: 1fr;
+  }
+  
+  .encryption-demo .headerButtonContainer {
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+  
+  .encryption-demo button {
+    width: 100%;
+    justify-content: center;
+  }
+}
+
+/* Simple focus states */
+button:focus,
+textarea:focus {
+  outline: 2px solid #3b82f6;
+  outline-offset: 2px;
+}
+
+/* Clean card styling */
+.bg-white {
+  transition: box-shadow 0.2s ease;
+}
+
+.bg-white:hover {
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+/* Subtle button transitions */
+button {
+  transition: all 0.2s ease;
+}
+
+/* Clean verification styling */
+.verification-success {
+  background: #f0fdf4;
+  border: 1px solid #bbf7d0;
+}

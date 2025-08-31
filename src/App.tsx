@@ -10,6 +10,10 @@ import PartnerSignUp from './components/PartnerSignUp'
 import HIPAAComplianceDashboard from './components/HIPAAComplianceDashboard'
 import QuickAppoinments from './components/QuickAppoinments'
 import TriageDemo from './components/TriageDemo'
+import EncryptionDemo from './components/EncryptionDemo'
+import RBACDemo from './components/RBACDemo'
+import AuditLogsDemo from './components/AuditLogsDemo'
+import FileUploadSecurityDemo from './components/FileUploadSecurityDemo'
 import './index.css'
 
 const App: React.FC = () => {
@@ -31,6 +35,10 @@ const App: React.FC = () => {
         <Route path="/partner-sign-up" element={<PartnerSignUp />} />
         <Route path="/quick-appointments" element={<QuickAppoinments />} />
         <Route path="/triage-demo" element={<TriageDemo />} />
+        <Route path="/encryption-demo" element={<EncryptionDemo />} />
+        <Route path="/rbac-demo" element={<RBACDemo />} />
+        <Route path="/audit-logs-demo" element={<AuditLogsDemo />} />
+        <Route path="/file-upload-security-demo" element={<FileUploadSecurityDemo />} />
         
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>

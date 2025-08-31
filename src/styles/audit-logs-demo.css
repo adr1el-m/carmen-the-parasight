@@ -1,0 +1,296 @@
+/* Audit Logs Demo Styles */
+
+/* Custom scrollbar for the audit logs table */
+.overflow-x-auto::-webkit-scrollbar {
+  height: 8px;
+}
+
+.overflow-x-auto::-webkit-scrollbar-track {
+  background: #f1f5f9;
+  border-radius: 4px;
+}
+
+.overflow-x-auto::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 4px;
+}
+
+.overflow-x-auto::-webkit-scrollbar-thumb:hover {
+  background: #94a3b8;
+}
+
+/* Table row hover effects */
+tbody tr:hover {
+  background-color: #f8fafc;
+  transition: background-color 0.2s ease;
+}
+
+/* Risk level indicator animations */
+.risk-level-indicator {
+  animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.7;
+  }
+}
+
+/* Critical risk level special styling */
+.risk-critical {
+  animation: critical-pulse 1.5s infinite;
+}
+
+@keyframes critical-pulse {
+  0%, 100% {
+    box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.7);
+  }
+  50% {
+    box-shadow: 0 0 0 10px rgba(239, 68, 68, 0);
+  }
+}
+
+/* HIPAA compliance indicator */
+.hipaa-compliant {
+  position: relative;
+}
+
+.hipaa-compliant::before {
+  content: '';
+  position: absolute;
+  top: -2px;
+  left: -2px;
+  right: -2px;
+  bottom: -2px;
+  background: linear-gradient(45deg, #10b981, #059669);
+  border-radius: 9999px;
+  z-index: -1;
+  opacity: 0.3;
+}
+
+/* Scenario selection button animations */
+.scenario-button {
+  transition: all 0.3s ease;
+  transform: translateY(0);
+}
+
+.scenario-button:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+.scenario-button.selected {
+  transform: translateY(-1px);
+  box-shadow: 0 2px 8px rgba(59, 130, 246, 0.3);
+}
+
+/* Filter dropdown styling */
+.filter-select {
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.filter-select:focus {
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
+
+/* Action button states */
+.action-button {
+  transition: all 0.2s ease;
+}
+
+.action-button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.action-button:not(:disabled):hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+/* Loading animation for log generation */
+.log-generation-loading {
+  animation: bounce 1s infinite;
+}
+
+@keyframes bounce {
+  0%, 20%, 50%, 80%, 100% {
+    transform: translateY(0);
+  }
+  40% {
+    transform: translateY(-10px);
+  }
+  60% {
+    transform: translateY(-5px);
+  }
+}
+
+/* Audit log table header styling */
+.audit-table-header {
+  background: linear-gradient(135deg, #1e293b, #334155);
+  color: white;
+}
+
+.audit-table-header h2 {
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+}
+
+/* Table cell content styling */
+.audit-table-cell {
+  padding: 12px 16px;
+  border-bottom: 1px solid #e2e8f0;
+  transition: background-color 0.2s ease;
+}
+
+/* Resource information styling */
+.resource-info {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.resource-name {
+  font-weight: 500;
+  color: #1e293b;
+}
+
+.resource-id {
+  font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+  font-size: 0.75rem;
+  color: #64748b;
+}
+
+/* User information styling */
+.user-info {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.user-id {
+  font-weight: 600;
+  color: #1e293b;
+}
+
+.user-role {
+  font-size: 0.75rem;
+  color: #64748b;
+  text-transform: capitalize;
+}
+
+/* Status badge animations */
+.status-badge {
+  transition: all 0.2s ease;
+  position: relative;
+  overflow: hidden;
+}
+
+.status-badge::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+  transition: left 0.5s ease;
+}
+
+.status-badge:hover::before {
+  left: 100%;
+}
+
+/* Export button special styling */
+.export-button {
+  background: linear-gradient(135deg, #059669, #047857);
+  border: none;
+  color: white;
+  font-weight: 600;
+  transition: all 0.3s ease;
+}
+
+.export-button:hover:not(:disabled) {
+  background: linear-gradient(135deg, #047857, #065f46);
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(5, 150, 105, 0.3);
+}
+
+.export-button:disabled {
+  background: #9ca3af;
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: none;
+}
+
+/* Clear button styling */
+.clear-button {
+  background: linear-gradient(135deg, #6b7280, #4b5563);
+  border: none;
+  color: white;
+  font-weight: 600;
+  transition: all 0.3s ease;
+}
+
+.clear-button:hover {
+  background: linear-gradient(135deg, #4b5563, #374151);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(107, 114, 128, 0.3);
+}
+
+/* Responsive table adjustments */
+@media (max-width: 1024px) {
+  .audit-table-responsive {
+    font-size: 0.875rem;
+  }
+  
+  .audit-table-responsive th,
+  .audit-table-responsive td {
+    padding: 8px 12px;
+  }
+}
+
+@media (max-width: 768px) {
+  .audit-table-responsive {
+    font-size: 0.75rem;
+  }
+  
+  .audit-table-responsive th,
+  .audit-table-responsive td {
+    padding: 6px 8px;
+  }
+  
+  .resource-info,
+  .user-info {
+    gap: 1px;
+  }
+}
+
+/* Print styles for audit logs */
+@media print {
+  .audit-logs-demo {
+    background: white !important;
+    color: black !important;
+  }
+  
+  .audit-table {
+    border: 1px solid #000;
+  }
+  
+  .audit-table th,
+  .audit-table td {
+    border: 1px solid #000;
+    padding: 4px;
+  }
+  
+  .status-badge {
+    border: 1px solid #000;
+    background: white !important;
+    color: black !important;
+  }
+}
+

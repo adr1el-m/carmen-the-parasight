@@ -287,6 +287,7 @@ const PatientPortal: React.FC = () => {
   const [uploadProgress, setUploadProgress] = useState(0)
   const [selectedFile, setSelectedFile] = useState<File | null>(null)
   const [documentName, setDocumentName] = useState('')
+  const [isPerformingDocumentOperation, setIsPerformingDocumentOperation] = useState(false)
   
   // Document viewer state
   const [viewingDocument, setViewingDocument] = useState<any>(null)
@@ -551,14 +552,44 @@ const PatientPortal: React.FC = () => {
           console.log('🔄 Real-time update received:', updatedPatientData)
           console.log('📋 Appointments in update:', updatedPatientData?.activity?.appointments || [])
           console.log('📋 Number of appointments:', updatedPatientData?.activity?.appointments?.length || 0)
+          console.log('📋 Documents in update:', updatedPatientData?.activity?.documents || [])
+          console.log('📋 Number of documents:', updatedPatientData?.activity?.documents?.length || 0)
           
           // Check for appointment modifications and show notifications
           if (updatedPatientData?.activity?.appointments) {
             checkForAppointmentModifications(updatedPatientData.activity.appointments)
           }
           
-          // Update the state with fresh data
-          setPatientData(updatedPatientData)
+          // Only update state if the data is actually different to prevent conflicts
+          // and if we're not currently performing a document operation
+          if (!isPerformingDocumentOperation) {
+            setPatientData(prevData => {
+              if (!prevData) return updatedPatientData
+              
+              // Check if documents have changed
+              const prevDocCount = prevData?.activity?.documents?.length || 0
+              const newDocCount = updatedPatientData?.activity?.documents?.length || 0
+              
+              if (prevDocCount !== newDocCount) {
+                console.log('🔄 Document count changed, updating state')
+                return updatedPatientData
+              }
+              
+              // Check if appointments have changed
+              const prevApptCount = prevData?.activity?.appointments?.length || 0
+              const newApptCount = updatedPatientData?.activity?.appointments?.length || 0
+              
+              if (prevApptCount !== newApptCount) {
+                console.log('🔄 Appointment count changed, updating state')
+                return updatedPatientData
+              }
+              
+              // For other changes, update the state
+              return updatedPatientData
+            })
+          } else {
+            console.log('🔄 Skipping real-time update during document operation')
+          }
           
           // Update localStorage
           try {
@@ -1366,6 +1397,9 @@ const PatientPortal: React.FC = () => {
       console.log('File:', selectedFile)
       console.log('Document name:', documentName)
       
+      // Set flag to prevent real-time listener interference
+      setIsPerformingDocumentOperation(true)
+      
       const { addPatientDocument } = await import('../services/firestoredb.js')
       
       // Upload document to Firestore and Firebase Storage
@@ -1407,6 +1441,8 @@ const PatientPortal: React.FC = () => {
     } finally {
       setIsUploadingDocument(false)
       setUploadProgress(0)
+      // Clear the flag after operation completes
+      setIsPerformingDocumentOperation(false)
     }
   }, [user, selectedFile, documentName, closeModal])
 
@@ -1507,34 +1543,94 @@ const PatientPortal: React.FC = () => {
     
     try {
       console.log('🔍 handleRemoveDocument called for document:', documentId)
+      console.log('🔍 Current patient data documents:', patientData?.activity?.documents)
+      console.log('🔍 Document IDs in current data:', patientData?.activity?.documents?.map(doc => doc.id))
       
-      const { removePatientDocument } = await import('../services/firestoredb.js')
+      // Set flag to prevent real-time listener interference
+      setIsPerformingDocumentOperation(true)
       
-      await removePatientDocument(user.uid, documentId)
-      
-      // Update local state directly by removing the document
+      // Update local state immediately for better UX
       setPatientData(prev => {
         if (!prev) return prev
         
         const updatedDocuments = prev.activity?.documents?.filter(doc => doc.id !== documentId) || []
         
         console.log('📦 Updated documents array after removal:', updatedDocuments)
+        console.log('📦 Number of documents before:', prev.activity?.documents?.length || 0)
+        console.log('📦 Number of documents after:', updatedDocuments.length)
         
         return {
           ...prev,
           activity: {
             ...prev.activity,
             documents: updatedDocuments
-          }
+          },
+          updatedAt: new Date().toISOString()
         }
       })
       
+      // Try to remove from Firebase/Firestore
+      try {
+        console.log('📦 Attempting Firebase/Firestore removal...')
+        const { removePatientDocument } = await import('../services/firestoredb.js')
+        
+        await removePatientDocument(user.uid, documentId)
+        
+        console.log('✅ Firebase/Firestore removal successful!')
       showNotification('Document removed successfully!', 'success')
+        
+        // Update localStorage
+        try {
+          const updatedData = {
+            ...patientData,
+            activity: {
+              ...patientData?.activity,
+              documents: patientData?.activity?.documents?.filter(doc => doc.id !== documentId) || []
+            },
+            updatedAt: new Date().toISOString()
+          }
+          localStorage.setItem(`patientData_${user.uid}`, JSON.stringify(updatedData))
+          console.log('✅ Updated localStorage after document removal')
+        } catch (localStorageError) {
+          console.warn('⚠️ localStorage update failed:', localStorageError)
+        }
+        
+      } catch (firebaseError: any) {
+        console.warn('⚠️ Firebase/Firestore removal failed:', firebaseError)
+        console.warn('Firebase error details:', {
+          message: firebaseError.message,
+          code: firebaseError.code,
+          stack: firebaseError.stack
+        })
+        
+        // Revert local state if Firebase removal failed
+        setPatientData(prev => {
+          if (!prev) return prev
+          
+          const originalDocuments = patientData?.activity?.documents || []
+          
+          return {
+            ...prev,
+            activity: {
+              ...prev.activity,
+              documents: originalDocuments
+            }
+          }
+        })
+        
+        showNotification('Failed to remove document from server. Please try again.', 'error')
+      } finally {
+        // Clear the flag after operation completes
+        setIsPerformingDocumentOperation(false)
+      }
+      
     } catch (error: any) {
       console.error('❌ Error removing document:', error)
-      showNotification(`Failed to remove document: ${error.message}`, 'error')
+      showNotification('Failed to remove document. Please try again.', 'error')
+      // Clear the flag on error too
+      setIsPerformingDocumentOperation(false)
     }
-  }, [user])
+  }, [user, patientData])
 
   const handleEditAppointment = useCallback(async () => {
     console.log('🔍 handleEditAppointment called')

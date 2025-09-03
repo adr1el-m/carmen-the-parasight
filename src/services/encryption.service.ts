@@ -168,7 +168,7 @@ export class EncryptionService {
       const ivString = btoa(String.fromCharCode(...iv));
 
       // Extract authentication tag (last 16 bytes for GCM)
-      const tag = btoa(String.fromCharCode(...new Uint8Array(encryptedBuffer.slice(-16)));
+      const tag = btoa(String.fromCharCode(...new Uint8Array(encryptedBuffer.slice(-16))));
 
       const result: EncryptedData = {
         encryptedData,

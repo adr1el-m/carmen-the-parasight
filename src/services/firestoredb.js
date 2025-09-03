@@ -952,13 +952,15 @@ export async function removePatientDocument(userId, documentId) {
         
         // Remove from Firestore array
         const updatedDocuments = documents.filter(doc => doc.id !== documentId);
-        const updates = {
-            'activity.documents': updatedDocuments,
-            updatedAt: serverTimestamp()
-        };
         
         console.log('📦 Removing document from Firestore...');
-        await setDoc(doc(db, 'patients', userId), updates, { merge: true });
+        
+        // Use updateDoc instead of setDoc for better reliability
+        const patientDocRef = doc(db, 'patients', userId);
+        await updateDoc(patientDocRef, {
+            'activity.documents': updatedDocuments,
+            updatedAt: serverTimestamp()
+        });
         
         console.log('✅ Document removed successfully from Firestore');
         return true;

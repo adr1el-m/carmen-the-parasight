@@ -15,7 +15,6 @@ interface AuditLog {
   ipAddress: string;
   userAgent: string;
   sessionId: string;
-  hipaaCompliant: boolean;
   riskLevel: 'low' | 'medium' | 'high' | 'critical';
   processingTime: number;
   correlationId: string;
@@ -112,7 +111,6 @@ const AuditLogsDemo: React.FC = () => {
         userAgent: isFailed ? 'Mozilla/5.0 (Unknown Browser)' : 
                    'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
         sessionId: `sess-${Math.floor(Math.random() * 100000)}`,
-        hipaaCompliant: !isFailed,
         riskLevel: isFailed ? 'critical' : isEmergency ? 'medium' : 'low',
         processingTime: Math.floor(Math.random() * 100) + 50,
         correlationId: `corr-${Date.now()}-${index}`
@@ -152,9 +150,9 @@ const AuditLogsDemo: React.FC = () => {
 
   const exportLogs = () => {
     const csvContent = [
-      'Timestamp,User ID,User Role,User Email,Action,Resource Type,Resource ID,Resource Name,Action Result,IP Address,User Agent,Session ID,HIPAA Compliant,Risk Level,Processing Time,Correlation ID',
+      'Timestamp,User ID,User Role,User Email,Action,Resource Type,Resource ID,Resource Name,Action Result,IP Address,User Agent,Session ID,Risk Level,Processing Time,Correlation ID',
       ...filteredLogs.map(log => 
-        `${log.timestamp.toISOString()},${log.userId},${log.userRole},${log.userEmail},${log.action},${log.resourceType},${log.resourceId},${log.resourceName},${log.actionResult},${log.ipAddress},${log.userAgent},${log.sessionId},${log.hipaaCompliant},${log.riskLevel},${log.processingTime},${log.correlationId}`
+        `${log.timestamp.toISOString()},${log.userId},${log.userRole},${log.userEmail},${log.action},${log.resourceType},${log.resourceId},${log.resourceName},${log.actionResult},${log.ipAddress},${log.userAgent},${log.sessionId},${log.riskLevel},${log.processingTime},${log.correlationId}`
       ).join('\n')
     ];
     
@@ -193,7 +191,7 @@ const AuditLogsDemo: React.FC = () => {
           Audit Logs & Compliance Monitoring Demo
         </h1>
         <p className="text-lg text-gray-600 max-w-4xl mx-auto">
-          See how LingapLink tracks every single action in the system for security, compliance, and transparency. 
+          See how Haliya tracks every single action in the system for security, compliance, and transparency. 
           Every login, data access, and system change is automatically logged and monitored in real-time.
         </p>
       </div>
@@ -262,7 +260,7 @@ const AuditLogsDemo: React.FC = () => {
                 <div className="space-y-2">
                   <div className="flex items-center text-sm">
                     <span className="w-3 h-3 bg-green-500 rounded-full mr-2"></span>
-                    HIPAA Compliance Tracking
+                    Security Monitoring & Tracking
                   </div>
                   <div className="flex items-center text-sm">
                     <span className="w-3 h-3 bg-blue-500 rounded-full mr-2"></span>
@@ -396,7 +394,6 @@ const AuditLogsDemo: React.FC = () => {
                   <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Result</th>
                   <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Risk</th>
                   <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">IP Address</th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">HIPAA</th>
                 </tr>
               </thead>
               <tbody className="bg-white divide-y divide-gray-200">
@@ -433,15 +430,6 @@ const AuditLogsDemo: React.FC = () => {
                     <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900 font-mono">
                       {log.ipAddress}
                     </td>
-                    <td className="px-4 py-3 whitespace-nowrap">
-                      <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
-                        log.hipaaCompliant 
-                          ? 'bg-green-100 text-green-800 border border-green-200' 
-                          : 'bg-red-100 text-red-800 border border-red-200'
-                      }`}>
-                        {log.hipaaCompliant ? '✓' : '✗'}
-                      </span>
-                    </td>
                   </tr>
                 ))}
               </tbody>
@@ -461,9 +449,9 @@ const AuditLogsDemo: React.FC = () => {
             </p>
           </div>
           <div className="p-4 bg-green-50 rounded-lg">
-            <h3 className="font-semibold text-green-800 mb-2">HIPAA Compliance</h3>
+            <h3 className="font-semibold text-green-800 mb-2">Data Protection</h3>
             <p className="text-sm text-green-700">
-              Complete audit trail meets healthcare data protection requirements and audit standards
+              Complete audit trail meets international data protection requirements and audit standards
             </p>
           </div>
           <div className="p-4 bg-purple-50 rounded-lg">
@@ -495,7 +483,7 @@ const AuditLogsDemo: React.FC = () => {
 
       {/* How It Works */}
       <div className="bg-white rounded-lg shadow-sm border p-6 mt-6">
-        <h2 className="text-xl font-bold text-gray-800 mb-4">How Audit Logging Works in LingapLink</h2>
+        <h2 className="text-xl font-bold text-gray-800 mb-4">How Audit Logging Works in Haliya</h2>
         <div className="space-y-4">
           <div className="flex items-start space-x-4">
             <div className="w-8 h-8 bg-blue-600 text-white rounded-full flex items-center justify-center text-sm font-bold flex-shrink-0">
@@ -547,7 +535,7 @@ const AuditLogsDemo: React.FC = () => {
         <div className="mt-6 p-4 bg-blue-50 rounded-lg border-l-4 border-blue-400">
           <p className="text-blue-800 text-sm">
             <strong>Why this matters:</strong> Complete audit logging is not just about compliance - it's about transparency, 
-            security, and trust. Every action in LingapLink leaves a digital fingerprint that can be traced, 
+            security, and trust. Every action in Haliya leaves a digital fingerprint that can be traced, 
             analyzed, and used to protect patient data and maintain system integrity.
           </p>
         </div>

@@ -120,7 +120,7 @@ class ConfigValidator {
       'G-XXXXXXXXXX',
       'fallback-secret',
       'your-app-secret-key',
-      'your-jwt-secret-key',
+      'your-auth-token-secret',
       'your-email@gmail.com',
       'your-email-password',
       'your-sms-api-key',
@@ -162,7 +162,7 @@ class ConfigValidator {
         return /^AIza[0-9A-Za-z-_]{35}$/.test(value);
       case 'firebase-project-id':
         return /^[a-z0-9-]+$/.test(value) && value.length >= 6;
-      case 'jwt-secret':
+      case 'auth-token-secret':
         return value.length >= 32 && /[A-Za-z0-9!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/.test(value);
       default:
         return true;
@@ -208,14 +208,14 @@ class ConfigValidator {
   }
 
   /**
-   * Validate JWT configuration
+   * Validate authentication token configuration
    */
-  validateJWTConfig() {
-    const jwtConfig = {
-      JWT_SECRET: { format: 'jwt-secret', minLength: 32 }
+  validateTokenConfig() {
+    const tokenConfig = {
+      AUTH_TOKEN_SECRET: { format: 'auth-token-secret', minLength: 32 }
     };
 
-    return this.validateRequired(jwtConfig, 'JWT');
+    return this.validateRequired(tokenConfig, 'Authentication Token');
   }
 
   /**
@@ -226,10 +226,10 @@ class ConfigValidator {
       // Validate Firebase config
       this.validateFirebaseConfig();
       
-      // Only validate JWT in production
-      let jwtSecret = this.getEnvValue('JWT_SECRET');
-      if (this.isProduction && !jwtSecret) {
-        this.validateJWTConfig();
+      // Only validate auth token in production
+      let tokenSecret = this.getEnvValue('AUTH_TOKEN_SECRET');
+      if (this.isProduction && !tokenSecret) {
+        this.validateTokenConfig();
       }
 
       return {
@@ -242,8 +242,8 @@ class ConfigValidator {
           appId: this.getEnvValue('VITE_FIREBASE_APP_ID'),
           measurementId: this.getEnvValue('VITE_FIREBASE_MEASUREMENT_ID')
         },
-        jwt: {
-          secret: jwtSecret || this.generateSecureFallback('jwt-secret', 64)
+        authToken: {
+          secret: tokenSecret || this.generateSecureFallback('auth-token-secret', 64)
         },
         environment: this.isProduction ? 'production' : 'development'
       };
@@ -272,8 +272,8 @@ class ConfigValidator {
         appId: '1:123456789012:web:abcdef1234567890',
         measurementId: 'G-DEVXXXXXXXX'
       },
-      jwt: {
-        secret: this.generateSecureFallback('jwt-secret', 64)
+      authToken: {
+        secret: this.generateSecureFallback('auth-token-secret', 64)
       },
       environment: 'development'
     };

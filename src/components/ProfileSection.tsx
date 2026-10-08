@@ -82,7 +82,7 @@ const ProfileSection: React.FC<ProfileSectionProps> = ({
   }, [patientData?.personalInfo?.address])
 
   const getPatientBio = useCallback(() => {
-    return patientData?.personalInfo?.bio || 'Welcome to LingapLink!'
+    return patientData?.personalInfo?.bio || 'Welcome to Haliya!'
   }, [patientData?.personalInfo?.bio])
 
   const getPatientGender = useCallback(() => {

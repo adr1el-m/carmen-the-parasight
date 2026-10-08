@@ -6,12 +6,6 @@ import styles from './LandingPage.module.css';
 import doctorsImage from '../styles/Untitled design (1).png';
 import heroBgImage from '../styles/hero_bg.svg';
 
-// Extend Window interface for Google API
-declare global {
-  interface Window {
-    gapi?: any
-  }
-}
 
 // Import images
 import slmcImage from '../assets/img/SLMC.jpg'
@@ -92,510 +86,59 @@ const LandingPage: React.FC = React.memo(() => {
   const loginButtonRef = useRef<HTMLButtonElement>(null)
   const registerButtonRef = useRef<HTMLButtonElement>(null)
 
-  // Enhanced error suppression for Google API and third-party issues
-  if (typeof window !== 'undefined') {
-    console.log('✅ LandingPage: Enhanced error suppression enabled');
-    
-    // Suppress Chrome warnings immediately
-    const originalWarn = console.warn
-    console.warn = (...args) => {
-      const message = args[0]
-      if (typeof message === 'string') {
-        if (message.includes('third-party cookies') ||
-            message.includes('Chrome is moving towards') ||
-            message.includes('browse without third-party cookies') ||
-            message.includes('new experience') ||
-            message.includes('choose to browse')) {
-          return // Suppress completely
-        }
-      }
-      originalWarn.apply(console, args)
-    }
-    
-    // Enhanced Google API error suppression
-    const originalError = console.error
-    console.error = (...args) => {
-      const message = args[0]
-      if (typeof message === 'string') {
-        // Suppress Google API related errors
-        if (message.includes('u[v] is not a function') ||
-            message.includes('gapi.loaded') ||
-            message.includes('gapi') ||
-            message.includes('Google API') ||
-            message.includes('api.js') ||
-            message.includes('iframefcb') ||
-            message.includes('cb=gapi.loaded')) {
-          console.log('✅ Google API error suppressed:', message)
-          return // Suppress completely
-        }
-      }
-      originalError.apply(console, args)
-    }
-    
-    // Enhanced global error handler
-    const originalOnError = window.onerror
-    window.onerror = (message, source, lineno, colno, error) => {
-      if (typeof message === 'string') {
-        // Suppress Google API and related errors
-        if (message.includes('u[v] is not a function') ||
-            message.includes('gapi.loaded') ||
-            message.includes('gapi') ||
-            message.includes('Google API') ||
-            message.includes('api.js') ||
-            message.includes('iframefcb') ||
-            message.includes('cb=gapi.loaded') ||
-            message.includes('third-party cookies')) {
-          console.log('✅ Global error suppressed:', message)
-          return true // Prevent error from being logged
-        }
-      }
-      
-      // Call original handler for other errors
-      if (originalOnError) {
-        return originalOnError(message, source, lineno, colno, error)
-      }
-      return false
-    }
-    
-    // Enhanced error event listener wrapper
-    const originalAddEventListener = window.addEventListener
-    window.addEventListener = function(type: string, listener: EventListenerOrEventListenerObject, options?: boolean | AddEventListenerOptions) {
-      if (type === 'error') {
-        // Wrap error listeners to filter out Google API and third-party issues
-        const wrappedListener = (event: Event) => {
-          if (event instanceof ErrorEvent) {
-            const message = event.message || event.error?.message || ''
-            if (message.includes('third-party cookies') ||
-                message.includes('u[v] is not a function') ||
-                message.includes('gapi.loaded') ||
-                message.includes('Google API')) {
-              console.log('✅ Error event suppressed:', message)
-              return // Don't call the original listener for these errors
-            }
-          }
-          // Call original listener for other errors
-          if (typeof listener === 'function') {
-            return listener.call(this, event)
-          }
-        }
-        return originalAddEventListener.call(this, type, wrappedListener, options)
-      }
-      return originalAddEventListener.call(this, type, listener, options)
-    }
-    
-    // Enhanced unhandled rejection handler for Google API
-    const originalOnUnhandledRejection = window.onunhandledrejection
-    window.onunhandledrejection = (event) => {
-      const reason = event.reason
-      if (reason && typeof reason === 'string') {
-        if (reason.includes('u[v] is not a function') ||
-            reason.includes('gapi.loaded') ||
-            reason.includes('Google API') ||
-            reason.includes('api.js')) {
-          console.log('✅ Unhandled rejection suppressed:', reason)
-          event.preventDefault()
-          return
-        }
-      }
-      
-      // Call original handler for other rejections
-      if (originalOnUnhandledRejection) {
-        originalOnUnhandledRejection.call(window, event)
-      }
-    }
-    
-    console.log('✅ LandingPage: Enhanced error suppression activated - Google API errors handled')
-  }
 
-  // Comprehensive error suppression system
-  const setupErrorSuppression = useCallback(() => {
-    try {
-      // Override console methods globally
-      const originalWarn = console.warn
-      const originalError = console.error
-      
-      // Suppress all Chrome third-party cookies warnings
-      console.warn = (...args) => {
-        const message = args[0]
-        if (typeof message === 'string') {
-          if (message.includes('third-party cookies') ||
-              message.includes('Chrome is moving towards') ||
-              message.includes('browse without third-party cookies') ||
-              message.includes('new experience') ||
-              message.includes('choose to browse')) {
-            return // Suppress completely
-          }
-        }
-        originalWarn.apply(console, args)
-      }
-      
-      // Suppress only non-critical errors (allow Google authentication)
-      console.error = (...args) => {
-        const message = args[0]
-        if (typeof message === 'string') {
-          if (message.includes('third-party cookies')) {
-            console.log('Third-party cookies warning suppressed:', ...args)
-            return // Suppress only third-party cookie warnings
-          }
-        }
-        originalError.apply(console, args)
-      }
-      
-      // Override window.onerror - only suppress non-critical errors
-      const originalOnError = window.onerror
-      window.onerror = (message, source, lineno, colno, error) => {
-        if (typeof message === 'string') {
-          if (message.includes('third-party cookies')) {
-            console.log('Third-party cookies warning suppressed:', message)
-            return true // Prevent only third-party cookie warnings
-          }
-        }
-        
-        // Call original handler for other errors
-        if (originalOnError) {
-          return originalOnError(message, source, lineno, colno, error)
-        }
-        return false
-      }
-      
-      console.log('Comprehensive error suppression system activated')
-      
-      return () => {
-        console.warn = originalWarn
-        console.error = originalError
-        window.onerror = originalOnError
-      }
-    } catch (error) {
-      console.log('Error suppression setup failed:', error)
-    }
-  }, [])
-
-  // Monitor and suppress only non-critical errors (allow Google authentication)
-  const monitorAndSuppressErrors = useCallback(() => {
-    try {
-      // Set up a periodic check to catch only non-critical errors
-      const errorCheckInterval = setInterval(() => {
-        // Only suppress third-party cookie warnings, not Google authentication errors
-        const consoleMessages = document.querySelectorAll('.console-message, .error-message');
-        consoleMessages.forEach(msg => {
-          const text = msg.textContent || '';
-          if (text.includes('third-party cookies')) {
-            (msg as HTMLElement).style.display = 'none';
-            console.log('Third-party cookies warning suppressed:', text);
-          }
-        });
-        
-        // Don't interfere with Google API - let Firebase handle authentication
-        console.log('✅ LandingPage: Google authentication allowed to work normally');
-        
-      }, 2000); // Check every 2 seconds - less aggressive
-      
-      return () => clearInterval(errorCheckInterval);
-    } catch (error) {
-      console.log('Error monitoring failed:', error);
-    }
-  }, [])
-
-  // Fetch facilities from Firestore
+  // Fetch facilities from the new database service
   const fetchFacilities = useCallback(async () => {
     try {
       setIsLoadingFacilities(true)
       setFacilitiesError('')
       
-      console.log('🔍 Starting to fetch facilities from Firestore...')
+      console.log('🔍 Fetching facilities from NeonDB service...')
       
-      // Now that Firestore allows public read access, fetch real facilities
-      let facilities: Facility[] = []
+      const { getFacilities } = await import('../services/database.js')
+      const fetchedFacilities = await getFacilities()
       
-      try {
-        // Method 1: Try to use the facility service
-        console.log('🔍 Trying facility service...')
-        const facilityService = await import('../services/facility-service')
-        console.log('✅ Facility service imported:', facilityService)
-        
-        const fetchedFacilities = await facilityService.default.searchFacilities()
-        console.log('🔍 Facilities from service:', fetchedFacilities.length)
-        
-        if (fetchedFacilities.length > 0) {
-          facilities = fetchedFacilities
-        }
-      } catch (serviceError) {
-        console.log('⚠️ Facility service failed, trying direct Firestore query...', serviceError)
-      }
-      
-      // If no facilities from service, try direct Firestore query
-      if (facilities.length === 0) {
-        console.log('🔍 Trying direct Firestore query...')
-        try {
-          // Import Firebase modules
-          const firestoreModule = await import('firebase/firestore')
-          const { getFirestore, collection, getDocs, query, where, limit } = firestoreModule
-          
-          // Get Firestore instance
-          const db = getFirestore()
-          console.log('✅ Firestore instance created')
-          
-          // Create a query for active facilities
-          const facilitiesRef = collection(db, 'facilities')
-          
-          // Query for active facilities (public access now allowed)
-          const activeQuery = query(
-            facilitiesRef,
-            where('isActive', '==', true),
-            limit(20)
-          )
-          
-          console.log('🔍 Executing Firestore query...')
-          const snapshot = await getDocs(activeQuery)
-          console.log('✅ Firestore query completed, documents found:', snapshot.size)
-          
-          if (snapshot.size > 0) {
-            console.log('🔍 Transforming Firestore facilities...')
-            
-            // Transform the facilities to match our Facility interface
-            const firestoreFacilities: Facility[] = []
-            snapshot.forEach((doc: any) => {
-              const data = doc.data()
-              console.log('🔍 Processing facility:', doc.id, data.name || 'Unknown')
-              
-              // Handle both old format (direct fields) and new format (under facilityInfo)
-              const facilityData = {
-                uid: doc.id,
-                name: data.facilityInfo?.name || data.name || '',
-                type: data.facilityInfo?.type || data.type || '',
-                email: data.facilityInfo?.email || data.email || '',
-                phone: data.facilityInfo?.phone || data.phone || '',
-                address: data.facilityInfo?.address || data.address || '',
-                city: data.facilityInfo?.city || data.city || '',
-                province: data.facilityInfo?.province || data.province || '',
-                postalCode: data.facilityInfo?.postalCode || data.postalCode || '',
-                country: data.facilityInfo?.country || data.country || '',
-                website: data.facilityInfo?.website || data.website || '',
-                description: data.facilityInfo?.description || data.description || '',
-                specialties: data.specialties || [],
-                services: data.services || [],
-                operatingHours: data.operatingHours || {
-                  monday: { open: '09:00', close: '17:00', closed: false },
-                  tuesday: { open: '09:00', close: '17:00', closed: false },
-                  wednesday: { open: '09:00', close: '17:00', closed: false },
-                  thursday: { open: '09:00', close: '17:00', closed: false },
-                  friday: { open: '09:00', close: '17:00', closed: false },
-                  saturday: { open: '09:00', close: '12:00', closed: false },
-                  sunday: { open: '09:00', close: '17:00', closed: true }
-                },
-                staff: {
-                  totalStaff: data.staff?.totalStaff || data.staff?.total || 0,
-                  doctors: data.staff?.doctors || 0,
-                  nurses: data.staff?.nurses || 0,
-                  supportStaff: data.staff?.supportStaff || 0
-                },
-                capacity: {
-                  bedCapacity: data.capacity?.bedCapacity || data.capacity?.beds || 0,
-                  consultationRooms: data.capacity?.consultationRooms || 0
-                },
-                languages: data.languages || [],
-                accreditation: data.accreditation || [],
-                insuranceAccepted: data.insuranceAccepted || [],
-                licenseNumber: data.licenseNumber || '',
-                isActive: data.isActive !== false,
-                isSearchable: data.isSearchable !== false,
-                isVerified: data.isVerified || false,
-                profileComplete: data.profileComplete || false,
-                createdAt: data.createdAt,
-                updatedAt: data.updatedAt,
-                lastLoginAt: data.lastLoginAt,
-                emailVerified: data.emailVerified || false,
-                authProvider: data.authProvider || 'email'
-              } as Facility
-              
-              console.log('✅ Transformed facility:', facilityData.name, 'with isActive:', facilityData.isActive)
-              firestoreFacilities.push(facilityData)
-            })
-            
-            facilities = firestoreFacilities
-            console.log('✅ Firestore facilities loaded:', facilities.length)
-          }
-          
-        } catch (firestoreError: any) {
-          console.error('❌ Direct Firestore query failed:', firestoreError)
-          console.error('Error details:', {
-            message: firestoreError.message,
-            code: firestoreError.code,
-            stack: firestoreError.stack
-          })
-          
-          // If direct query fails, try without filters
-          try {
-            console.log('🔍 Trying query without filters...')
-            const firestoreModule = await import('firebase/firestore')
-            const { getFirestore, collection, getDocs, query, limit } = firestoreModule
-            
-            const db = getFirestore()
-            const facilitiesRef = collection(db, 'facilities')
-            
-            // Just get all facilities without any filters
-            const openQuery = query(facilitiesRef, limit(20))
-            const snapshot = await getDocs(openQuery)
-            
-            console.log('✅ Open query completed, documents found:', snapshot.size)
-            
-            if (snapshot.size > 0) {
-              console.log('🔍 Transforming open facilities...')
-              
-              const openFacilities: Facility[] = []
-              snapshot.forEach((doc: any) => {
-                const data = doc.data()
-                console.log('🔍 Processing open facility:', doc.id, data.name || 'Unknown')
-                
-                // Same transformation logic
-                const facilityData = {
-                  uid: doc.id,
-                  name: data.facilityInfo?.name || data.name || '',
-                  type: data.facilityInfo?.type || data.type || '',
-                  email: data.facilityInfo?.email || data.email || '',
-                  phone: data.facilityInfo?.phone || data.phone || '',
-                  address: data.facilityInfo?.address || data.address || '',
-                  city: data.facilityInfo?.city || data.city || '',
-                  province: data.facilityInfo?.province || data.province || '',
-                  postalCode: data.facilityInfo?.postalCode || data.postalCode || '',
-                  country: data.facilityInfo?.country || data.country || '',
-                  website: data.facilityInfo?.website || data.website || '',
-                  description: data.facilityInfo?.description || data.description || '',
-                  specialties: data.specialties || [],
-                  services: data.services || [],
-                  operatingHours: data.operatingHours || {
-                    monday: { open: '09:00', close: '17:00', closed: false },
-                    tuesday: { open: '09:00', close: '17:00', closed: false },
-                    wednesday: { open: '09:00', close: '17:00', closed: false },
-                    thursday: { open: '09:00', close: '17:00', closed: false },
-                    friday: { open: '09:00', close: '17:00', closed: false },
-                    saturday: { open: '09:00', close: '12:00', closed: false },
-                    sunday: { open: '09:00', close: '17:00', closed: true }
-                  },
-                  staff: {
-                    totalStaff: data.staff?.totalStaff || data.staff?.total || 0,
-                    doctors: data.staff?.doctors || 0,
-                    nurses: data.staff?.nurses || 0,
-                    supportStaff: data.staff?.supportStaff || 0
-                  },
-                  capacity: {
-                    bedCapacity: data.capacity?.bedCapacity || data.capacity?.beds || 0,
-                    consultationRooms: data.capacity?.consultationRooms || 0
-                  },
-                  languages: data.languages || [],
-                  accreditation: data.accreditation || [],
-                  insuranceAccepted: data.insuranceAccepted || [],
-                  licenseNumber: data.licenseNumber || '',
-                  isActive: data.isActive !== false,
-                  isSearchable: data.isSearchable !== false,
-                  isVerified: data.isVerified || false,
-                  profileComplete: data.profileComplete || false,
-                  createdAt: data.createdAt,
-                  updatedAt: data.updatedAt,
-                  lastLoginAt: data.lastLoginAt,
-                  emailVerified: data.emailVerified || false,
-                  authProvider: data.authProvider || 'email'
-                } as Facility
-                
-                console.log('✅ Transformed open facility:', facilityData.name, 'with isActive:', facilityData.isActive)
-                openFacilities.push(facilityData)
-              })
-              
-              facilities = openFacilities
-              console.log('✅ Open facilities loaded:', facilities.length)
-            }
-            
-          } catch (openQueryError: any) {
-            console.error('❌ Open query also failed:', openQueryError)
-            throw openQueryError
-          }
-        }
-      }
-      
-      // Filter to show only active facilities (don't require verification for landing page)
-      const activeFacilities = facilities.filter(facility => {
-        console.log('🔍 Filtering facility:', facility.name, {
-          isActive: facility.isActive,
-          isSearchable: facility.isSearchable,
-          isVerified: facility.isVerified,
-          uid: facility.uid
-        })
-        return facility.isActive !== false // Default to true if not set
-      })
-      
-      console.log('🔍 Active facilities after filtering:', activeFacilities.length)
-      console.log('🔍 Facility details:', activeFacilities.map(f => ({
-        name: f.name,
-        isActive: f.isActive,
-        isVerified: f.isVerified,
-        isSearchable: f.isSearchable
-      })))
-      
-      // Debug: Check why facilities might be filtered out
-      if (facilities.length > 0 && activeFacilities.length === 0) {
-        console.warn('⚠️ All facilities were filtered out! Debug info:')
-        facilities.forEach((facility, index) => {
-          console.warn(`Facility ${index + 1}:`, {
-            name: facility.name,
-            isActive: facility.isActive,
-            isVerified: facility.isVerified,
-            isSearchable: facility.isSearchable,
-            uid: facility.uid
-          })
-        })
-      }
-      
-      // Limit to 6 facilities for the landing page
-      const limitedFacilities = activeFacilities.slice(0, 6)
-      
-      setFacilities(limitedFacilities)
-      console.log('✅ Real facilities loaded from Firestore:', limitedFacilities.length)
-      
-      if (limitedFacilities.length === 0) {
-        setFacilitiesError('No healthcare facilities found yet. Be the first to join our platform!')
-      }
+      console.log('✅ Facilities fetched:', fetchedFacilities.length)
+      setFacilities(fetchedFacilities as Facility[])
       
     } catch (error: any) {
-      console.error('❌ Error fetching facilities:', error)
-      console.error('Error details:', {
-        message: error.message,
-        code: error.code,
-        stack: error.stack
-      })
-      
-      let errorMessage = 'Failed to load healthcare facilities'
-      if (error.code === 'permission-denied') {
-        errorMessage = 'Access denied. This might be a configuration issue.'
-      } else if (error.code === 'unavailable') {
-        errorMessage = 'Service temporarily unavailable. Please try again later.'
-      } else if (error.message) {
-        errorMessage = `Loading failed: ${error.message}`
-      }
-      
-      setFacilitiesError(errorMessage)
-      
-      // Fallback to empty array
-      setFacilities([])
+      console.error('Failed to fetch facilities:', error)
+      setFacilitiesError('Unable to load healthcare facilities. Please try again later.')
     } finally {
       setIsLoadingFacilities(false)
     }
   }, [])
 
+  useEffect(() => {
+    fetchFacilities()
+  }, [fetchFacilities])
+
   // Format operating hours for display
   const formatOperatingHours = useCallback((operatingHours: Facility['operatingHours']) => {
+    // Defensive check: ensure operatingHours exists
+    if (!operatingHours || typeof operatingHours !== 'object') {
+      return 'Hours not available'
+    }
+    
     const days = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday']
-    const openDays = days.filter(day => !operatingHours[day as keyof typeof operatingHours].closed)
+    
+    // Defensive check: ensure each day has the required properties
+    const openDays = days.filter(day => {
+      const dayHours = operatingHours[day as keyof typeof operatingHours]
+      return dayHours && typeof dayHours === 'object' && !dayHours.closed
+    })
     
     if (openDays.length === 0) return 'Closed'
     if (openDays.length === 7) return '24/7 Available'
     
     // Helper function to convert 24-hour format to 12-hour format with AM/PM
     const formatTime = (time: string) => {
+      if (!time || typeof time !== 'string') return '00:00 AM'
       const [hours, minutes] = time.split(':')
       const hour = parseInt(hours)
       const ampm = hour >= 12 ? 'PM' : 'AM'
       const displayHour = hour === 0 ? 12 : hour > 12 ? hour - 12 : hour
-      return `${displayHour}:${minutes} ${ampm}`
+      return `${displayHour}:${minutes || '00'} ${ampm}`
     }
     
     const firstDay = openDays[0]
@@ -603,11 +146,16 @@ const LandingPage: React.FC = React.memo(() => {
     
     if (openDays.length === 1) {
       const day = operatingHours[firstDay as keyof typeof operatingHours]
+      if (!day || !day.open || !day.close) return 'Hours not available'
       return `${firstDay.charAt(0).toUpperCase() + firstDay.slice(1)} ${formatTime(day.open)} - ${formatTime(day.close)}`
     }
     
     const firstDayHours = operatingHours[firstDay as keyof typeof operatingHours]
     const lastDayHours = operatingHours[lastDay as keyof typeof operatingHours]
+    
+    if (!firstDayHours || !lastDayHours || !firstDayHours.open || !lastDayHours.close) {
+      return 'Hours not available'
+    }
     
     return `${firstDay.charAt(0).toUpperCase() + firstDay.slice(1)}-${lastDay.charAt(0).toUpperCase() + lastDay.slice(1)} ${formatTime(firstDayHours.open)} - ${formatTime(lastDayHours.close)}`
   }, [])
@@ -664,9 +212,6 @@ const LandingPage: React.FC = React.memo(() => {
     initializeAnimations()
     initializeAccessibility()
     initializeHeaderScroll()
-    
-    // Prevent HIPAA service errors on landing page
-    preventHIPAAErrors()
     
     // Prevent Google API errors from external sources
     preventGoogleAPIErrors()
@@ -770,7 +315,7 @@ const LandingPage: React.FC = React.memo(() => {
 
   const initializeAccessibility = useCallback(() => {
     // Announce page load to screen readers
-    announceToScreenReader('LingapLink healthcare platform loaded. Use Tab to navigate.')
+    announceToScreenReader('Haliya healthcare platform loaded. Use Tab to navigate.')
   }, [])
 
   const handleSearch = useCallback(() => {
@@ -1058,42 +603,13 @@ const LandingPage: React.FC = React.memo(() => {
   // Check Firebase authentication status
   const checkFirebaseAuth = useCallback(() => {
     try {
-      // This will help prevent HIPAA service errors when not authenticated
-      if (typeof window !== 'undefined' && (window as any).firebase) {
-        console.log('Firebase detected, authentication status will be checked')
-      }
+      // Placeholder for future auth checks
+      console.log('Auth check placeholder')
     } catch (error) {
-      console.warn('Firebase check failed:', error)
+      console.warn('Auth check failed:', error)
     }
   }, [])
 
-  // Prevent HIPAA service from running when not needed
-  const preventHIPAAErrors = useCallback(() => {
-    try {
-      // Check if we're on a page that needs HIPAA compliance
-      const currentPath = window.location.pathname
-      const needsHIPAA = ['/dashboard', '/patient-portal', '/hipaa-compliance'].includes(currentPath)
-      
-      if (!needsHIPAA) {
-        // If we're on the landing page, we don't need HIPAA compliance
-        console.log('Landing page detected, HIPAA compliance not required')
-        
-        // Try to disable HIPAA service if it's running
-        try {
-          if (typeof window !== 'undefined' && (window as any).hipaaService) {
-            (window as any).hipaaService.disableAuditLogging()
-            console.log('HIPAA service disabled for landing page')
-          }
-        } catch (error) {
-          console.warn('Failed to disable HIPAA service:', error)
-        }
-        
-        return
-      }
-    } catch (error) {
-      console.warn('HIPAA prevention check failed:', error)
-    }
-  }, [])
 
   // Enhanced Google API error prevention
   const preventGoogleAPIErrors = useCallback(() => {
@@ -1176,6 +692,15 @@ const LandingPage: React.FC = React.memo(() => {
       console.log('Google API prevention setup failed:', error);
       return () => {};
     }
+  }, [])
+
+  // No-op error suppression hooks used by the mount effect
+  const setupErrorSuppression = useCallback(() => {
+    return () => {}
+  }, [])
+
+  const monitorAndSuppressErrors = useCallback(() => {
+    return () => {}
   }, [])
 
   // Keyboard navigation handlers
@@ -1304,13 +829,6 @@ const LandingPage: React.FC = React.memo(() => {
             message.includes('choose to browse')) {
           return
         }
-        
-        // Suppress HIPAA audit warnings that are not critical
-        if (message.includes('HIPAA audit: User not fully verified') ||
-            message.includes('HIPAA audit: User not authenticated') ||
-            message.includes('HIPAA audit: Service not ready')) {
-          return
-        }
       }
       
       originalWarn.apply(console, args)
@@ -1333,8 +851,7 @@ const LandingPage: React.FC = React.memo(() => {
             message.includes('Content Security Policy') ||
             message.includes('api.ipify.org') ||
             message.includes('Missing or insufficient permissions') ||
-            message.includes('Failed to process audit queue') ||
-            message.includes('hipaa-compliance.service.ts')) {
+            message.includes('Failed to process audit queue')) {
           console.log('✅ Non-critical error suppressed:', message)
           return
         }
@@ -1389,12 +906,12 @@ const LandingPage: React.FC = React.memo(() => {
           <a 
             href="/"
             className={styles.brandNameAndLogo}
-            aria-label="LingapLink - Healthcare Platform Philippines"
+            aria-label="Haliya - Healthcare Platform Philippines"
           >
 
             <i className="fas fa-heartbeat" aria-hidden="true"></i>
 
-            <h2>LingapLink</h2>
+            <h2>Haliya</h2>
 
             <div 
               className={styles.logoBadge} 
@@ -1811,7 +1328,7 @@ const LandingPage: React.FC = React.memo(() => {
           <div className="cta-content">
             <div className="cta-text">
               <h2 id="provider-heading">Are you a Healthcare Provider?</h2>
-              <p>Join LingapLink and connect with thousands of patients across the Philippines. Streamline your practice with our comprehensive healthcare platform.</p>
+              <p>Join Haliya and connect with thousands of patients across the Philippines. Streamline your practice with our comprehensive healthcare platform.</p>
               <div className="cta-features" role="list" aria-label="Platform features for healthcare providers">
                 <div className="cta-feature" role="listitem">
                   <i className="fas fa-check-circle" aria-hidden="true"></i>
@@ -1835,10 +1352,10 @@ const LandingPage: React.FC = React.memo(() => {
                 <button 
                   onClick={handlePartnerSignup}
                   className="partner-btn"
-                  aria-label="Register your healthcare practice with LingapLink"
+                  aria-label="Register your healthcare practice with Haliya"
                 >
                   <i className="fas fa-handshake" aria-hidden="true"></i>
-                  Partner with LingapLink
+                  Partner with Haliya
                 </button>
                 <p className="cta-note">
                   Join {isLoadingFacilities ? '...' : facilities.length > 0 ? `${facilities.length}+` : '0+'} healthcare providers already on our platform
@@ -1854,7 +1371,7 @@ const LandingPage: React.FC = React.memo(() => {
           <div className="encryption-demo-content">
             <div className="encryption-demo-text">
               <h2 id="encryption-demo-heading">See How We Protect Your Data</h2>
-              <p>Experience LingapLink's military-grade encryption in action. Watch how your sensitive healthcare information is protected from input to storage.</p>
+              <p>Experience Haliya's military-grade encryption in action. Watch how your sensitive healthcare information is protected from input to storage.</p>
             </div>
             <div className="encryption-demo-action">
               <button 
@@ -1876,7 +1393,7 @@ const LandingPage: React.FC = React.memo(() => {
           <div className="rbac-demo-content">
             <div className="rbac-demo-text">
               <h2 id="rbac-demo-heading">Experience Smart Access Control</h2>
-              <p>See how LingapLink ensures data security through intelligent role-based permissions. Different user types access only what they need.</p>
+              <p>See how Haliya ensures data security through intelligent role-based permissions. Different user types access only what they need.</p>
             </div>
             <div className="rbac-demo-action">
               <button 
@@ -1898,7 +1415,7 @@ const LandingPage: React.FC = React.memo(() => {
           <div className="file-upload-security-demo-content">
             <div className="file-upload-security-demo-text">
               <h2 id="file-upload-security-demo-heading">Advanced File Upload Protection</h2>
-              <p>See how LingapLink protects against malicious file uploads and ensures secure document handling. Every file is analyzed for threats in real-time.</p>
+              <p>See how Haliya protects against malicious file uploads and ensures secure document handling. Every file is analyzed for threats in real-time.</p>
             </div>
             <div className="file-upload-security-demo-action">
               <button 
@@ -1923,7 +1440,7 @@ const LandingPage: React.FC = React.memo(() => {
               <div className="cta-text-section">
                 <h3>
                   <i className="fas fa-hospital" aria-hidden="true"></i>
-                  Healthcare Providers - Join LingapLink
+                  Healthcare Providers - Join Haliya
                 </h3>
                 <p>Connect with thousands of patients across the Philippines. Grow your practice with our digital platform.</p>
               </div>
@@ -1947,7 +1464,7 @@ const LandingPage: React.FC = React.memo(() => {
               <div className="footer-brand" role="contentinfo">
                 <div className="footer-logo">
                   <i className="fas fa-heartbeat" aria-hidden="true"></i>
-                  <span>LingapLink</span>
+                  <span>Haliya</span>
                   <span className="logo-badge" aria-label="Philippines">PH</span>
                 </div>
                 <p className="footer-description">
@@ -1992,9 +1509,9 @@ const LandingPage: React.FC = React.memo(() => {
                 </h3>
                 <ul className="nav-list" role="menu">
                   <li className="featured" role="none">
-                    <button onClick={handlePartnerSignup} aria-label="Register your healthcare practice with LingapLink" role="menuitem">
+                    <button onClick={handlePartnerSignup} aria-label="Register your healthcare practice with Haliya" role="menuitem">
                       <i className="fas fa-star" aria-hidden="true"></i>
-                      Join LingapLink
+                      Join Haliya
                     </button>
                   </li>
                   <li role="none"><button onClick={handlePartnerSignin} aria-label="Sign in to provider portal" role="menuitem">Provider Portal</button></li>
@@ -2029,7 +1546,7 @@ const LandingPage: React.FC = React.memo(() => {
                     <li><a href="#" aria-label="Access help center and support resources">Help Center</a></li>
                     <li><a href="#" aria-label="Read our privacy policy">Privacy Policy</a></li>
                     <li><a href="#" aria-label="Read our terms of service">Terms of Service</a></li>
-                    <li><a href="#" aria-label="Learn about HIPAA compliance">HIPAA Compliance</a></li>
+                    <li><a href="#" aria-label="Learn about our data privacy policies">Data Privacy</a></li>
                     <li><button onClick={() => navigate('/encryption-demo')} className="text-link" aria-label="View end-to-end encryption demo">Encryption Demo</button></li>
                   </ul>
                 </div>
@@ -2041,7 +1558,7 @@ const LandingPage: React.FC = React.memo(() => {
           <div className="footer-bottom">
             <div className="footer-bottom-content">
               <div className="copyright">
-                <p>&copy; <span id="current-year">2024</span> LingapLink. All rights reserved.</p>
+                <p>&copy; <span id="current-year">2024</span> Haliya. All rights reserved.</p>
               </div>
               <div className="social-links">
                 <a 

@@ -22,14 +22,14 @@ This demo showcases the AES-256-GCM encryption implemented in the LingapLink hea
 ### 2. **Dual Encryption Methods**
 
 - **Standard Encryption**: Basic AES-256-GCM implementation
-- **HIPAA Encryption**: Healthcare-compliant encryption with metadata
+- **Enhanced Encryption**: Healthcare-grade encryption with metadata
 
 ### 3. **Security Features Displayed**
 
 - **AES-256-GCM**: Military-grade encryption algorithm
 - **Key Rotation**: Automatic key rotation every 24 hours
 - **Unique IVs**: Random initialization vectors for each operation
-- **HIPAA Compliant**: Meets healthcare data protection standards
+- **Healthcare Grade**: Meets international healthcare data protection standards
 - **No Backdoors**: End-to-end encryption with no server-side decryption keys
 - **Audit Trail**: Complete logging of all operations
 
@@ -122,7 +122,7 @@ Witness Signature: [Digital Signature Encrypted]
 ## Key Benefits Demonstrated
 
 1. **Data Privacy**: Even if the server is compromised, patient data remains unreadable
-2. **Compliance**: Meets HIPAA and other healthcare data protection requirements
+2. **Compliance**: Meets healthcare data protection requirements and international standards
 3. **Transparency**: Users can see exactly how their data is protected
 4. **Real-Time**: Live demonstration of encryption/decryption process
 5. **Verification**: Data integrity is verified through the complete cycle
@@ -151,7 +151,7 @@ Witness Signature: [Digital Signature Encrypted]
 
 ### **For Compliance Officers**
 
-- Validate HIPAA compliance measures
+- Validate healthcare compliance measures
 - Document security protocols
 - Prepare for security audits
 
@@ -176,7 +176,7 @@ If the demo doesn't work:
 After viewing the demo:
 
 1. **Explore the Platform**: Try the actual patient portal with confidence
-2. **Review Security**: Check the HIPAA compliance dashboard
+2. **Review Security**: Check the security compliance dashboard
 3. **Contact Support**: Ask questions about specific security features
 4. **Provide Feedback**: Help improve the security demonstration
 

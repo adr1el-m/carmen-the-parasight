@@ -1,7 +1,9 @@
+@import url('./breakpoints.css');
+
 /* Partner SignUp Styles */
 
 /* Import standardized breakpoints */
-@import url('./breakpoints.css');
+
 
 .partner-signup-container {
   min-height: 100vh;

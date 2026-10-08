@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { jwtAuthService } from '../services/jwt-auth.service';
+import { sessionService } from '../services/session.service';
 import { permissionService, PermissionCheck } from '../services/permission.service';
 
 interface PermissionGuardProps {
@@ -38,14 +38,14 @@ const PermissionGuard: React.FC<PermissionGuardProps> = ({
       setIsLoading(true);
       
       // Check if user is authenticated
-      if (!jwtAuthService.isAuthenticated()) {
+      if (!sessionService.isAuthenticated()) {
         setHasAccess(false);
         setAccessReason('User not authenticated');
         onAccessDenied?.('User not authenticated');
         return;
       }
 
-      const currentUser = jwtAuthService.getCurrentUser();
+      const currentUser = sessionService.getCurrentUser();
       if (!currentUser) {
         setHasAccess(false);
         setAccessReason('User data not available');

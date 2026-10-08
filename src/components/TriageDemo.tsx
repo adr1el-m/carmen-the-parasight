@@ -50,7 +50,7 @@ const TriageDemo: React.FC = () => {
       condition: 'Mosquito bite',
       notes: 'meow',
       status: 'scheduled',
-      facilityName: 'Carmen Medical Clinic'
+      facilityName: 'Haliya Medical Clinic'
     }
   ])
 

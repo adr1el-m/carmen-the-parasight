@@ -109,7 +109,7 @@ const RBACDemo: React.FC = () => {
           Role-Based Access Control Demo
         </h1>
         <p className="text-lg text-gray-600 max-w-3xl mx-auto">
-          Experience how LingapLink ensures data security through intelligent role-based permissions. 
+          Experience how Haliya ensures data security through intelligent role-based permissions. 
           See how different user types access only the information and tools they need.
         </p>
       </div>
@@ -276,7 +276,7 @@ const RBACDemo: React.FC = () => {
             </p>
           </div>
           <div className="p-4 bg-red-50 rounded-lg">
-            <h3 className="font-semibold text-red-800 mb-2">HIPAA Compliance</h3>
+            <h3 className="font-semibold text-red-800 mb-2">Data Protection</h3>
             <p className="text-sm text-red-700">
               Meets healthcare data access requirements and audit standards
             </p>

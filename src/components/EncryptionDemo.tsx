@@ -122,7 +122,7 @@ const EncryptionDemo: React.FC = () => {
           End-to-End Encryption Demo
         </h1>
         <p className="text-lg text-gray-600 max-w-3xl mx-auto">
-          See how LingapLink keeps your healthcare information completely private and secure. 
+          See how Haliya keeps your healthcare information completely private and secure. 
           Watch your sensitive data transform into unreadable code that only you can unlock.
         </p>
       </div>
@@ -326,7 +326,7 @@ const EncryptionDemo: React.FC = () => {
 
       {/* How It Works */}
       <div className="bg-white rounded-lg shadow-sm border p-6 mt-6">
-        <h2 className="text-xl font-bold text-gray-800 mb-4">How LingapLink Protects Your Data</h2>
+        <h2 className="text-xl font-bold text-gray-800 mb-4">How Haliya Protects Your Data</h2>
         <div className="space-y-4">
           <div className="flex items-start space-x-4">
             <div className="w-8 h-8 bg-blue-600 text-white rounded-full flex items-center justify-center text-sm font-bold flex-shrink-0">
@@ -342,7 +342,7 @@ const EncryptionDemo: React.FC = () => {
               2
             </div>
             <div>
-              <h3 className="font-semibold text-gray-800">LingapLink Locks It Down</h3>
+              <h3 className="font-semibold text-gray-800">Haliya Locks It Down</h3>
               <p className="text-gray-600">Before your information leaves your device, we scramble it using the same encryption that protects military secrets</p>
             </div>
           </div>

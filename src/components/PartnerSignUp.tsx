@@ -1,7 +1,8 @@
 import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { auth } from '../config/firebase'
-import { signInWithPopup, GoogleAuthProvider, createUserWithEmailAndPassword, sendEmailVerification, updateProfile } from 'firebase/auth'
+import authService from '../services/auth-service'
+
+
 import '../styles/partnerSignUp.css'
 import '../styles/csp-utilities.css'
 
@@ -115,7 +116,6 @@ const PartnerSignUp: React.FC = React.memo(() => {
   const [showPassword, setShowPassword] = useState(false)
   const [showConfirmPassword, setShowConfirmPassword] = useState(false)
   const [errorMessage, setErrorMessage] = useState('')
-  const [isGoogleSignUpInProgress, setIsGoogleSignUpInProgress] = useState(false)
   const [validationErrors, setValidationErrors] = useState<ValidationErrors>({})
   const [formProgress, setFormProgress] = useState(0)
 
@@ -192,85 +192,6 @@ const PartnerSignUp: React.FC = React.memo(() => {
   //   }
   // }, [validateCurrentStep])
 
-  const handleGoogleSignUp = useCallback(async () => {
-    try {
-      setIsGoogleSignUpInProgress(true)
-      setErrorMessage('')
-      
-      // Validate required fields for Google sign-up
-      if (!formData.facilityName.trim()) {
-        setErrorMessage('Please enter a facility name before signing up with Google')
-        return
-      }
-      if (!formData.facilityType) {
-        setErrorMessage('Please select a facility type before signing up with Google')
-        return
-      }
-      
-      const provider = new GoogleAuthProvider()
-      provider.addScope('email')
-      provider.addScope('profile')
-      
-      const result = await signInWithPopup(auth, provider)
-      
-      if (result.user) {
-        console.log('Google sign-up successful:', result.user.email)
-        
-        // Update user's display name to facility name
-        await updateProfile(result.user, {
-          displayName: formData.facilityName
-        })
-        
-        // Create facility document in Firestore
-        try {
-          const { createFacilityDocument } = await import('../services/firestoredb.js')
-          await createFacilityDocument(result.user, {
-            facilityName: formData.facilityName,
-            facilityType: formData.facilityType,
-            email: formData.email || result.user.email,
-            phone: formData.phone,
-            authProvider: 'google'
-          })
-          console.log('Facility document created successfully')
-        } catch (error) {
-          console.error('Error creating facility document:', error)
-          // Continue with registration even if document creation fails
-        }
-        
-        showNotification('Facility registration successful! Welcome to LingapLink.', 'success')
-        
-        // Redirect to dashboard
-        setTimeout(() => {
-          navigate('/dashboard')
-        }, 2000)
-      }
-    } catch (error: any) {
-      console.error('Google sign-up error:', error)
-      
-      let errorMsg = 'Google sign-up failed. Please try again.'
-      
-      switch (error.code) {
-        case 'auth/popup-closed-by-user':
-          errorMsg = 'Sign-up was cancelled. Please try again.'
-          break
-        case 'auth/popup-blocked':
-          errorMsg = 'Pop-up was blocked. Please allow pop-ups and try again.'
-          break
-        case 'auth/account-exists-with-different-credential':
-          errorMsg = 'An account already exists with this email using a different sign-in method.'
-          break
-        case 'auth/network-request-failed':
-          errorMsg = 'Network error. Please check your internet connection and try again.'
-          break
-        default:
-          errorMsg = error.message || errorMsg
-      }
-      
-      setErrorMessage(errorMsg)
-    } finally {
-      setIsGoogleSignUpInProgress(false)
-    }
-  }, [formData, navigate])
 
   const handleSubmit = useCallback(async () => {
     if (!validateCurrentStep()) {
@@ -282,45 +203,22 @@ const PartnerSignUp: React.FC = React.memo(() => {
 
     try {
       // Create user account
-      const userCredential = await createUserWithEmailAndPassword(
-        auth,
-        formData.email,
-        formData.password
-      )
-
-      // Update user's display name to facility name
-      await updateProfile(userCredential.user, {
-        displayName: formData.facilityName
+      const user = await authService.registerWithEmail(formData.email, formData.password, {
+        firstName: formData.facilityName,
+        lastName: 'Facility'
       })
 
-      // Create facility document in Firestore
-      try {
-        const { createFacilityDocument } = await import('../services/firestoredb.js')
-        await createFacilityDocument(userCredential.user, {
-          facilityName: formData.facilityName,
-          facilityType: formData.facilityType,
-          email: formData.email,
-          phone: formData.phone,
-          authProvider: 'email'
-        })
-        console.log('Facility document created successfully')
-      } catch (error) {
-        console.error('Error creating facility document:', error)
-        // Continue with registration even if document creation fails
+      if (user) {
+        console.log('Registration completed successfully!')
+        console.log('User:', user)
+        console.log('Redirecting to dashboard...')
+        
+        showNotification('Facility registration successful! Welcome to Haliya.', 'success')
+        
+        // Redirect to dashboard immediately
+        navigate('/dashboard')
       }
 
-      // Send email verification
-      await sendEmailVerification(userCredential.user)
-
-      console.log('Registration completed successfully!')
-      console.log('User:', userCredential.user)
-      console.log('Facility name set to:', formData.facilityName)
-      console.log('Redirecting to dashboard...')
-      
-      showNotification('Facility registration successful! Welcome to LingapLink.', 'success')
-      
-      // Redirect to dashboard immediately
-      navigate('/dashboard')
 
     } catch (error: any) {
       console.error('Registration error:', error)
@@ -389,9 +287,9 @@ const PartnerSignUp: React.FC = React.memo(() => {
       <div className="signup-header">
         <div className="logo">
           <i className="fas fa-heartbeat"></i>
-          <span>LingapLink</span>
+          <span>Haliya</span>
         </div>
-        <h1>Partner with LingapLink</h1>
+        <h1>Partner with Haliya</h1>
         <p>Join our network of healthcare facilities and connect with patients nationwide</p>
       </div>
 
@@ -545,20 +443,6 @@ const PartnerSignUp: React.FC = React.memo(() => {
           )}
         </form>
 
-        <div className="social-signup">
-          <div className="divider">
-            <span>or</span>
-          </div>
-          <button
-            type="button"
-            className="btn btn-google"
-            onClick={handleGoogleSignUp}
-            disabled={isGoogleSignUpInProgress}
-          >
-            <i className="fab fa-google"></i>
-            {isGoogleSignUpInProgress ? 'Signing up...' : 'Continue with Google'}
-          </button>
-        </div>
 
         {errorMessage && (
           <div className="error-message general-error">

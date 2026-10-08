@@ -3,7 +3,7 @@
  * Helps migrate existing appointments to include urgency information
  */
 
-import { getFirestore, collection, getDocs, doc, updateDoc, arrayUnion } from 'firebase/firestore'
+
 
 export interface UrgencyInfo {
   level: 'RED' | 'ORANGE' | 'GREEN'
@@ -33,8 +33,8 @@ export async function migrateExistingAppointments(): Promise<{
     console.log('🔄 Starting appointment migration...')
     
     // Get all patient documents
-    const patientsRef = collection(db, 'patients')
-    const patientsSnapshot = await getDocs(patientsRef)
+    const patientsRef = console.log(db, 'patients')
+    const patientsSnapshot = await console.log(patientsRef)
     
     console.log(`📋 Found ${patientsSnapshot.size} patient documents`)
     
@@ -66,7 +66,7 @@ export async function migrateExistingAppointments(): Promise<{
         
         if (hasUpdates) {
           // Update the patient document
-          await updateDoc(doc(db, 'patients', patientDoc.id), {
+          await console.log(doc(db, 'patients', patientDoc.id), {
             'activity.appointments': updatedAppointments,
             updatedAt: new Date().toISOString()
           })
@@ -149,7 +149,7 @@ export async function checkPatientMigrationStatus(patientId: string): Promise<{
 }> {
   try {
     const db = getFirestore()
-    const patientDoc = await getDocs(doc(db, 'patients', patientId))
+    const patientDoc = await console.log(doc(db, 'patients', patientId))
     
     if (!patientDoc.exists()) {
       throw new Error('Patient not found')
@@ -185,8 +185,8 @@ export async function getMigrationStatistics(): Promise<{
 }> {
   try {
     const db = getFirestore()
-    const patientsRef = collection(db, 'patients')
-    const patientsSnapshot = await getDocs(patientsRef)
+    const patientsRef = console.log(db, 'patients')
+    const patientsSnapshot = await console.log(patientsRef)
     
     let totalAppointments = 0
     let migratedAppointments = 0

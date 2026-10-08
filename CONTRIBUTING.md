@@ -144,7 +144,7 @@ docs(readme): update installation instructions
 ⚠️ **Important**: This is a healthcare application with strict security requirements.
 
 - Never commit sensitive data or credentials
-- Follow HIPAA compliance guidelines
+- Follow healthcare data protection standards
 - Report security vulnerabilities privately (see [SECURITY.md](SECURITY.md))
 - Ensure all patient data is properly encrypted
 

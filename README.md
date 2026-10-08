@@ -1,14 +1,13 @@
 <div align="center">
-  <img src="src/assets/img/logo.png" alt="LingapLink Logo" width="400"/>
+  <img src="src/assets/img/logo.png" alt="Haliya Logo" width="400"/>
   
-  <h1>LingapLink</h1>
+  <h1>Haliya</h1>
   <h3>Bridging Patients and Healthcare Providers</h3>
   
   <p align="center">
     <img src="https://img.shields.io/badge/Version-1.0.0-blue.svg" alt="Version" />
     <img src="https://img.shields.io/badge/License-MIT-green.svg" alt="License" />
     <img src="https://img.shields.io/badge/Status-Active%20Development-orange.svg" alt="Status" />
-    <img src="https://img.shields.io/badge/HIPAA-Compliant-red.svg" alt="HIPAA Compliant" />
   </p>
   
   <p align="center">
@@ -32,7 +31,7 @@
 - [Installation](#-installation)
 - [Configuration](#-configuration)
 - [API Documentation](#-api-documentation)
-- [Security & Compliance](#-security--compliance)
+- [Security & Privacy](#-security--privacy)
 - [Testing](#-testing)
 - [Deployment](#-deployment)
 - [Contributing](#-contributing)
@@ -41,7 +40,7 @@
 
 ## 🎯 Overview
 
-**LingapLink** is a comprehensive, modern healthcare platform designed to revolutionize the connection between patients and healthcare providers. Built with cutting-edge web technologies and a focus on security, accessibility, and user experience, LingapLink streamlines healthcare delivery through intelligent automation and seamless digital workflows.
+**Haliya** is a comprehensive, modern healthcare platform designed to revolutionize the connection between patients and healthcare providers. Built with cutting-edge web technologies and a focus on security, accessibility, and user experience, Haliya streamlines healthcare delivery through intelligent automation and seamless digital workflows.
 
 ### Mission Statement
 
@@ -51,8 +50,8 @@ To democratize healthcare access by providing an intuitive, secure, and efficien
 
 - **Patient-Centric Design**: Intuitive interfaces that prioritize user experience and accessibility
 - **Provider Efficiency**: Comprehensive dashboards that streamline clinical workflows
-- **AI-Powered Intelligence**: Smart triage and analytics powered by Google Gemini AI
-- **Enterprise Security**: HIPAA-compliant infrastructure with enterprise-grade security
+- **AI-Powered Intelligence**: Smart triage and analytics powered by Groq AI
+- **Enterprise Security**: Secure infrastructure with enterprise-grade protection
 - **Scalable Architecture**: Built to handle growth from individual practices to large healthcare systems
 
 ## ✨ Features
@@ -60,7 +59,7 @@ To democratize healthcare access by providing an intuitive, secure, and efficien
 ### 🏥 Patient Portal
 - **Comprehensive Health Records**: Secure management of personal health information, medical history, and documents
 - **Smart Appointment Scheduling**: AI-assisted appointment booking with intelligent time slot recommendations
-- **Real-time Communication**: HIPAA-compliant messaging system for direct provider communication
+- **Real-time Communication**: Secure messaging system for direct provider communication
 - **Health Analytics**: Personalized health insights and trend analysis
 - **Document Management**: Secure upload, storage, and sharing of medical documents
 - **Prescription Tracking**: Digital prescription management and medication reminders
@@ -71,20 +70,20 @@ To democratize healthcare access by providing an intuitive, secure, and efficien
 - **AI-Powered Triage**: Automated patient prioritization based on symptoms and urgency levels
 - **Clinical Analytics**: Performance metrics, patient outcomes, and operational insights
 - **Telemedicine Integration**: Built-in video consultation capabilities
-- **Compliance Monitoring**: HIPAA compliance tracking and audit trails
+- **Compliance Monitoring**: Security compliance tracking and audit trails
 
 ### 🤖 AI & Automation
-- **Intelligent Triage System**: Google Gemini AI-powered patient assessment and prioritization
+- **Intelligent Triage System**: Groq AI-powered patient assessment and prioritization
 - **Predictive Analytics**: Health trend analysis and risk assessment
 - **Automated Notifications**: Smart alerts for appointments, medication, and health milestones
 - **Natural Language Processing**: AI-powered symptom analysis and preliminary diagnosis support
 - **Performance Optimization**: Automated system monitoring and performance tuning
 
 ### 🔒 Security & Compliance
-- **HIPAA Compliance**: Full compliance with healthcare data protection regulations
+- **Data Protection**: Full compliance with modern data protection standards
 - **End-to-End Encryption**: All data encrypted in transit and at rest
 - **Multi-Factor Authentication**: Enhanced security with MFA support
-- **Audit Logging**: Comprehensive activity tracking and compliance reporting
+- **Audit Logging**: Comprehensive activity tracking and security reporting
 - **Role-Based Access Control**: Granular permissions and access management
 - **Data Privacy**: GDPR and CCPA compliant data handling
 
@@ -108,7 +107,7 @@ We welcome contributions to help us achieve these goals!
 ## 📸 Screenshots
 
 <p align="center">
-  <img src="src/assets/img/landingPage.jpeg" alt="LingapLink Landing Page" />
+  <img src="src/assets/img/landingPage.jpeg" alt="Haliya Landing Page" />
 </p>
 
 ### Patient Portal Screenshots
@@ -190,7 +189,7 @@ Here's a look at the provider dashboard, designed for healthcare professionals t
 Explore our high-fidelity prototype to see the user interface and experience our design vision.
 
 <p align="center">
-  <a href="https://www.figma.com/design/48AhpRLSp549mxywZipc9G/LingapLink?node-id=0-1&t=YDHJ15vmXcc3OMdW-1">
+  <a href="https://www.figma.com/design/48AhpRLSp549mxywZipc9G/Haliya?node-id=0-1&t=YDHJ15vmXcc3OMdW-1">
     <img src="https://img.shields.io/badge/Figma-View%20Prototype-F24E1E?style=for-the-badge&logo=figma&logoColor=white" alt="Figma Prototype" />
   </a>
 </p>
@@ -201,7 +200,7 @@ Explore our high-fidelity prototype to see the user interface and experience our
 
 ## 🏗️ System Architecture
 
-LingapLink follows a modern, scalable architecture pattern designed for healthcare applications:
+Haliya follows a modern, scalable architecture pattern designed for healthcare applications:
 
 ```mermaid
 graph TB
@@ -226,13 +225,13 @@ graph TB
     end
     
     subgraph "External Services"
-        K --> M[Google Gemini AI]
+        K --> M[Groq AI]
         L --> N[Email Service]
         L --> O[SMS Service]
     end
     
     subgraph "Security Layer"
-        P[HIPAA Compliance] --> Q[Data Encryption]
+        P[Security Best Practices] --> Q[Data Encryption]
         Q --> R[Audit Logging]
         R --> S[Access Control]
     end
@@ -247,7 +246,7 @@ graph TB
 - **API-First**: RESTful APIs with comprehensive documentation
 
 <p align="center">
-  <img src="src/assets/img/sysArch.png" alt="LingapLink System Architecture Diagram" />
+  <img src="src/assets/img/sysArch.png" alt="Haliya System Architecture Diagram" />
 </p>
 
 ## 🛠️ Technology Stack
@@ -269,7 +268,7 @@ graph TB
 | ![Express](https://img.shields.io/badge/Express-4.19.2-000000?style=flat&logo=express&logoColor=white) | 4.19.2 | Web application framework |
 | ![Firebase](https://img.shields.io/badge/Firebase-11.9.1-FFCA28?style=flat&logo=firebase&logoColor=black) | 11.9.1 | Backend-as-a-Service platform |
 | ![Firestore](https://img.shields.io/badge/Firestore-11.9.1-FFCA28?style=flat&logo=firebase&logoColor=black) | 11.9.1 | NoSQL document database |
-| ![Google Gemini](https://img.shields.io/badge/Gemini-0.24.1-4285F4?style=flat&logo=google-gemini&logoColor=white) | 0.24.1 | AI/ML services and natural language processing |
+| ![Google Groq](https://img.shields.io/badge/Groq-0.24.1-4285F4?style=flat&logo=google-gemini&logoColor=white) | 0.24.1 | AI/ML services and natural language processing |
 
 ### Development & Quality
 | Technology | Version | Purpose |
@@ -283,15 +282,13 @@ graph TB
 | Technology | Version | Purpose |
 |------------|---------|---------|
 | ![Helmet](https://img.shields.io/badge/Helmet-7.1.0-000000?style=flat&logo=helmet&logoColor=white) | 7.1.0 | Security headers and middleware |
-| ![JWT](https://img.shields.io/badge/JWT-9.0.2-000000?style=flat&logo=json-web-tokens&logoColor=white) | 9.0.2 | Secure authentication tokens |
+| ![Secure Token](https://img.shields.io/badge/Token-Secure-000000?style=flat&logo=json-web-tokens&logoColor=white) | 9.0.2 | Secure authentication tokens |
 | ![Rate Limiting](https://img.shields.io/badge/Rate_Limit-7.1.5-FF6B6B?style=flat&logo=express&logoColor=white) | 7.1.5 | API rate limiting and abuse prevention |
 | ![DOMPurify](https://img.shields.io/badge/DOMPurify-3.0.8-000000?style=flat&logo=dompurify&logoColor=white) | 3.0.8 | XSS protection and HTML sanitization |
 
-## 🔒 Security & Compliance
+### Security & Privacy
 
-### HIPAA Compliance
-
-LingapLink is designed with HIPAA compliance as a core requirement:
+Haliya is designed with data protection as a core requirement:
 
 - **Administrative Safeguards**: Role-based access control and audit logging
 - **Physical Safeguards**: Cloud-based infrastructure with physical security
@@ -349,7 +346,7 @@ npm start
 - **Application Monitoring**: Real-time performance metrics
 - **Error Tracking**: Automated error detection and reporting
 - **Security Monitoring**: Intrusion detection and prevention
-- **Compliance Monitoring**: HIPAA compliance tracking
+- **Security Monitoring**: Regular system auditing
 
 ## 🚀 Quick Start
 
@@ -358,27 +355,27 @@ npm start
 - **Node.js** 20.0.0 or higher
 - **npm** 10.0.0 or higher
 - **Firebase Project** with Firestore enabled
-- **Google Cloud Account** for Gemini AI services
+- **Google Cloud Account** for Groq AI services
 
 ### 1-Minute Setup
 
 ```bash
 # Clone the repository
-git clone https://github.com/adr1el-m/carmen-the-parasight.git
-cd carmen-the-parasight
+git clone https://github.com/adr1el-m/haliya.git
+cd haliya
 
 # Install dependencies
 npm install
 
 # Configure environment
 cp env.template .env.local
-# Edit .env.local with your Firebase and Gemini API keys
+# Edit .env.local with your Firebase and Groq API keys
 
 # Start development server
 npm run dev
 ```
 
-Visit `http://localhost:5173` to see LingapLink in action!
+Visit `http://localhost:5173` to see Haliya in action!
 
 ## 📦 Installation
 
@@ -386,8 +383,8 @@ Visit `http://localhost:5173` to see LingapLink in action!
 
 1. **Clone the Repository**
    ```bash
-   git clone https://github.com/adr1el-m/carmen-the-parasight.git
-   cd carmen-the-parasight
+   git clone https://github.com/adr1el-m/haliya.git
+   cd haliya
    ```
 
 2. **Install Dependencies**
@@ -415,7 +412,7 @@ Visit `http://localhost:5173` to see LingapLink in action!
    VITE_GEMINI_API_KEY=your_gemini_api_key
    
    # Application Settings
-   VITE_APP_NAME=LingapLink
+   VITE_APP_NAME=Haliya
    VITE_APP_VERSION=1.0.0
    ```
 
@@ -467,7 +464,7 @@ The application includes comprehensive security measures:
 
 ### Test Suite Overview
 
-LingapLink includes a comprehensive testing strategy:
+Haliya includes a comprehensive testing strategy:
 
 ```bash
 # Run all tests
@@ -503,7 +500,7 @@ npm run test:ui
 The project is organized into modular folders to separate concerns and improve maintainability. The structure is designed to clearly distinguish between public-facing pages, server-side logic, client-side scripts, and shared utilities.
 
 ```sh
-LingapLink/
+Haliya/
 ├── public/               # All client-facing HTML pages
 │   ├── patientSign-in.html
 │   ├── patientSign-up.html
@@ -591,7 +588,7 @@ POST   /api/triage/feedback       # Submit triage feedback
 GET    /api/analytics/dashboard   # Dashboard metrics
 GET    /api/analytics/patients    # Patient analytics
 GET    /api/analytics/appointments # Appointment analytics
-GET    /api/analytics/compliance  # Compliance reports
+GET    /api/analytics/security    # Security reports
 ```
 
 ## 🤝 Contributing
@@ -602,7 +599,7 @@ We welcome contributions from the community! Please read our contributing guidel
 
 1. **Fork the Repository**
    ```bash
-   git fork https://github.com/adr1el-m/carmen-the-parasight.git
+   git fork https://github.com/adr1el-m/haliya.git
    ```
 
 2. **Create a Feature Branch**
@@ -704,8 +701,8 @@ When reporting issues, please include:
 - **Frontend Development**: React, TypeScript, modern web technologies
 - **Backend Development**: Node.js, Express, Firebase, cloud services
 - **UI/UX Design**: Healthcare-focused user experience design
-- **Security Engineering**: HIPAA compliance, healthcare security standards
-- **AI/ML Integration**: Google Gemini AI, healthcare analytics
+- **Security Engineering**: Data protection, healthcare security standards
+- **AI/ML Integration**: Groq AI, healthcare analytics
 
 ## 📄 License
 
@@ -714,16 +711,16 @@ This project is licensed under the MIT License - see the [LICENSE.md](LICENSE.md
 ## 🙏 Acknowledgments
 
 - **Google Firebase** for providing robust backend services
-- **Google Gemini AI** for intelligent healthcare features
+- **Groq AI** for intelligent healthcare features
 - **React Community** for excellent documentation and tools
 - **Healthcare Professionals** who provided valuable feedback and requirements
 - **Open Source Community** for the amazing tools and libraries
 
 ## 📞 Support
 
-- **Documentation**: [Project Wiki](https://github.com/adr1el-m/carmen-the-parasight/wiki)
-- **Issues**: [GitHub Issues](https://github.com/adr1el-m/carmen-the-parasight/issues)
-- **Discussions**: [GitHub Discussions](https://github.com/adr1el-m/carmen-the-parasight/discussions)
+- **Documentation**: [Project Wiki](https://github.com/adr1el-m/haliya/wiki)
+- **Issues**: [GitHub Issues](https://github.com/adr1el-m/haliya/issues)
+- **Discussions**: [GitHub Discussions](https://github.com/adr1el-m/haliya/discussions)
 - **Email**: support@lingaplink.com
 
 ---

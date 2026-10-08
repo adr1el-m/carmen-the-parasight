@@ -20,7 +20,7 @@ const Sidebar: React.FC<SidebarProps> = ({
       <div className="sidebar-header">
         <div className="logo">
           <i className="fas fa-heart-pulse" aria-hidden="true"></i>
-          <span>LingapLink</span>
+          <span>Haliya</span>
         </div>
       </div>
       

@@ -41,13 +41,13 @@ class SecurityConfig {
                 }
             },
             
-            // JWT configuration
-            jwt: {
+            // Authentication token configuration
+            authToken: {
                 algorithm: 'HS256',
                 accessTokenExpiry: 30 * 60, // 30 minutes
                 refreshTokenExpiry: 24 * 60 * 60, // 24 hours
-                issuer: process.env.JWT_ISSUER || 'lingaplink-healthcare',
-                audience: process.env.JWT_AUDIENCE || 'lingaplink-users',
+                issuer: process.env.AUTH_TOKEN_ISSUER || 'haliya-healthcare',
+                audience: process.env.AUTH_TOKEN_AUDIENCE || 'haliya-users',
                 clockTolerance: 30 // 30 seconds
             },
             
@@ -168,13 +168,13 @@ class SecurityConfig {
             warnings.push('Login attempt limit is high (>10 attempts)');
         }
 
-        // Validate JWT configuration
-        if (this.config.jwt.accessTokenExpiry < 5 * 60) {
-            issues.push('JWT access token expiry is too short (<5 minutes)');
+        // Validate token configuration
+        if (this.config.authToken.accessTokenExpiry < 5 * 60) {
+            issues.push('Access token expiry is too short (<5 minutes)');
         }
 
-        if (this.config.jwt.refreshTokenExpiry > 7 * 24 * 60 * 60) {
-            warnings.push('JWT refresh token expiry is very long (>7 days)');
+        if (this.config.authToken.refreshTokenExpiry > 7 * 24 * 60 * 60) {
+            warnings.push('Refresh token expiry is very long (>7 days)');
         }
 
         // Validate CSRF configuration
@@ -256,7 +256,7 @@ class SecurityConfig {
                 password: this.config.password,
                 session: this.config.session,
                 rateLimit: this.config.rateLimit,
-                jwt: this.config.jwt,
+                authToken: this.config.authToken,
                 csrf: this.config.csrf
             }
         };
@@ -299,13 +299,13 @@ class SecurityConfig {
      */
     validateEnvironmentVariables() {
         const required = [
-            'JWT_SECRET',
+            'AUTH_TOKEN_SECRET',
             'NODE_ENV'
         ];
 
         const optional = [
-            'JWT_ISSUER',
-            'JWT_AUDIENCE',
+            'AUTH_TOKEN_ISSUER',
+            'AUTH_TOKEN_AUDIENCE',
             'CSRF_SECRET'
         ];
 
@@ -319,10 +319,10 @@ class SecurityConfig {
             }
         }
 
-        // Check JWT secret strength
-        const jwtSecret = process.env.JWT_SECRET;
-        if (jwtSecret && (jwtSecret.length < 32 || jwtSecret === 'your-jwt-secret-key')) {
-            weak.push('JWT_SECRET is too weak or using default value');
+        // Check token secret strength
+        const tokenSecret = process.env.AUTH_TOKEN_SECRET;
+        if (tokenSecret && (tokenSecret.length < 32 || tokenSecret === 'your-auth-token-secret')) {
+            weak.push('AUTH_TOKEN_SECRET is too weak or using default value');
         }
 
         // Check CSRF secret strength

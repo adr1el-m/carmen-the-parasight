@@ -46,8 +46,8 @@ export class Environment {
     'herokuapp.com',
     'firebaseapp.com',
     'github.io',
-    'lingaplink.com', // Add your production domain
-    'carmen-para-sight.vercel.app'
+    'haliya.com', // Add your production domain
+    'haliya.vercel.app'
   ];
 
   constructor(private customProductionDomains: string[] = []) {

@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
-import { jwtAuthService, AuthUser, UserSession } from '../services/jwt-auth.service';
+import { sessionService, AuthUser, UserSession } from '../services/session.service';
 
 interface AuthContextType {
   // User state
@@ -10,7 +10,6 @@ interface AuthContextType {
   
   // Authentication methods
   signIn: (email: string, password: string) => Promise<AuthUser>;
-  signInWithGoogle: () => Promise<AuthUser>;
   signUp: (email: string, password: string, userData: Partial<AuthUser>) => Promise<AuthUser>;
   signOut: () => Promise<void>;
   
@@ -46,16 +45,16 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   useEffect(() => {
     const initializeAuth = () => {
       try {
-        const currentUser = jwtAuthService.getCurrentUser();
-        const currentSession = jwtAuthService.getCurrentSession();
+        const currentUser = sessionService.getCurrentUser();
+        const currentSession = sessionService.getCurrentSession();
         
         setUser(currentUser);
         setSession(currentSession);
         
         // Set up auth state listener
         const checkAuthState = () => {
-          const currentUser = jwtAuthService.getCurrentUser();
-          const currentSession = jwtAuthService.getCurrentSession();
+          const currentUser = sessionService.getCurrentUser();
+          const currentSession = sessionService.getCurrentSession();
           
           setUser(currentUser);
           setSession(currentSession);
@@ -79,10 +78,10 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   // Authentication methods
   const signIn = async (email: string, password: string): Promise<AuthUser> => {
     try {
-      const authUser = await jwtAuthService.signInWithEmail(email, password);
+      const authUser = await sessionService.signInWithEmail(email, password);
       setUser(authUser);
       
-      const currentSession = jwtAuthService.getCurrentSession();
+      const currentSession = sessionService.getCurrentSession();
       setSession(currentSession);
       
       return authUser;
@@ -92,27 +91,13 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     }
   };
 
-  const signInWithGoogle = async (): Promise<AuthUser> => {
-    try {
-      const authUser = await jwtAuthService.signInWithGoogle();
-      setUser(authUser);
-      
-      const currentSession = jwtAuthService.getCurrentSession();
-      setSession(currentSession);
-      
-      return authUser;
-    } catch (error) {
-      console.error('Google sign in failed:', error);
-      throw error;
-    }
-  };
 
   const signUp = async (email: string, password: string, userData: Partial<AuthUser>): Promise<AuthUser> => {
     try {
-      const authUser = await jwtAuthService.createUser(email, password, userData);
+      const authUser = await sessionService.createUser(email, password, userData);
       setUser(authUser);
       
-      const currentSession = jwtAuthService.getCurrentSession();
+      const currentSession = sessionService.getCurrentSession();
       setSession(currentSession);
       
       return authUser;
@@ -124,7 +109,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
   const signOut = async (): Promise<void> => {
     try {
-      await jwtAuthService.signOut();
+      await sessionService.signOut();
       setUser(null);
       setSession(null);
     } catch (error) {
@@ -136,11 +121,11 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   // Session management
   const refreshSession = async (): Promise<void> => {
     try {
-      await jwtAuthService.refreshSession();
+      await sessionService.refreshSession();
       
       // Update state after refresh
-      const currentUser = jwtAuthService.getCurrentUser();
-      const currentSession = jwtAuthService.getCurrentSession();
+      const currentUser = sessionService.getCurrentUser();
+      const currentSession = sessionService.getCurrentSession();
       
       setUser(currentUser);
       setSession(currentSession);
@@ -151,38 +136,38 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   };
 
   const isSessionValid = (): boolean => {
-    return jwtAuthService.isSessionValid();
+    return sessionService.isSessionValid();
   };
 
   const getSessionTimeRemaining = (): number => {
-    return jwtAuthService.getSessionTimeRemaining();
+    return sessionService.getSessionTimeRemaining();
   };
 
   // Permission checks
   const hasRole = (role: string): boolean => {
-    return jwtAuthService.hasRole(role);
+    return sessionService.hasRole(role);
   };
 
   const hasAnyRole = (roles: string[]): boolean => {
-    return jwtAuthService.hasAnyRole(roles);
+    return sessionService.hasAnyRole(roles);
   };
 
   const hasPermission = (permission: string): boolean => {
-    return jwtAuthService.hasPermission(permission);
+    return sessionService.hasPermission(permission);
   };
 
   const canPerformAction = (resource: string, action: string): boolean => {
-    return jwtAuthService.canPerformAction(resource, action);
+    return sessionService.canPerformAction(resource, action);
   };
 
   const hasFacilityAccess = (facilityId: string): boolean => {
-    return jwtAuthService.hasFacilityAccess(facilityId);
+    return sessionService.hasFacilityAccess(facilityId);
   };
 
   // User management
   const updatePassword = async (currentPassword: string, newPassword: string): Promise<void> => {
     try {
-      await jwtAuthService.updateUserPassword(currentPassword, newPassword);
+      await sessionService.updateUserPassword(currentPassword, newPassword);
     } catch (error) {
       console.error('Password update failed:', error);
       throw error;
@@ -190,7 +175,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   };
 
   const getCurrentUser = (): AuthUser | null => {
-    return jwtAuthService.getCurrentUser();
+    return sessionService.getCurrentUser();
   };
 
   const contextValue: AuthContextType = {
@@ -199,7 +184,6 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     isAuthenticated: !!user && !!session?.isActive,
     isLoading,
     signIn,
-    signInWithGoogle,
     signUp,
     signOut,
     refreshSession,

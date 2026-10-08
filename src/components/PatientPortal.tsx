@@ -1,12 +1,13 @@
 import React, { useState, useEffect, useRef, useCallback, useMemo, lazy, Suspense } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { auth } from '../config/firebase'
-import { signOut } from 'firebase/auth'
+import authService from '../services/auth-service'
+
+
 import '../styles/shared-header.css'
 import '../styles/patientPortal.css'
 import '../styles/csp-utilities.css'
 
-import QuotaStatusBanner from './QuotaStatusBanner'
+
 
 // Lazy load components for better performance
 const DashboardSection = lazy(() => import('./DashboardSection'))
@@ -414,8 +415,8 @@ const PatientPortal: React.FC = () => {
 
   useEffect(() => {
     console.log('🔍 PatientPortal useEffect triggered')
-    // Check authentication
-    const unsubscribe = auth.onAuthStateChanged(async (user) => {
+    // Check authentication using the custom authService
+    const unsubscribe = authService.onAuthStateChanged(async (user: any) => {
       console.log('🔍 Auth state changed:', user ? 'User logged in' : 'No user')
       
             if (user) {
@@ -445,7 +446,7 @@ const PatientPortal: React.FC = () => {
         // Try to load existing patient data from Firestore first
         try {
           console.log('📦 Attempting to load existing patient data from Firestore...')
-          const { getPatientData } = await import('../services/firestoredb.js')
+          const { getPatientData } = await import('../services/database.js')
           const existingPatientData = await getPatientData(user.uid)
           
           if (existingPatientData) {
@@ -469,7 +470,7 @@ const PatientPortal: React.FC = () => {
         // If no existing data, try to create patient document in Firestore
         try {
           console.log('📦 Creating new patient document in Firestore...')
-          const { createPatientDocument } = await import('../services/firestoredb.js')
+          const { createPatientDocument } = await import('../services/database.js')
           const firestorePatientData = await createPatientDocument(user, {
             firstName: user.displayName?.split(' ')[0] || '',
             lastName: user.displayName?.split(' ').slice(1).join(' ') || '',
@@ -500,7 +501,7 @@ const PatientPortal: React.FC = () => {
               gender: '',
               phone: '',
               address: '',
-              bio: 'Welcome to LingapLink!'
+              bio: 'Welcome to Haliya!'
             },
             medicalInfo: {
               conditions: {}
@@ -547,7 +548,7 @@ const PatientPortal: React.FC = () => {
     
     const setupRealTimeListener = async () => {
       try {
-        const { listenToPatientData } = await import('../services/firestoredb.js')
+        const { listenToPatientData } = await import('../services/database.js')
         const unsubscribe = listenToPatientData(user.uid, (updatedPatientData) => {
           console.log('🔄 Real-time update received:', updatedPatientData)
           console.log('📋 Appointments in update:', updatedPatientData?.activity?.appointments || [])
@@ -631,7 +632,7 @@ const PatientPortal: React.FC = () => {
 
   const handleLogout = useCallback(async () => {
     try {
-      await signOut(auth)
+      await console.log(null)
       navigate('/')
     } catch (error) {
       console.error('Logout error:', error)
@@ -911,8 +912,8 @@ const PatientPortal: React.FC = () => {
     console.log('🔄 Starting appointment booking...')
     
     try {
-      console.log('📦 Importing firestoredb...')
-      const { addAppointment, getPatientData } = await import('../services/firestoredb.js')
+      console.log('📦 Importing database service...')
+      const { addAppointment, getPatientData } = await import('../services/database.js')
       console.log('✅ addAppointment imported successfully')
       
       const appointmentData = {
@@ -1103,7 +1104,7 @@ const PatientPortal: React.FC = () => {
           console.log('📦 Attempting Firebase update...')
           console.log('🔐 User authentication status:', user.uid, user.email)
           
-          const { updatePatientPersonalInfo, getPatientData, createPatientDocument } = await import('../services/firestoredb.js')
+          const { updatePatientPersonalInfo, getPatientData, createPatientDocument } = await import('../services/database.js')
           
           // First check if patient document exists
           const existingPatientData = await getPatientData(user.uid)
@@ -1229,7 +1230,7 @@ const PatientPortal: React.FC = () => {
       if (user) {
         try {
           console.log('📦 Attempting Firebase update...')
-          const { addMedicalCondition } = await import('../services/firestoredb.js')
+          const { addMedicalCondition } = await import('../services/database.js')
           
           // Add timeout to prevent hanging
           const timeoutPromise = new Promise((_, reject) => {
@@ -1295,7 +1296,7 @@ const PatientPortal: React.FC = () => {
       if (user) {
         try {
           console.log('📦 Attempting Firebase update...')
-          const { addConsultationHistory } = await import('../services/firestoredb.js')
+          const { addConsultationHistory } = await import('../services/database.js')
           
           await addConsultationHistory(user.uid, {
             id: `consultation_${Date.now()}`,
@@ -1341,7 +1342,7 @@ const PatientPortal: React.FC = () => {
     }
     
     try {
-      const { removeMedicalCondition } = await import('../services/firestoredb.js')
+      const { removeMedicalCondition } = await import('../services/database.js')
       
       await removeMedicalCondition(user.uid, category, condition)
       
@@ -1400,7 +1401,7 @@ const PatientPortal: React.FC = () => {
       // Set flag to prevent real-time listener interference
       setIsPerformingDocumentOperation(true)
       
-      const { addPatientDocument } = await import('../services/firestoredb.js')
+      const { addPatientDocument } = await import('../services/database.js')
       
       // Upload document to Firestore and Firebase Storage
       const uploadedDocument = await addPatientDocument(user.uid, selectedFile, documentName || selectedFile.name)
@@ -1572,7 +1573,7 @@ const PatientPortal: React.FC = () => {
       // Try to remove from Firebase/Firestore
       try {
         console.log('📦 Attempting Firebase/Firestore removal...')
-        const { removePatientDocument } = await import('../services/firestoredb.js')
+        const { removePatientDocument } = await import('../services/database.js')
         
         await removePatientDocument(user.uid, documentId)
         
@@ -1674,8 +1675,8 @@ const PatientPortal: React.FC = () => {
     console.log('🔄 Starting appointment update...')
     
     try {
-      console.log('📦 Importing firestoredb...')
-      const { updateAppointment } = await import('../services/firestoredb.js')
+      console.log('📦 Importing database service...')
+      const { updateAppointment } = await import('../services/database.js')
       console.log('✅ updateAppointment imported successfully')
       
       const updatedAppointmentData = {
@@ -1701,7 +1702,7 @@ const PatientPortal: React.FC = () => {
       
       // Refresh patient data to show the updated appointment
       try {
-        const { getCurrentPatientData } = await import('../services/firestoredb.js')
+        const { getCurrentPatientData } = await import('../services/database.js')
         const updatedPatientData = await getCurrentPatientData()
         setPatientData(updatedPatientData)
         console.log('✅ Patient data refreshed with updated appointment')
@@ -1802,7 +1803,7 @@ const PatientPortal: React.FC = () => {
       // Try to delete from Firebase
       try {
         console.log('📦 Attempting Firebase deletion...')
-        const { deleteAppointment } = await import('../services/firestoredb.js')
+        const { deleteAppointment } = await import('../services/database.js')
         
         await deleteAppointment(user.uid, appointmentId)
         
@@ -1870,7 +1871,7 @@ const PatientPortal: React.FC = () => {
     
     setIsLoadingConsultationHistory(true)
     try {
-      const { getConsultationHistory } = await import('../services/firestoredb.js')
+      const { getConsultationHistory } = await import('../services/database.js')
       const history = await getConsultationHistory(user.uid)
       setConsultationHistory(history)
       console.log('✅ Consultation history loaded successfully')
@@ -1900,12 +1901,12 @@ const PatientPortal: React.FC = () => {
       
       // Try to remove from Firestore
       try {
-        console.log('📦 Attempting Firestore removal...')
-        const firestoredb: any = await import('../services/firestoredb.js')
+        console.log('📦 Attempting database removal...')
+        const database: any = await import('../services/database.js')
         
-        await firestoredb.removePatientConsultation(user.uid, consultationId)
+        await database.removePatientConsultation(user.uid, consultationId)
         
-        console.log('✅ Firestore removal successful!')
+        console.log('✅ Database removal successful!')
         showNotification('Consultation removed successfully!', 'success')
       } catch (firebaseError: any) {
         console.warn('⚠️ Firestore removal failed:', firebaseError)
@@ -1953,7 +1954,7 @@ const PatientPortal: React.FC = () => {
   }, [patientData?.personalInfo?.address])
 
   const getPatientBio = useCallback(() => {
-    return patientData?.personalInfo?.bio || 'Welcome to LingapLink!'
+    return patientData?.personalInfo?.bio || 'Welcome to Haliya!'
   }, [patientData?.personalInfo?.bio])
 
   const getPatientGender = useCallback(() => {
@@ -2227,7 +2228,7 @@ const PatientPortal: React.FC = () => {
   return (
     <div className="dashboard-layout" role="application" aria-label="Patient Portal Dashboard">
       {/* Quota Status Banner */}
-      <QuotaStatusBanner />
+      
       
       {/* Notification System */}
       <Suspense fallback={null}>

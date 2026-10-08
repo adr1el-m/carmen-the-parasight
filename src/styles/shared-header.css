@@ -1,7 +1,9 @@
+@import url('./breakpoints.css');
+
 /* public/pages/css/shared-header.css */
 
 /* Import standardized breakpoints */
-@import url('./breakpoints.css');
+
 
 :root {
   --primary-color: #0052cc; /* Darker blue for WCAG AA compliance */

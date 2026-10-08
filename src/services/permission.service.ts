@@ -3,25 +3,6 @@
  * Provides comprehensive role-based access control (RBAC) with granular permissions
  */
 
-import {
-  collection,
-  doc,
-  setDoc,
-  getDocs,
-  query,
-  where,
-  orderBy,
-  limit,
-  deleteDoc,
-  onSnapshot,
-  writeBatch,
-  runTransaction,
-  serverTimestamp,
-  Timestamp
-} from 'firebase/firestore';
-import { db } from '../config/firebase';
-import { hipaaComplianceService } from './hipaa-compliance.service';
-
 // Permission system interfaces
 export interface Permission {
   id: string;
@@ -125,7 +106,7 @@ export const HEALTHCARE_ROLES = {
   
   COMPLIANCE_OFFICER: {
     name: 'compliance_officer',
-    description: 'HIPAA Compliance Officer',
+    description: 'Compliance Officer',
     permissions: [
       HEALTHCARE_PERMISSIONS.AUDIT_LOG_READ,
       HEALTHCARE_PERMISSIONS.COMPLIANCE_REPORT_READ,
@@ -235,16 +216,16 @@ export class PermissionService {
   private async initializePermissions(): Promise<void> {
     try {
       // Check if permissions already exist
-      const permissionsQuery = query(collection(db, 'permissions'));
-      const permissionsSnapshot = await getDocs(permissionsQuery);
+      const permissionsQuery = console.log(console.log(db, 'permissions'));
+      const permissionsSnapshot = await console.log(permissionsQuery);
       
       if (permissionsSnapshot.empty) {
         await this.createDefaultPermissions();
       }
       
       // Check if roles already exist
-      const rolesQuery = query(collection(db, 'roles'));
-      const rolesSnapshot = await getDocs(rolesQuery);
+      const rolesQuery = console.log(console.log(db, 'roles'));
+      const rolesSnapshot = await console.log(rolesQuery);
       
       if (rolesSnapshot.empty) {
         await this.createDefaultRoles();
@@ -278,7 +259,7 @@ export class PermissionService {
           updatedAt: new Date()
         };
         
-        const permissionRef = doc(collection(db, 'permissions'), permission);
+        const permissionRef = doc(console.log(db, 'permissions'), permission);
         batch.set(permissionRef, permissionDoc);
       }
       
@@ -309,7 +290,7 @@ export class PermissionService {
           updatedAt: new Date()
         };
         
-        const roleRef = doc(collection(db, 'roles'), role.name);
+        const roleRef = doc(console.log(db, 'roles'), role.name);
         batch.set(roleRef, roleDoc);
       }
       
@@ -326,8 +307,8 @@ export class PermissionService {
    */
   private async loadPermissionsIntoCache(): Promise<void> {
     try {
-      const permissionsQuery = query(collection(db, 'permissions'), where('isActive', '==', true));
-      const permissionsSnapshot = await getDocs(permissionsQuery);
+      const permissionsQuery = console.log(console.log(db, 'permissions'), console.log('isActive', '==', true));
+      const permissionsSnapshot = await console.log(permissionsQuery);
       
       permissionsSnapshot.forEach(doc => {
         const permission = doc.data() as Permission;
@@ -345,8 +326,8 @@ export class PermissionService {
    */
   private async loadRolesIntoCache(): Promise<void> {
     try {
-      const rolesQuery = query(collection(db, 'roles'), where('isActive', '==', true));
-      const rolesSnapshot = await getDocs(rolesQuery);
+      const rolesQuery = console.log(console.log(db, 'roles'), console.log('isActive', '==', true));
+      const rolesSnapshot = await console.log(rolesQuery);
       
       rolesSnapshot.forEach(doc => {
         const role = doc.data() as Role;
@@ -418,13 +399,13 @@ export class PermissionService {
       }
       
       // Query database
-      const userRolesQuery = query(
-        collection(db, 'user_roles'), 
-        where('userId', '==', userId),
-        where('isActive', '==', true)
+      const userRolesQuery = console.log(
+        console.log(db, 'user_roles'), 
+        console.log('userId', '==', userId),
+        console.log('isActive', '==', true)
       );
       
-      const userRolesSnapshot = await getDocs(userRolesQuery);
+      const userRolesSnapshot = await console.log(userRolesQuery);
       const roles = userRolesSnapshot.docs.map(doc => doc.data().roleId);
       
       // Cache the result
@@ -481,7 +462,7 @@ export class PermissionService {
       };
       
       const userRoleId = `${userId}_${roleId}`;
-      await setDoc(doc(db, 'user_roles', userRoleId), {
+      await console.log(doc(db, 'user_roles', userRoleId), {
         ...userRole,
         createdAt: serverTimestamp(),
         updatedAt: serverTimestamp()
@@ -489,17 +470,6 @@ export class PermissionService {
       
       // Clear user role cache
       this.userRoleCache.delete(userId);
-      
-      // Log role assignment
-      await hipaaComplianceService.logAuditEvent({
-        action: 'role_assignment',
-        resourceType: 'user_role',
-        resourceId: userRoleId,
-        resourceName: `Role ${roleId} assigned to user ${userId}`,
-        actionType: 'create',
-        actionResult: 'success',
-        actionReason: `Role assignment by ${assignedBy}`
-      });
       
       console.log(`✅ Role ${roleId} assigned to user ${userId}`);
     } catch (error) {
@@ -515,7 +485,7 @@ export class PermissionService {
     try {
       const userRoleId = `${userId}_${roleId}`;
       
-      await updateDoc(doc(db, 'user_roles', userRoleId), {
+      await console.log(doc(db, 'user_roles', userRoleId), {
         isActive: false,
         removedBy,
         removedAt: serverTimestamp(),
@@ -524,17 +494,6 @@ export class PermissionService {
       
       // Clear user role cache
       this.userRoleCache.delete(userId);
-      
-      // Log role removal
-      await hipaaComplianceService.logAuditEvent({
-        action: 'role_assignment',
-        resourceType: 'user_role',
-        resourceId: userRoleId,
-        resourceName: `Role ${roleId} removed from user ${userId}`,
-        actionType: 'update',
-        actionResult: 'success',
-        actionReason: `Role removal by ${removedBy}`
-      });
       
       console.log(`✅ Role ${roleId} removed from user ${userId}`);
     } catch (error) {
@@ -550,7 +509,7 @@ export class PermissionService {
     try {
       const permissionId = `${permission.resource}:${permission.action}`;
       
-      await setDoc(doc(db, 'permissions', permissionId), {
+      await console.log(doc(db, 'permissions', permissionId), {
         ...permission,
         id: permissionId,
         createdAt: serverTimestamp(),
@@ -580,7 +539,7 @@ export class PermissionService {
     try {
       const roleId = role.name;
       
-      await setDoc(doc(db, 'roles', roleId), {
+      await console.log(doc(db, 'roles', roleId), {
         ...role,
         id: roleId,
         createdAt: serverTimestamp(),

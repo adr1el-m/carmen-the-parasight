@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { jwtAuthService } from '../services/jwt-auth.service';
+import { sessionService } from '../services/session.service';
 
 interface SessionManagerProps {
   children: React.ReactNode;
@@ -21,11 +21,11 @@ const SessionManager: React.FC<SessionManagerProps> = ({
   // Check session status periodically
   useEffect(() => {
     const checkSession = () => {
-      if (!jwtAuthService.isAuthenticated()) {
+      if (!sessionService.isAuthenticated()) {
         return;
       }
 
-      const remaining = jwtAuthService.getSessionTimeRemaining();
+      const remaining = sessionService.getSessionTimeRemaining();
       const warningTime = warningThreshold * 60 * 1000; // Convert to milliseconds
 
       if (remaining <= 0) {
@@ -58,7 +58,7 @@ const SessionManager: React.FC<SessionManagerProps> = ({
     if (!showWarning) return;
 
     const updateTime = () => {
-      const remaining = jwtAuthService.getSessionTimeRemaining();
+      const remaining = sessionService.getSessionTimeRemaining();
       setTimeRemaining(remaining);
 
       if (remaining <= 0) {
@@ -75,13 +75,13 @@ const SessionManager: React.FC<SessionManagerProps> = ({
     onSessionExpired?.();
     
     // Sign out user
-    jwtAuthService.signOut();
+    sessionService.console.log();
   }, [onSessionExpired]);
 
   const handleRefreshSession = async () => {
     try {
       setIsRefreshing(true);
-      await jwtAuthService.refreshSession();
+      await sessionService.refreshSession();
       
       // Hide warning after successful refresh
       setShowWarning(false);
@@ -98,7 +98,7 @@ const SessionManager: React.FC<SessionManagerProps> = ({
   const handleExtendSession = async () => {
     try {
       setIsRefreshing(true);
-      await jwtAuthService.refreshSession();
+      await sessionService.refreshSession();
       setShowWarning(false);
       console.log('✅ Session extended successfully');
     } catch (error) {
@@ -115,7 +115,7 @@ const SessionManager: React.FC<SessionManagerProps> = ({
     return `${minutes}:${seconds.toString().padStart(2, '0')}`;
   };
 
-  if (!jwtAuthService.isAuthenticated()) {
+  if (!sessionService.isAuthenticated()) {
     return <>{children}</>;
   }
 

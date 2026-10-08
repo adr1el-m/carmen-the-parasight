@@ -1,7 +1,10 @@
-/* LingapLink - Modern Healthcare Platform CSS */
+@import url('./breakpoints.css');
+
+
+/* Haliya - Modern Healthcare Platform CSS */
 
 /* Import standardized breakpoints */
-@import url('./breakpoints.css');
+
 
 :root {
   --primary-color: #0052cc; /* Darker blue for WCAG AA compliance */

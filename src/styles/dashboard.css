@@ -1,7 +1,9 @@
+@import url('./breakpoints.css');
+
 /* Patient Portal CSS - Complete Styles */
 
 /* Import standardized breakpoints */
-@import url('./breakpoints.css');
+
 
 :root {
     --primary-blue: #0040e7;

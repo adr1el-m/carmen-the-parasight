@@ -1,8 +1,8 @@
-import { GoogleGenerativeAI } from '@google/generative-ai'
+import Groq from 'groq-sdk'
 import { getAITriageConfig, isAITriageConfigured, getAITriageStatus } from '../config/ai-triage.config'
 
-// Initialize Gemini AI
-const genAI = new GoogleGenerativeAI(import.meta.env.VITE_GEMINI_API_KEY || '')
+// Initialize Groq AI
+const groq = new Groq({ apiKey: import.meta.env.VITE_GROQ_API_KEY || '', dangerouslyAllowBrowser: true })
 
 // Cache for urgency evaluations to avoid repeated API calls
 const urgencyCache = new Map<string, { level: string; urgency: string; timestamp: number }>()
@@ -74,7 +74,7 @@ export async function evaluateAppointmentUrgency(appointment: AppointmentData): 
       return fallbackUrgencyEvaluation(appointment)
     }
     
-    console.log(`✅ AI triage is configured and enabled, proceeding with Gemini evaluation...`)
+    console.log(`✅ AI triage is configured and enabled, proceeding with Groq evaluation...`)
 
     // Check cache first
     const cacheKey = generateCacheKey(appointment)
@@ -101,38 +101,35 @@ export async function evaluateAppointmentUrgency(appointment: AppointmentData): 
       return fallback
     }
 
-    console.log(`🔥 Evaluating urgency for appointment ${appointment.id} using Gemini AI...`)
+    console.log(`🔥 Evaluating urgency for appointment ${appointment.id} using Groq AI...`)
 
     // Record this request for rate limiting
     recordRequest()
 
-    // Prepare the prompt for Gemini AI
+    // Prepare the prompt for Groq AI
     const prompt = createUrgencyPrompt(appointment)
-    console.log(`📝 Prompt for Gemini:`, prompt)
-    
-    // Get Gemini model
-    console.log(`🤖 Initializing Gemini model...`)
-    const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' })
-    console.log(`✅ Gemini model initialized`)
+    console.log(`📝 Prompt for Groq:`, prompt)
     
     // Get configuration for timeout
     const config = getAITriageConfig()
     console.log(`⏱️ Using timeout:`, config.timeout)
     
     // Generate response with timeout
-    console.log(`🚀 Sending request to Gemini AI...`)
+    console.log(`🚀 Sending request to Groq AI...`)
     const result = await Promise.race([
-      model.generateContent(prompt),
+      groq.chat.completions.create({
+        messages: [{ role: 'user', content: prompt }],
+        model: 'llama3-8b-8192',
+      }),
       new Promise((_, reject) => 
         setTimeout(() => reject(new Error('Request timeout')), config.timeout)
       )
     ])
     
-    console.log(`📨 Received response from Gemini AI`)
-    const response = await (result as any).response
-    const text = response.text()
+    console.log(`📨 Received response from Groq AI`)
+    const text = (result as any).choices[0]?.message?.content || ''
     
-    console.log(`🎯 Gemini AI response for appointment ${appointment.id}:`, text)
+    console.log(`🎯 Groq AI response for appointment ${appointment.id}:`, text)
     
     // Parse the AI response
     const urgency = parseAIResponse(text)
@@ -188,7 +185,7 @@ export async function evaluateAppointmentUrgency(appointment: AppointmentData): 
 }
 
 /**
- * Creates a prompt for Gemini AI to evaluate urgency
+ * Creates a prompt for Groq AI to evaluate urgency
  */
 function createUrgencyPrompt(appointment: AppointmentData): string {
   const { symptoms = '', condition = '', notes = '', type = '', status = '' } = appointment
@@ -318,7 +315,7 @@ export function getCacheStats(): { size: number; entries: string[] } {
  * Checks if the service is properly configured
  */
 export function isServiceConfigured(): boolean {
-  return !!import.meta.env.VITE_GEMINI_API_KEY
+  return !!import.meta.env.VITE_GROQ_API_KEY
 }
 
 /**

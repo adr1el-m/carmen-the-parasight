@@ -1,5 +1,5 @@
 /**
- * Encryption Service for HIPAA Compliance
+ * Encryption Service for Healthcare Data
  * Implements proper AES-256-GCM encryption for sensitive healthcare data
  */
 
@@ -52,10 +52,10 @@ export class EncryptionService {
       // Generate initial encryption key
       await this.generateNewKey();
       
-      // Set up key rotation every 90 days
+      // Set up key rotation check every 24 hours
       this.keyRotationInterval = setInterval(async () => {
         await this.rotateKeys();
-      }, 90 * 24 * 60 * 60 * 1000); // 90 days
+      }, 24 * 60 * 60 * 1000); // 24 hours
       
       console.log('🔐 Encryption service initialized with key rotation');
     } catch (error) {

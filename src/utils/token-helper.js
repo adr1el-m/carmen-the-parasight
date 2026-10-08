@@ -1,17 +1,17 @@
 /**
- * Secure JWT Helper Utility
- * Provides secure JWT token generation, validation, and management
- * with protection against common JWT vulnerabilities
+ * Secure Token Helper Utility
+ * Provides secure authentication token generation, validation, and management
+ * with protection against common vulnerabilities
  */
 
-import jwt from 'jsonwebtoken';
+import tokenLib from 'jsonwebtoken';
 import crypto from 'crypto';
 
-class SecureJWTHelper {
+class TokenHelper {
     constructor() {
         this.algorithm = 'HS256';
-        this.issuer = process.env.JWT_ISSUER || 'lingaplink-healthcare';
-        this.audience = process.env.JWT_AUDIENCE || 'lingaplink-users';
+        this.issuer = process.env.AUTH_TOKEN_ISSUER || 'haliya-healthcare';
+        this.audience = process.env.AUTH_TOKEN_AUDIENCE || 'haliya-users';
         this.maxAge = 30 * 60; // 30 minutes in seconds
         this.refreshMaxAge = 24 * 60 * 60; // 24 hours in seconds
         
@@ -24,7 +24,7 @@ class SecureJWTHelper {
     }
 
     /**
-     * Generate a secure JWT token
+     * Generate a secure authentication token
      * @param {Object} payload - Token payload
      * @param {string} userId - User ID
      * @param {string} userRole - User role
@@ -59,14 +59,14 @@ class SecureJWTHelper {
                 type: isRefreshToken ? 'refresh' : 'access'
             };
 
-            // Get JWT secret
-            const secret = this.getJWTSecret();
+            // Get token secret
+            const secret = this.getTokenSecret();
             if (!secret) {
-                throw new Error('JWT secret not configured');
+                throw new Error('Authentication secret not configured');
             }
 
             // Generate token
-            const token = jwt.sign(claims, secret, {
+            const token = tokenLib.sign(claims, secret, {
                 algorithm: this.algorithm,
                 expiresIn: isRefreshToken ? this.refreshMaxAge : this.maxAge
             });
@@ -89,8 +89,8 @@ class SecureJWTHelper {
     }
 
     /**
-     * Verify and validate a JWT token
-     * @param {string} token - JWT token to verify
+     * Verify and validate an authentication token
+     * @param {string} token - Token to verify
      * @returns {Object} Decoded token payload
      */
     verifyToken(token) {
@@ -105,14 +105,14 @@ class SecureJWTHelper {
                 throw new Error('Token has been revoked');
             }
 
-            // Get JWT secret
-            const secret = this.getJWTSecret();
+            // Get token secret
+            const secret = this.getTokenSecret();
             if (!secret) {
-                throw new Error('JWT secret not configured');
+                throw new Error('Authentication secret not configured');
             }
 
             // Verify token signature and decode
-            const decoded = jwt.verify(token, secret, {
+            const decoded = tokenLib.verify(token, secret, {
                 algorithms: [this.algorithm],
                 issuer: this.issuer,
                 audience: this.audience,
@@ -176,7 +176,7 @@ class SecureJWTHelper {
             if (!token) return;
 
             // Decode token to get expiration
-            const decoded = jwt.decode(token);
+            const decoded = tokenLib.decode(token);
             if (!decoded || !decoded.exp) return;
 
             // Add to blacklist
@@ -264,14 +264,14 @@ class SecureJWTHelper {
     }
 
     /**
-     * Get JWT secret from environment
-     * @returns {string} JWT secret
+     * Get token secret from environment
+     * @returns {string} Token secret
      * @private
      */
-    getJWTSecret() {
-        const secret = process.env.JWT_SECRET;
-        if (!secret || secret === 'your-jwt-secret-key' || secret.length < 32) {
-            throw new Error('JWT secret not properly configured');
+    getTokenSecret() {
+        const secret = process.env.AUTH_TOKEN_SECRET;
+        if (!secret || secret === 'your-auth-token-secret' || secret.length < 32) {
+            throw new Error('Authentication secret not properly configured');
         }
         return secret;
     }
@@ -340,7 +340,7 @@ class SecureJWTHelper {
 
         for (const token of this.tokenBlacklist) {
             try {
-                const decoded = jwt.decode(token);
+                const decoded = tokenLib.decode(token);
                 if (decoded && decoded.exp && decoded.exp < now) {
                     this.tokenBlacklist.delete(token);
                     cleaned++;
@@ -357,14 +357,14 @@ class SecureJWTHelper {
 }
 
 // Create singleton instance
-const jwtHelper = new SecureJWTHelper();
+const tokenHelper = new TokenHelper();
 
 // Cleanup expired tokens every hour
 setInterval(() => {
-    jwtHelper.cleanup();
+    tokenHelper.cleanup();
 }, 60 * 60 * 1000);
 
-export default jwtHelper;
+export default tokenHelper;
 
 
 

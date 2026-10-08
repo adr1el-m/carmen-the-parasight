@@ -1,7 +1,9 @@
+@import url('./breakpoints.css');
+
 /* Partner SignIn Styles - Improved Design */
 
 /* Import standardized breakpoints */
-@import url('./breakpoints.css');
+
 
 /* CSS Variables */
 :root {

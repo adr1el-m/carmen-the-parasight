@@ -21,7 +21,7 @@ export interface AITriageConfig {
  */
 export const defaultAITriageConfig: AITriageConfig = {
   enabled: true, // ENABLED to use AI triage when available
-  apiKey: import.meta.env.VITE_GEMINI_API_KEY,
+  apiKey: import.meta.env.VITE_GROQ_API_KEY,
   rateLimit: {
     maxRequests: 10,
     windowMs: 60 * 1000, // 1 minute
@@ -39,7 +39,7 @@ export function getAITriageConfig(): AITriageConfig {
   return {
     ...defaultAITriageConfig,
     enabled: true, // ENABLED to use AI triage when available
-    apiKey: import.meta.env.VITE_GEMINI_API_KEY,
+    apiKey: import.meta.env.VITE_GROQ_API_KEY,
   }
 }
 

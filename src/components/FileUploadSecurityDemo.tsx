@@ -237,7 +237,7 @@ const FileUploadSecurityDemo: React.FC = () => {
           File Upload Security Demo
         </h1>
         <p className="text-lg text-gray-600 max-w-4xl mx-auto">
-          See how LingapLink protects against malicious file uploads and ensures secure document handling. 
+          See how Haliya protects against malicious file uploads and ensures secure document handling. 
           Watch our advanced security system analyze files in real-time and block potential threats.
         </p>
       </div>
@@ -498,7 +498,7 @@ const FileUploadSecurityDemo: React.FC = () => {
             </p>
           </div>
           <div className="p-4 bg-indigo-50 rounded-lg">
-            <h3 className="font-semibold text-indigo-800 mb-2">HIPAA Compliance</h3>
+            <h3 className="font-semibold text-indigo-800 mb-2">Healthcare Standards</h3>
             <p className="text-sm text-indigo-700">
               Meets healthcare security standards for document uploads and file handling
             </p>
@@ -508,7 +508,7 @@ const FileUploadSecurityDemo: React.FC = () => {
 
       {/* How It Works */}
       <div className="bg-white rounded-lg shadow-sm border p-6 mt-6">
-        <h2 className="text-xl font-bold text-gray-800 mb-4">How File Upload Security Works in LingapLink</h2>
+        <h2 className="text-xl font-bold text-gray-800 mb-4">How File Upload Security Works in Haliya</h2>
         <div className="space-y-4">
           <div className="flex items-start space-x-4">
             <div className="w-8 h-8 bg-blue-600 text-white rounded-full flex items-center justify-center text-sm font-bold flex-shrink-0">

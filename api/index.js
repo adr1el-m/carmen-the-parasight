@@ -1,5 +1,5 @@
 /**
- * LingapLink PH API Server
+ * Haliya PH API Server
  * 
  * Vercel Configuration:
  * - This file is deployed as a serverless function
@@ -13,20 +13,20 @@ const cors = require('cors');
 const helmet = require('helmet');
 const rateLimit = require('express-rate-limit');
 const { body, param, query, validationResult } = require('express-validator');
-const jwt = require('jsonwebtoken');
+const tokenLib = require('jsonwebtoken');
 
-// Import secure JWT helper
-let jwtHelper;
+// Import secure token helper
+let tokenHelper;
 try {
-  jwtHelper = require('../src/utils/jwt-helper.js').default;
+  tokenHelper = require('../src/utils/token-helper.js').default;
 } catch (err) {
-  console.warn('JWT helper not available, using basic JWT operations');
-  jwtHelper = null;
+  console.warn('Token helper not available, using basic token operations');
+  tokenHelper = null;
 }
 const morgan = require('morgan');
-const { GoogleGenerativeAI } = require('@google/generative-ai');
-const admin = require('firebase-admin');
-const { getAuth } = require('firebase-admin/auth');
+const Groq = require('groq-sdk');
+
+
 const mongoSanitize = require('express-mongo-sanitize');
 const xss = require('xss');
 const validator = require('validator');
@@ -75,7 +75,7 @@ app.use(helmet({
       fontSrc: ["'self'", "https://fonts.gstatic.com", "https://cdnjs.cloudflare.com"],
       scriptSrc: ["'self'", "https://cdn.jsdelivr.net", "https://apis.google.com", "https://www.gstatic.com"],
       imgSrc: ["'self'", "data:", "https:"],
-      connectSrc: ["'self'", "https://lingaplink-ph.firebaseapp.com", "https://api.gemini.google.com", "https://apis.google.com", "https://www.googleapis.com", "https://accounts.google.com"],
+      connectSrc: ["'self'", "https://api.groq.com"],
       objectSrc: ["'none'"],
       frameAncestors: ["'none'"],
       baseUri: ["'self'"],
@@ -84,7 +84,7 @@ app.use(helmet({
       mediaSrc: ["'self'"]
     }
   },
-  crossOriginEmbedderPolicy: false, // Disable for Firebase compatibility
+  crossOriginEmbedderPolicy: false,
   hsts: {
     maxAge: 31536000,
     includeSubDomains: true,
@@ -336,8 +336,8 @@ app.use(cors({
     const allowedOrigins = process.env.NODE_ENV === 'production' 
       ? [
           process.env.CORS_ORIGIN || 'https://your-vercel-domain.vercel.app',
-          'https://lingaplink.vercel.app',
-          'https://carmen-para-sight.vercel.app'
+          'https://haliya.vercel.app',
+          'https://haliya.vercel.app'
         ]
       : [
           'http://localhost:5173',
@@ -454,71 +454,12 @@ const sanitizeFilename = (filename) => {
     .trim();
 };
 
-// Firebase Configuration - using environment variables for security
-const firebaseConfig = {
-  apiKey: process.env.FIREBASE_API_KEY || process.env.VITE_FIREBASE_API_KEY,
-  authDomain: process.env.FIREBASE_AUTH_DOMAIN || process.env.VITE_FIREBASE_AUTH_DOMAIN,
-  projectId: process.env.FIREBASE_PROJECT_ID || process.env.VITE_FIREBASE_PROJECT_ID,
-  storageBucket: process.env.FIREBASE_STORAGE_BUCKET || process.env.VITE_FIREBASE_STORAGE_BUCKET,
-  messagingSenderId: process.env.FIREBASE_MESSAGING_SENDER_ID || process.env.VITE_FIREBASE_MESSAGING_SENDER_ID,
-  appId: process.env.FIREBASE_APP_ID || process.env.VITE_FIREBASE_APP_ID,
-  measurementId: process.env.FIREBASE_MEASUREMENT_ID || process.env.VITE_FIREBASE_MEASUREMENT_ID
-};
+// Initialize Postgres DB
+const db = require('./db');
+const bcrypt = require('bcryptjs');
 
-// Validate Firebase configuration
-if (!firebaseConfig.apiKey || !firebaseConfig.projectId) {
-  console.error('❌ Firebase configuration incomplete. Please check your environment variables.');
-  console.log('Required environment variables:');
-  console.log('- FIREBASE_API_KEY (or VITE_FIREBASE_API_KEY)');
-  console.log('- FIREBASE_PROJECT_ID (or VITE_FIREBASE_PROJECT_ID)');
-  console.log('- FIREBASE_AUTH_DOMAIN (or VITE_FIREBASE_AUTH_DOMAIN)');
-  process.exit(1);
-}
-
-// Initialize Firebase Admin (for server-side authentication)
-let adminAuth;
-let db;
-try {
-  if (!admin.apps.length) {
-    const serviceAccount = process.env.FIREBASE_SERVICE_ACCOUNT ? JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT) : null;
-    
-    if (serviceAccount) {
-      admin.initializeApp({
-        credential: admin.credential.cert(serviceAccount),
-        projectId: firebaseConfig.projectId
-      });
-    } else if (process.env.GOOGLE_APPLICATION_CREDENTIALS) {
-      // For production environments like Google Cloud Run/Functions
-      admin.initializeApp({
-        credential: admin.credential.applicationDefault(),
-        projectId: firebaseConfig.projectId
-      });
-    } else {
-      console.warn('⚠️ Firebase Admin SDK not initialized. Missing FIREBASE_SERVICE_ACCOUNT or GOOGLE_APPLICATION_CREDENTIALS.');
-    }
-  }
-  
-  if (admin.apps.length > 0) {
-    adminAuth = admin.auth();
-    db = admin.firestore();
-    console.log('✅ Firebase Admin SDK initialized successfully.');
-  } else {
-    // Mocking auth/db for local development without credentials
-    console.warn('⚠️ Using mocked Firebase services for development.');
-    adminAuth = null;
-    db = null;
-  }
-
-} catch (error) {
-  console.error('❌ Firebase Admin initialization failed:', error);
-  // Fallback to mock objects to prevent crashes
-  adminAuth = null;
-  db = null;
-}
-
-// Initialize Gemini AI
-const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || process.env.VITE_GEMINI_API_KEY);
-const model = genAI.getGenerativeModel({ model: "gemini-pro" });
+// Initialize Groq AI
+const groq = new Groq({ apiKey: process.env.GROQ_API_KEY || process.env.VITE_GROQ_API_KEY });
 
 // Authentication Middleware
 const authenticateUser = async (req, res, next) => {
@@ -534,36 +475,30 @@ const authenticateUser = async (req, res, next) => {
     
     const token = authHeader.split(' ')[1];
     
-    // Verify Firebase ID token
-    if (adminAuth) {
-      const decodedToken = await adminAuth.verifyIdToken(token);
-      req.user = decodedToken;
-    } else {
-      // Secure JWT verification using JWT helper
-      if (jwtHelper) {
-        try {
-          const decoded = jwtHelper.verifyToken(token);
-          req.user = decoded;
-        } catch (jwtError) {
-          console.error('JWT verification failed:', jwtError.message);
-          return res.status(401).json({ 
-            error: 'Unauthorized', 
-            message: 'Invalid or expired token' 
-          });
-        }
-      } else {
-        // Fallback to basic JWT verification with validation
-        const jwtSecret = process.env.JWT_SECRET;
-        if (!jwtSecret || jwtSecret === 'fallback-secret' || jwtSecret.length < 32) {
-          console.error('❌ Invalid JWT secret configuration');
-          return res.status(500).json({ 
-            error: 'Server configuration error', 
-            message: 'Authentication service unavailable' 
-          });
-        }
-        const decoded = jwt.verify(token, jwtSecret);
+    // Secure token verification using token helper
+    if (tokenHelper) {
+      try {
+        const decoded = tokenHelper.verifyToken(token);
         req.user = decoded;
+      } catch (tokenError) {
+        console.error('Token verification failed:', tokenError.message);
+        return res.status(401).json({ 
+          error: 'Unauthorized', 
+          message: 'Invalid or expired token' 
+        });
       }
+    } else {
+      // Fallback to basic token verification with validation
+      const tokenSecret = process.env.AUTH_TOKEN_SECRET;
+      if (!tokenSecret || tokenSecret === 'fallback-secret' || tokenSecret.length < 32) {
+        console.error('❌ Invalid authentication secret configuration');
+        return res.status(500).json({ 
+          error: 'Server configuration error', 
+          message: 'Authentication service unavailable' 
+        });
+      }
+      const decoded = tokenLib.verify(token, tokenSecret);
+      req.user = decoded;
     }
     
     next();
@@ -584,34 +519,29 @@ const optionalAuth = async (req, res, next) => {
     if (authHeader && authHeader.startsWith('Bearer ')) {
       const token = authHeader.split(' ')[1];
       
-      if (adminAuth) {
-        const decodedToken = await adminAuth.verifyIdToken(token);
-        req.user = decodedToken;
+      // Secure token verification using token helper
+      if (tokenHelper) {
+        try {
+          const decoded = tokenHelper.verifyToken(token);
+          req.user = decoded;
+        } catch (tokenError) {
+          console.error('Token verification failed:', tokenError.message);
+          // Continue without authentication for optional auth
+          return next();
+        }
       } else {
-        // Secure JWT verification using JWT helper
-        if (jwtHelper) {
-          try {
-            const decoded = jwtHelper.verifyToken(token);
-            req.user = decoded;
-          } catch (jwtError) {
-            console.error('JWT verification failed:', jwtError.message);
-            // Continue without authentication for optional auth
-            return next();
-          }
-        } else {
-          // Fallback to basic JWT verification with validation
-          const jwtSecret = process.env.JWT_SECRET;
-          if (!jwtSecret || jwtSecret === 'fallback-secret' || jwtSecret.length < 32) {
-            console.error('❌ Invalid JWT secret configuration');
-            return next();
-          }
-          try {
-            const decoded = jwt.verify(token, jwtSecret);
-            req.user = decoded;
-          } catch (jwtError) {
-            console.error('JWT verification failed:', jwtError.message);
-            return next();
-          }
+        // Fallback to basic token verification with validation
+        const tokenSecret = process.env.AUTH_TOKEN_SECRET;
+        if (!tokenSecret || tokenSecret === 'fallback-secret' || tokenSecret.length < 32) {
+          console.error('❌ Invalid authentication secret configuration');
+          return next();
+        }
+        try {
+          const decoded = tokenLib.verify(token, tokenSecret);
+          req.user = decoded;
+        } catch (tokenError) {
+          console.error('Token verification failed:', tokenError.message);
+          return next();
         }
       }
     }
@@ -706,11 +636,61 @@ const errorHandler = (err, req, res, next) => {
   errorSanitizer.secureErrorHandler(err, req, res, next);
 };
 
+// Auth Routes
+app.post('/api/auth/register', authLimiter, async (req, res) => {
+  try {
+    const { email, password, firstName, lastName } = req.body;
+    if (!email || !password) return res.status(400).json({ error: 'Email and password required' });
+    
+    // Check if user exists
+    const existing = await db.query('SELECT id FROM users WHERE email = $1', [email]);
+    if (existing.rows.length > 0) return res.status(400).json({ error: 'Email already exists' });
+    
+    const hash = await bcrypt.hash(password, 10);
+    const result = await db.query(
+      'INSERT INTO users (email, password_hash) VALUES ($1, $2) RETURNING id, email, role',
+      [email, hash]
+    );
+    
+    const user = result.rows[0];
+    
+    // Create patient record
+    await db.query(
+      'INSERT INTO patients (id, user_id, email, personal_info) VALUES (gen_random_uuid(), $1, $2, $3)',
+      [user.id, email, { firstName, lastName, fullName: `${firstName} ${lastName}` }]
+    );
+    
+    const token = tokenLib.sign({ uid: user.id, email: user.email, role: user.role }, process.env.AUTH_TOKEN_SECRET || 'fallback-secret', { expiresIn: '24h' });
+    res.json({ token, user, patientId });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
+app.post('/api/auth/login', authLimiter, async (req, res) => {
+  try {
+    const { email, password } = req.body;
+    const result = await db.query('SELECT * FROM users WHERE email = $1', [email]);
+    if (result.rows.length === 0) return res.status(401).json({ error: 'Invalid credentials' });
+    
+    const user = result.rows[0];
+    const match = await bcrypt.compare(password, user.password_hash);
+    if (!match) return res.status(401).json({ error: 'Invalid credentials' });
+    
+    const token = tokenLib.sign({ uid: user.id, email: user.email, role: user.role }, process.env.AUTH_TOKEN_SECRET || 'fallback-secret', { expiresIn: '24h' });
+    res.json({ token, user: { id: user.id, email: user.email, role: user.role } });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
 // Health check endpoint (no auth required) - Light rate limiting
 app.get('/api/health', lightLimiter, (req, res) => {
   res.json({ 
     status: 'OK', 
-    message: 'LingapLink PH API is running',
+    message: 'Haliya PH API is running',
     timestamp: new Date().toISOString(),
     version: process.env.npm_package_version || '1.0.0'
   });
@@ -912,7 +892,7 @@ app.get('/api/surgery/queue',
       },
       {
         id: '3',
-        patientName: 'Carmen Dela Cruz',
+        patientName: 'haliya Dela Cruz',
         patientId: 'patient_003',
         procedure: 'Ovarian Cyst Surgery',
         urgency: 'High',
@@ -1063,10 +1043,10 @@ app.post('/api/or/optimize',
         specialty: or.specialty
       }));
       
-      if (!genAI) {
+      if (!groq) {
         return res.status(503).json({ 
           error: 'AI Service Unavailable',
-          message: 'Gemini AI is not configured. Please check your API key.'
+          message: 'Groq AI is not configured. Please check your API key.'
         });
       }
       
@@ -1088,9 +1068,8 @@ app.post('/api/or/optimize',
       Keep suggestions practical and implementable.
       `;
 
-      const result = await model.generateContent(prompt);
-      const response = await result.response;
-      let suggestions = response.text();
+      const result = await groq.chat.completions.create({ messages: [{ role: 'user', content: prompt }], model: 'llama3-8b-8192' });
+      let suggestions = result.choices[0]?.message?.content || '[]';
       
       // Try to parse as JSON, fallback to default suggestions if parsing fails
       try {
@@ -1287,7 +1266,7 @@ app.post('/api/telemedicine/schedule-offline',
         });
       }
       
-      // In production, save to Firebase
+      // Save to database
       const consultation = {
         id: `consult_${Date.now()}`,
         ...sanitizedData,
@@ -1331,7 +1310,7 @@ app.post('/api/ai/consultation',
       const sanitizedSymptoms = symptoms.trim().substring(0, 1000);
       const sanitizedHistory = patientHistory ? patientHistory.trim().substring(0, 2000) : '';
       
-      if (!genAI) {
+      if (!groq) {
         return res.status(503).json({ 
           error: 'AI Service Unavailable',
           message: 'AI consultation service is temporarily unavailable. Please consult with a healthcare provider directly.'
@@ -1339,7 +1318,7 @@ app.post('/api/ai/consultation',
       }
       
       const prompt = `
-      As a medical AI assistant for LingapLink PH, provide a preliminary assessment for a Filipino patient:
+      As a medical AI assistant for Haliya PH, provide a preliminary assessment for a Filipino patient:
       
       Symptoms: ${sanitizedSymptoms}
       Patient History: ${sanitizedHistory}
@@ -1396,67 +1375,36 @@ app.post('/api/ai/consultation',
 );
 
 // Patient portal endpoints (requires authentication and parameter validation) - Medium rate limiting
+
 app.get('/api/patient/:id', 
   mediumLimiter,
   authenticateUser,
-  requireRole(['admin', 'doctor', 'nurse', 'patient']),
-  [
-    param('id')
-      .isString()
-      .isLength({ min: 1, max: 50 })
-      .matches(/^[a-zA-Z0-9_-]+$/)
-      .withMessage('Invalid patient ID format')
-  ],
-  validateInput,
   async (req, res) => {
     try {
       const { id } = req.params;
       const userId = req.user.uid;
-      const userRole = req.user.role || req.user.custom_claims?.role;
       
-      // Sanitize patient ID
-      const sanitizedId = sanitizeString(id, 50);
-      
-      // Authorization check: patients can only access their own data
-      if (userRole === 'patient' && sanitizedId !== userId) {
-        return res.status(403).json({ 
-          error: 'Forbidden',
-          message: 'You can only access your own patient data'
-        });
+      let queryResult;
+      if (id === 'me') {
+        queryResult = await db.query('SELECT * FROM patients WHERE user_id = ', [userId]);
+      } else {
+        queryResult = await db.query('SELECT * FROM patients WHERE id =  OR user_id = ', [id]);
       }
       
-      // Sample patient data - in production, fetch from Firebase
-      const patient = {
-        id: sanitizedId,
-        name: 'Maria Santos',
-        age: 34,
-        condition: 'Uterine Fibroids',
-        nextAppointment: '2024-01-15',
-        lastVisit: '2023-12-10',
-        medications: ['Ibuprofen 400mg', 'Iron supplements'],
-        documents: [
-          { name: 'Lab Results', type: 'PDF', date: '2024-01-10' },
-          { name: 'Ultrasound Report', type: 'PDF', date: '2023-12-08' }
-        ],
-        contactInfo: {
-          email: 'maria.santos@email.com',
-          phone: '+63 917 123 4567'
-        },
-        emergencyContact: {
-          name: 'Juan Santos',
-          relationship: 'Spouse',
-          phone: '+63 917 987 6543'
-        },
-        lastUpdated: new Date().toISOString()
-      };
+      if (queryResult.rows.length === 0) {
+        return res.status(404).json({ error: 'Patient not found' });
+      }
+      
+      const patient = queryResult.rows[0];
+      
+      // Ensure users only access their own data unless they are admins/doctors
+      if (req.user.role === 'patient' && patient.user_id !== userId) {
+        return res.status(403).json({ error: 'Forbidden' });
+      }
       
       res.json(patient);
     } catch (error) {
-      const sanitized = errorSanitizer.sanitizeError(error, { context: 'fetch-patient-data' });
-      res.status(500).json({ 
-        error: 'Failed to fetch patient data',
-        ...sanitized
-      });
+      res.status(500).json({ error: 'Failed to fetch patient data' });
     }
   }
 );
@@ -1518,54 +1466,458 @@ app.get('/api/analytics/wait-times',
 );
 
 // Save patient data (requires authentication and validation) - Data modification rate limiting
+
 app.post('/api/patient', 
   modificationLimiter,
   authenticateUser,
-  requireRole(['admin', 'doctor', 'nurse']),
-  [
-    body('name').isString().isLength({ min: 2, max: 100 }).withMessage('Name must be between 2 and 100 characters'),
-    body('age').isInt({ min: 0, max: 150 }).withMessage('Age must be a valid number between 0 and 150'),
-    body('condition').optional().isString().isLength({ max: 500 }).withMessage('Condition must be less than 500 characters'),
-    body('medications').optional().isArray().withMessage('Medications must be an array'),
-    body('contactInfo.email').optional().isEmail().withMessage('Please provide a valid email'),
-    body('contactInfo.phone').optional().isString().isLength({ min: 10, max: 20 }).withMessage('Phone number must be between 10 and 20 characters')
-  ],
-  validateInput,
   async (req, res) => {
     try {
       const patientData = req.body;
       const userId = req.user.uid;
       
-      // Input sanitization
-      const sanitizedData = {
-        ...patientData,
-        name: patientData.name.trim(),
-        age: parseInt(patientData.age),
-        condition: patientData.condition ? patientData.condition.trim() : '',
-        medications: patientData.medications || [],
-        contactInfo: {
-          email: patientData.contactInfo?.email?.trim() || '',
-          phone: patientData.contactInfo?.phone?.trim() || ''
-        },
-        createdBy: userId,
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString()
-      };
+      const updateResult = await db.query(
+        'UPDATE patients SET personal_info = , medical_info = , settings = , updated_at = CURRENT_TIMESTAMP WHERE user_id =  RETURNING *',
+        [patientData.personal_info || '{}', patientData.medical_info || '{}', patientData.settings || '{}', userId]
+      );
       
-      // In production, save to Firebase
-      const docRef = db.collection('patients').doc(patientData.id || Date.now().toString());
-      await docRef.set(sanitizedData);
+      if (updateResult.rows.length === 0) {
+        return res.status(404).json({ error: 'Patient not found' });
+      }
       
-      res.json({ 
-        success: true, 
-        message: 'Patient data saved successfully',
-        patientId: docRef.id,
-        timestamp: new Date().toISOString()
+      res.json({ success: true, message: 'Patient saved successfully', data: updateResult.rows[0] });
+    } catch (error) {
+      res.status(500).json({ error: 'Failed to save patient data' });
+    }
+  }
+);
+
+// Appointments endpoints (requires authentication) - Medium rate limiting
+
+// Get appointments for a patient
+app.get('/api/appointments/patient/:patientId',
+  mediumLimiter,
+  authenticateUser,
+  [
+    param('patientId')
+      .isString()
+      .isLength({ min: 1, max: 100 })
+      .withMessage('Patient ID is required')
+  ],
+  validateInput,
+  async (req, res) => {
+    try {
+      const { patientId } = req.params;
+      const userId = req.user.uid;
+      
+      // Ensure users can only access their own appointments unless they're admin/doctor
+      if (req.user.role === 'patient' && patientId !== userId) {
+        return res.status(403).json({ error: 'Forbidden' });
+      }
+      
+      const result = await db.query(
+        'SELECT * FROM appointments WHERE patient_id = $1 ORDER BY appointment_date DESC, appointment_time DESC',
+        [patientId]
+      );
+      
+      res.json({
+        appointments: result.rows,
+        totalCount: result.rows.length
       });
     } catch (error) {
-      const sanitized = errorSanitizer.sanitizeError(error, { context: 'save-patient-data' });
-      res.status(500).json({ 
-        error: 'Failed to save patient data',
+      console.error('Failed to fetch patient appointments:', error);
+      const sanitized = errorSanitizer.sanitizeError(error, { context: 'fetch-patient-appointments' });
+      res.status(500).json({
+        error: 'Failed to fetch appointments',
+        ...sanitized
+      });
+    }
+  }
+);
+
+// Get appointments for a facility
+app.get('/api/appointments/facility/:facilityId',
+  mediumLimiter,
+  authenticateUser,
+  requireRole(['admin', 'doctor', 'nurse']),
+  [
+    param('facilityId')
+      .isString()
+      .isLength({ min: 1, max: 100 })
+      .withMessage('Facility ID is required')
+  ],
+  validateInput,
+  async (req, res) => {
+    try {
+      const { facilityId } = req.params;
+      
+      const result = await db.query(
+        `SELECT a.*, p.personal_info 
+         FROM appointments a 
+         LEFT JOIN patients p ON a.patient_id = p.id 
+         WHERE a.facility_id = $1 
+         ORDER BY a.appointment_date DESC, a.appointment_time DESC`,
+        [facilityId]
+      );
+      
+      res.json({
+        appointments: result.rows,
+        totalCount: result.rows.length
+      });
+    } catch (error) {
+      console.error('Failed to fetch facility appointments:', error);
+      const sanitized = errorSanitizer.sanitizeError(error, { context: 'fetch-facility-appointments' });
+      res.status(500).json({
+        error: 'Failed to fetch appointments',
+        ...sanitized
+      });
+    }
+  }
+);
+
+// Create new appointment
+app.post('/api/appointments',
+  modificationLimiter,
+  authenticateUser,
+  [
+    body('patientId')
+      .isString()
+      .isLength({ min: 1, max: 100 })
+      .withMessage('Patient ID is required'),
+    body('facilityId')
+      .isString()
+      .isLength({ min: 1, max: 100 })
+      .withMessage('Facility ID is required'),
+    body('doctorName')
+      .optional()
+      .isString()
+      .isLength({ max: 255 })
+      .withMessage('Doctor name must be under 255 characters'),
+    body('specialty')
+      .optional()
+      .isString()
+      .isLength({ max: 255 })
+      .withMessage('Specialty must be under 255 characters'),
+    body('appointmentType')
+      .isString()
+      .isLength({ min: 1, max: 100 })
+      .withMessage('Appointment type is required'),
+    body('appointmentDate')
+      .isISO8601()
+      .withMessage('Valid appointment date is required'),
+    body('appointmentTime')
+      .matches(/^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/)
+      .withMessage('Valid appointment time is required (HH:MM format)'),
+    body('notes')
+      .optional()
+      .isString()
+      .isLength({ max: 1000 })
+      .withMessage('Notes must be under 1000 characters')
+  ],
+  validateInput,
+  async (req, res) => {
+    try {
+      const { patientId, facilityId, doctorName, specialty, appointmentType, appointmentDate, appointmentTime, notes } = req.body;
+      const userId = req.user.uid;
+      
+      // Ensure patients can only create appointments for themselves
+      if (req.user.role === 'patient' && patientId !== userId) {
+        return res.status(403).json({ error: 'Forbidden: Cannot create appointments for other patients' });
+      }
+      
+      // Validate facility exists
+      const facilityCheck = await db.query(
+        'SELECT id FROM facilities WHERE (id::text = $1 OR uid = $1) AND is_active = true',
+        [facilityId]
+      );
+      
+      if (facilityCheck.rows.length === 0) {
+        return res.status(404).json({ error: 'Facility not found or inactive' });
+      }
+      
+      const actualFacilityId = facilityCheck.rows[0].id;
+      
+      // Validate patient exists
+      const patientCheck = await db.query(
+        'SELECT id FROM patients WHERE (id::text = $1 OR user_id::text = $1)',
+        [patientId]
+      );
+      
+      if (patientCheck.rows.length === 0) {
+        return res.status(404).json({ error: 'Patient not found' });
+      }
+      
+      const actualPatientId = patientCheck.rows[0].id;
+      
+      // Create appointment
+      const result = await db.query(
+        `INSERT INTO appointments 
+         (patient_id, facility_id, doctor_name, specialty, appointment_type, appointment_date, appointment_time, status, notes, data) 
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10) 
+         RETURNING *`,
+        [
+          actualPatientId,
+          actualFacilityId,
+          doctorName || null,
+          specialty || null,
+          appointmentType,
+          appointmentDate,
+          appointmentTime,
+          'pending',
+          notes || null,
+          JSON.stringify({ createdBy: userId })
+        ]
+      );
+      
+      res.status(201).json({
+        success: true,
+        message: 'Appointment created successfully',
+        appointment: result.rows[0]
+      });
+    } catch (error) {
+      console.error('Failed to create appointment:', error);
+      const sanitized = errorSanitizer.sanitizeError(error, { context: 'create-appointment' });
+      res.status(500).json({
+        error: 'Failed to create appointment',
+        ...sanitized
+      });
+    }
+  }
+);
+
+// Update appointment status
+app.patch('/api/appointments/:id/status',
+  modificationLimiter,
+  authenticateUser,
+  [
+    param('id')
+      .isUUID()
+      .withMessage('Valid appointment ID is required'),
+    body('status')
+      .isIn(['pending', 'confirmed', 'cancelled', 'completed', 'no-show'])
+      .withMessage('Invalid status')
+  ],
+  validateInput,
+  async (req, res) => {
+    try {
+      const { id } = req.params;
+      const { status } = req.body;
+      const userId = req.user.uid;
+      
+      // Check if appointment exists and user has permission
+      const appointmentCheck = await db.query(
+        'SELECT patient_id FROM appointments WHERE id = $1',
+        [id]
+      );
+      
+      if (appointmentCheck.rows.length === 0) {
+        return res.status(404).json({ error: 'Appointment not found' });
+      }
+      
+      // Patients can only update their own appointments
+      if (req.user.role === 'patient' && appointmentCheck.rows[0].patient_id !== userId) {
+        return res.status(403).json({ error: 'Forbidden' });
+      }
+      
+      const result = await db.query(
+        'UPDATE appointments SET status = $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2 RETURNING *',
+        [status, id]
+      );
+      
+      res.json({
+        success: true,
+        message: 'Appointment status updated',
+        appointment: result.rows[0]
+      });
+    } catch (error) {
+      console.error('Failed to update appointment status:', error);
+      const sanitized = errorSanitizer.sanitizeError(error, { context: 'update-appointment-status' });
+      res.status(500).json({
+        error: 'Failed to update appointment status',
+        ...sanitized
+      });
+    }
+  }
+);
+
+// Delete appointment
+app.delete('/api/appointments/:id',
+  modificationLimiter,
+  authenticateUser,
+  [
+    param('id')
+      .isUUID()
+      .withMessage('Valid appointment ID is required')
+  ],
+  validateInput,
+  async (req, res) => {
+    try {
+      const { id } = req.params;
+      const userId = req.user.uid;
+      
+      // Check if appointment exists and user has permission
+      const appointmentCheck = await db.query(
+        'SELECT patient_id FROM appointments WHERE id = $1',
+        [id]
+      );
+      
+      if (appointmentCheck.rows.length === 0) {
+        return res.status(404).json({ error: 'Appointment not found' });
+      }
+      
+      // Patients can only delete their own appointments
+      if (req.user.role === 'patient' && appointmentCheck.rows[0].patient_id !== userId) {
+        return res.status(403).json({ error: 'Forbidden' });
+      }
+      
+      await db.query('DELETE FROM appointments WHERE id = $1', [id]);
+      
+      res.json({
+        success: true,
+        message: 'Appointment deleted successfully'
+      });
+    } catch (error) {
+      console.error('Failed to delete appointment:', error);
+      const sanitized = errorSanitizer.sanitizeError(error, { context: 'delete-appointment' });
+      res.status(500).json({
+        error: 'Failed to delete appointment',
+        ...sanitized
+      });
+    }
+  }
+);
+
+// Facilities endpoints (public access with optional auth) - Light rate limiting
+app.get('/api/facilities', 
+  lightLimiter,
+  optionalAuth,
+  [
+    query('limit')
+      .optional()
+      .isInt({ min: 1, max: 100 })
+      .withMessage('Limit must be between 1 and 100'),
+    query('offset')
+      .optional()
+      .isInt({ min: 0 })
+      .withMessage('Offset must be a non-negative integer'),
+    query('city')
+      .optional()
+      .isString()
+      .isLength({ min: 1, max: 100 })
+      .withMessage('City must be under 100 characters'),
+    query('type')
+      .optional()
+      .isString()
+      .isLength({ min: 1, max: 100 })
+      .withMessage('Type must be under 100 characters'),
+    query('searchable')
+      .optional()
+      .isBoolean()
+      .withMessage('Searchable must be a boolean')
+  ],
+  validateInput,
+  async (req, res) => {
+    try {
+      const { limit = 50, offset = 0, city, type, searchable = true } = req.query;
+      
+      let queryText = 'SELECT * FROM facilities WHERE is_active = true';
+      const queryParams = [];
+      let paramCount = 1;
+      
+      if (searchable) {
+        queryText += ` AND is_searchable = true`;
+      }
+      
+      if (city) {
+        queryText += ` AND LOWER(city) = LOWER($${paramCount})`;
+        queryParams.push(city);
+        paramCount++;
+      }
+      
+      if (type) {
+        queryText += ` AND LOWER(type) = LOWER($${paramCount})`;
+        queryParams.push(type);
+        paramCount++;
+      }
+      
+      queryText += ` ORDER BY created_at DESC LIMIT $${paramCount} OFFSET $${paramCount + 1}`;
+      queryParams.push(parseInt(limit), parseInt(offset));
+      
+      const result = await db.query(queryText, queryParams);
+      
+      // Get total count
+      let countQuery = 'SELECT COUNT(*) FROM facilities WHERE is_active = true';
+      const countParams = [];
+      let countParamIndex = 1;
+      
+      if (searchable) {
+        countQuery += ` AND is_searchable = true`;
+      }
+      
+      if (city) {
+        countQuery += ` AND LOWER(city) = LOWER($${countParamIndex})`;
+        countParams.push(city);
+        countParamIndex++;
+      }
+      
+      if (type) {
+        countQuery += ` AND LOWER(type) = LOWER($${countParamIndex})`;
+        countParams.push(type);
+      }
+      
+      const countResult = await db.query(countQuery, countParams);
+      const totalCount = parseInt(countResult.rows[0].count);
+      
+      res.json({
+        facilities: result.rows,
+        totalCount,
+        limit: parseInt(limit),
+        offset: parseInt(offset),
+        lastUpdated: new Date().toISOString()
+      });
+    } catch (error) {
+      console.error('Failed to fetch facilities:', error);
+      const sanitized = errorSanitizer.sanitizeError(error, { context: 'fetch-facilities' });
+      res.status(500).json({
+        error: 'Failed to fetch facilities',
+        ...sanitized
+      });
+    }
+  }
+);
+
+// Get single facility by ID (public access) - Light rate limiting
+app.get('/api/facilities/:id',
+  lightLimiter,
+  optionalAuth,
+  [
+    param('id')
+      .isString()
+      .isLength({ min: 1, max: 100 })
+      .withMessage('Facility ID is required')
+  ],
+  validateInput,
+  async (req, res) => {
+    try {
+      const { id } = req.params;
+      
+      const result = await db.query(
+        'SELECT * FROM facilities WHERE (uid = $1 OR id::text = $1) AND is_active = true',
+        [id]
+      );
+      
+      if (result.rows.length === 0) {
+        return res.status(404).json({
+          error: 'Facility not found',
+          message: 'The requested facility does not exist or is not active'
+        });
+      }
+      
+      res.json(result.rows[0]);
+    } catch (error) {
+      console.error('Failed to fetch facility:', error);
+      const sanitized = errorSanitizer.sanitizeError(error, { context: 'fetch-facility' });
+      res.status(500).json({
+        error: 'Failed to fetch facility',
         ...sanitized
       });
     }
@@ -1576,7 +1928,7 @@ app.post('/api/patient',
 app.get('/api/health', (req, res) => {
   res.json({ 
     status: 'healthy',
-    message: 'LingapLink PH API is running',
+    message: 'Haliya PH API is running',
     timestamp: new Date().toISOString(),
     environment: process.env.NODE_ENV || 'development',
     version: '1.0.0'
@@ -1610,10 +1962,9 @@ process.on('SIGINT', () => {
 
 if (process.env.NODE_ENV !== 'production') {
   app.listen(port, () => {
-    console.log(`🚀 LingapLink PH API server running on port ${port}`);
+    console.log(`🚀 Haliya PH API server running on port ${port}`);
     console.log(`🔒 Security features enabled`);
     console.log(`📊 Environment: ${process.env.NODE_ENV || 'development'}`);
-    console.log(`🏥 Firebase project: ${firebaseConfig.projectId}`);
   });
 }
 

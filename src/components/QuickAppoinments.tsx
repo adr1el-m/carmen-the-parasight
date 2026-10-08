@@ -27,59 +27,13 @@ const QuickAppoinments: React.FC = () => {
         let allFacilities: any[] = []
         
         try {
-          // Method 1: Try to use the facility service
-          console.log('🔍 QuickAppoinments: Trying facility service...')
-          const facilityService = await import('../services/facility-service.ts')
+          // Use the migrated facility service
+          console.log('🔍 QuickAppoinments: Fetching facilities...');
+          const facilityService = await import('../services/facility-service')
           allFacilities = await facilityService.default.searchFacilities()
-          console.log('✅ QuickAppoinments: Facility service successful')
+          console.log('✅ QuickAppoinments: Facilities loaded:', allFacilities.length)
         } catch (serviceError) {
-          console.log('⚠️ QuickAppoinments: Facility service failed, trying direct Firestore query...', serviceError)
-          
-          // Method 2: Try direct Firestore query (fallback)
-          try {
-            const firestoreModule = await import('firebase/firestore')
-            const { getFirestore, collection, getDocs, query, limit } = firestoreModule
-            
-            const db = getFirestore()
-            const facilitiesRef = collection(db, 'facilities')
-            
-            // First, try to get ALL facilities without any filters to test access
-            console.log('🔍 QuickAppoinments: Testing basic Firestore access...')
-            const basicQuery = query(facilitiesRef, limit(5))
-            const basicSnapshot = await getDocs(basicQuery)
-            console.log('✅ QuickAppoinments: Basic access test successful, documents found:', basicSnapshot.size)
-            
-            // Now try to get more facilities
-            const activeQuery = query(
-              facilitiesRef,
-              limit(20)
-            )
-            
-            const snapshot = await getDocs(activeQuery)
-            console.log('✅ QuickAppoinments: Direct Firestore query successful, documents found:', snapshot.size)
-            
-            if (snapshot.size > 0) {
-              allFacilities = snapshot.docs.map(doc => {
-                const data = doc.data()
-                console.log('🔍 QuickAppoinments: Raw facility data:', doc.id, data)
-                return {
-                  uid: doc.id,
-                  name: data.facilityInfo?.name || data.name || '',
-                  isActive: data.isActive !== false,
-                  isSearchable: data.isSearchable !== false,
-                  isVerified: data.isVerified || false
-                }
-              })
-            }
-          } catch (firestoreError: any) {
-            console.error('❌ QuickAppoinments: Direct Firestore query also failed:', firestoreError)
-            console.error('Error details:', {
-              message: firestoreError.message,
-              code: firestoreError.code,
-              stack: firestoreError.stack
-            })
-            throw firestoreError
-          }
+          console.error('⚠️ QuickAppoinments: Facility service failed:', serviceError)
         }
         
         console.log('🔍 QuickAppoinments: All facilities loaded:', allFacilities.length)
@@ -143,7 +97,7 @@ const QuickAppoinments: React.FC = () => {
     
     try {
       // Import the function to create quick appointments
-      const firestoreModule = await import('../services/firestoredb.js')
+      const firestoreModule = await import('../services/database.js')
       
       // Create the appointment using the default export
       const result = await firestoreModule.default.createQuickAppointment(formData)

@@ -1,7 +1,8 @@
  import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { auth } from '../config/firebase'
-import { signOut } from 'firebase/auth'
+import authService from '../services/auth-service'
+
+
 import '../styles/shared-header.css'
 import '../styles/dashboard.css'
 import '../styles/csp-utilities.css'
@@ -226,54 +227,42 @@ const Dashboard: React.FC = React.memo(() => {
   ], [])
 
   useEffect(() => {
-    // Check authentication
-    const unsubscribe = auth.onAuthStateChanged(async (user: any) => {
+    // Check authentication using the custom authService
+    const unsubscribe = authService.onAuthStateChanged(async (user: any) => {
       if (user) {
-        setUser(user)
+        // Map uid from the user object (custom backend uses 'id' but we map it for compatibility)
+        const userId = user.id || user.uid;
+        setUser({
+          uid: userId,
+          email: user.email,
+          displayName: user.firstName ? `${user.firstName} ${user.lastName}` : (user.displayName || 'User')
+        })
         setIsLoading(false)
         
         // Load facility data
-        await loadFacilityData(user.uid)
+        await loadFacilityData(userId)
         
-        // Load appointments for the current user (facility or patient)
-        loadUserAppointments(user.uid)
+        // Load appointments for the current user
+        loadUserAppointments(userId)
       } else {
         navigate('/')
       }
     })
 
     return () => {
-      unsubscribe()
+      if (unsubscribe) unsubscribe()
     }
   }, [navigate])
-
-
 
   const loadFacilityData = useCallback(async (userId: string) => {
     setIsLoadingFacilityData(true)
     try {
-      // Import the function dynamically to avoid TypeScript issues
-      const { getFirestore, doc, getDoc } = await import('firebase/firestore')
-      const db = getFirestore()
-      const facilityDoc = await getDoc(doc(db, 'facilities', userId))
-      
-      if (facilityDoc.exists()) {
-        const data = facilityDoc.data()
-        setFacilityData(data)
-        
-        // Load quick appointments if they exist
-        if (data.quickAppointments && Array.isArray(data.quickAppointments)) {
-          setQuickAppointments(data.quickAppointments)
-          console.log('📋 Quick appointments loaded:', data.quickAppointments.length)
-        } else {
-          setQuickAppointments([])
-        }
-      } else {
-        setFacilityData(null)
-        setQuickAppointments([])
-      }
+      // In Neon migration, facility data would come from /api/facility/:id
+      // For now, we'll use a placeholder or the shim if it had facility data
+      setFacilityData(null)
+      setQuickAppointments([])
     } catch (error) {
-      console.warn('⚠️ Firestore access control error (this is normal during development):', error)
+      console.warn('⚠️ Error loading facility data:', error)
       setFacilityData(null)
       setQuickAppointments([])
     } finally {
@@ -286,54 +275,21 @@ const Dashboard: React.FC = React.memo(() => {
     try {
       console.log('🔍 loadUserAppointments called for user:', userId)
       
-      // First, check if user is a facility
-      const { getFirestore, doc, getDoc } = await import('firebase/firestore')
-      const db = getFirestore()
-      const facilityDoc = await getDoc(doc(db, 'facilities', userId))
+      // Import the migration shim functions
+      const { getFacilityAppointments, getPatientAppointments } = await import('../services/database.js')
       
-      if (facilityDoc.exists()) {
-        console.log('🔍 User is a facility, loading facility appointments...')
-        // User is a facility - load facility appointments
-        const { getFacilityAppointments } = await import('../services/firestoredb.js')
-        const appointments = await getFacilityAppointments(userId)
-        console.log('📋 Facility appointments loaded:', appointments)
-        setFacilityAppointments(appointments)
-      } else {
-        console.log('🔍 User is a patient, loading patient appointments...')
-        // User is a patient - load patient appointments
-        const { getPatientAppointments } = await import('../services/firestoredb.js')
-        const appointments = await getPatientAppointments(userId)
-        console.log('📋 Patient appointments loaded:', appointments)
-        setFacilityAppointments(appointments)
+      // Try to load as facility first, then as patient
+      // In a real app, you'd check the user's role
+      let appointments = await getFacilityAppointments(userId)
+      if (!appointments || appointments.length === 0) {
+        appointments = await getPatientAppointments(userId)
       }
+      
+      console.log('📋 Appointments loaded:', appointments)
+      setFacilityAppointments(appointments)
     } catch (error) {
-      console.warn('⚠️ Firestore access control error (this is normal during development):', error)
-      // Try to load appointments anyway using the service functions
-      try {
-        console.log('🔄 Attempting to load appointments using service functions...')
-        const { getFacilityAppointments, getPatientAppointments } = await import('../services/firestoredb.js')
-        
-        // Try both approaches and see which one works
-        let appointments: any[] = []
-        try {
-          appointments = await getFacilityAppointments(userId)
-          console.log('📋 Facility appointments loaded via service:', appointments)
-        } catch (facilityError) {
-          console.log('🔄 Facility approach failed, trying patient approach...')
-          try {
-            appointments = await getPatientAppointments(userId)
-            console.log('📋 Patient appointments loaded via service:', appointments)
-          } catch (patientError) {
-            console.log('🔄 Both approaches failed, using empty array')
-            appointments = []
-          }
-        }
-        
-        setFacilityAppointments(appointments)
-      } catch (serviceError) {
-        console.warn('⚠️ Service functions also failed:', serviceError)
+      console.warn('⚠️ Error loading appointments:', error)
       setFacilityAppointments([])
-      }
     } finally {
       setIsLoadingAppointments(false)
     }
@@ -354,7 +310,7 @@ const Dashboard: React.FC = React.memo(() => {
     if (appointment.patientId) {
       setIsLoadingPatientData(true)
       try {
-        const { getPatientData, getConsultationHistory, getPatientDocuments } = await import('../services/firestoredb.js')
+        const { getPatientData, getConsultationHistory, getPatientDocuments } = await import('../services/database.js')
         
         // Load basic patient data
         const patientData = await getPatientData(appointment.patientId)
@@ -678,7 +634,7 @@ const Dashboard: React.FC = React.memo(() => {
     }
     
     try {
-      const { getPatientData } = await import('../services/firestoredb.js')
+      const { getPatientData } = await import('../services/database.js')
       const patientData = await getPatientData(uid)
       
       if (!patientData) {
@@ -704,7 +660,7 @@ const Dashboard: React.FC = React.memo(() => {
 
   const handleLogout = useCallback(async () => {
     try {
-      await signOut(auth)
+      await console.log(null)
       navigate('/')
     } catch (error) {
       console.error('Logout error:', error)
@@ -925,7 +881,7 @@ const Dashboard: React.FC = React.memo(() => {
     setIsAddingNote(true)
     
     try {
-      const firestoreModule: any = await import('../services/firestoredb.js')
+      const firestoreModule: any = await import('../services/database.js')
       
       await firestoreModule.updateAppointmentByFacility(
         selectedAppointmentForNote.id,
@@ -960,7 +916,7 @@ const Dashboard: React.FC = React.memo(() => {
     setIsSavingProfile(true)
     
     try {
-      const firestoreModule: any = await import('../services/firestoredb.js')
+      const firestoreModule: any = await import('../services/database.js')
       
       // Update facility information
       await firestoreModule.updateFacilityInfo(user.uid, {
@@ -1053,7 +1009,7 @@ const Dashboard: React.FC = React.memo(() => {
     setIsCreatingAppointment(true)
     
     try {
-      const firestoreModule: any = await import('../services/firestoredb.js')
+      const firestoreModule: any = await import('../services/database.js')
       
       const newAppointment = await firestoreModule.createAppointmentForPatient(
         newAppointmentForm.patientUid,
@@ -1098,7 +1054,7 @@ const Dashboard: React.FC = React.memo(() => {
     setIsEditingAppointment(true)
     
     try {
-      const firestoreModule: any = await import('../services/firestoredb.js')
+      const firestoreModule: any = await import('../services/database.js')
       
       // Clean the data to remove undefined values and ensure all fields are valid
       const cleanedAppointmentData = {
@@ -1259,7 +1215,7 @@ const Dashboard: React.FC = React.memo(() => {
               
               // Save the urgency data back to Firestore for future use
               try {
-                const { updateAppointmentByFacility } = await import('../services/firestoredb.js')
+                const { updateAppointmentByFacility } = await import('../services/database.js')
                 await updateAppointmentByFacility(
                   appointment.id,
                   appointment.patientId,
@@ -1290,7 +1246,7 @@ const Dashboard: React.FC = React.memo(() => {
               
               // Save fallback urgency data to Firestore
               try {
-                const { updateAppointmentByFacility } = await import('../services/firestoredb.js')
+                const { updateAppointmentByFacility } = await import('../services/database.js')
                 await updateAppointmentByFacility(
                   appointment.id,
                   appointment.patientId,
@@ -1348,12 +1304,12 @@ const Dashboard: React.FC = React.memo(() => {
     const setupRealTimeListener = async () => {
       try {
         // Import the real-time listener functions
-        const { listenToFacilityAppointments, listenToPatientData } = await import('../services/firestoredb.js')
+        const { listenToFacilityAppointments, listenToPatientData } = await import('../services/database.js')
         
         // Check if user is a facility or patient
-        const { getFirestore, doc, getDoc } = await import('firebase/firestore')
+        const { getFirestore, doc, getDoc } = {} as any
         const db = getFirestore()
-        const facilityDoc = await getDoc(doc(db, 'facilities', user.uid))
+        const facilityDoc = await console.log(doc(db, 'facilities', user.uid))
         
         if (facilityDoc.exists()) {
           // User is a facility - listen to facility appointments
@@ -1595,9 +1551,9 @@ const Dashboard: React.FC = React.memo(() => {
         tabIndex={-1}
       >
         <div className="sidebar-header">
-          <a href="/" className="logo" aria-label="LingapLink - Healthcare Platform">
+          <a href="/" className="logo" aria-label="Haliya - Healthcare Platform">
             <i className="fas fa-heartbeat" aria-hidden="true"></i>
-            <span>LingapLink</span>
+            <span>Haliya</span>
           </a>
         </div>
         
@@ -2341,7 +2297,7 @@ const Dashboard: React.FC = React.memo(() => {
                               
                               try {
                                 // Import the update function
-                                const { updateAppointmentStatus } = await import('../services/firestoredb.js')
+                                const { updateAppointmentStatus } = await import('../services/database.js')
                                 
                                 // Update the appointment status in the database
                                 await updateAppointmentStatus(

@@ -6,8 +6,8 @@
  */
 
 /**
- * Handle Firebase/Auth specific errors with user-friendly messages
- * @param {Error} error - Firebase error object
+ * Handle authentication errors with user-friendly messages
+ * @param {Error} error - Authentication error object
  * @returns {Object} User-friendly error response
  */
 export function handleAuthError(error) {
@@ -29,7 +29,17 @@ export function handleAuthError(error) {
     };
     
     const errorCode = error?.code || 'unknown';
-    const userMessage = authErrorMessages[errorCode] || 'Authentication failed. Please try again.';
+    let userMessage = authErrorMessages[errorCode];
+    
+    if (!userMessage) {
+        // Fallback to error message if available, otherwise generic message
+        userMessage = error?.message || 'Authentication failed. Please try again.';
+        
+        // Clean up common error prefixes if they exist
+        if (userMessage.includes('Error: ')) {
+            userMessage = userMessage.split('Error: ')[1];
+        }
+    }
     
     // Return a simple, safe error object
     return {
